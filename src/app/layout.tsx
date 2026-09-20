@@ -7,6 +7,14 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Fitna AI | محاكاة',
   description: 'اتقن إدارة الفصل قبل أن تدخله - AI-Powered Classroom Simulation',
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/logo/fitna-icon.png', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/logo/fitna-icon.png',
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
