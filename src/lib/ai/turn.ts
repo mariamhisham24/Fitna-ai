@@ -1,0 +1,948 @@
+import { groq, CHAT_MODEL, callGroqWithFallback } from "@/lib/ai/groq";
+import { buildClassroomSwarmSystemPrompt, buildQuestionClassifierPrompt, buildCandidateStudentPrompt } from "@/lib/ai/personas";
+import type { Database } from "@/lib/supabase/types";
+import { StudentBrainState, StudentPhysicalAction, initializeStudentBrain, getActionDescription } from "@/lib/simulation/classroomState";
+import { analyzeTeacherIntent, decideClassroomReaction, DecisionResult } from "@/lib/simulation/decisionEngine";
+
+type Persona = Database["public"]["Tables"]["student_personas"]["Row"];
+
+export type QuestionType = "open" | "closed" | "statement";
+
+export type StudentTurnResult = {
+  personaId: string;
+  name: string;
+  responded: boolean;
+  text: string | null;
+  newState: "attentive" | "hand_raised" | "distracted";
+  attentionDelta: number; // -20..+20, applied and clamped by the caller
+  physicalAction?: StudentPhysicalAction;
+  actionDescriptionAr?: string;
+  emotion?: string;
+};
+
+/**
+ * Real LLM call #1: classify the teacher's utterance (spec §4d).
+ */
+export async function classifyTeacherUtterance(text: string): Promise<QuestionType> {
+  const clean = text.replace(/[إأآا]/g, "ا");
+  // Social greetings, sound checks, praise, farewells, or classroom orders are NOT pedagogical inquiry questions
+  const isGreetingOrFarewell =
+    /عاملين\s*(ايه|إيه|اي)|ازيكم|ازيكو|صباح\s*الخير|مساء\s*الخير|سلام\s*عليكم|السلام\s*عليكم|اهلا|اهلاً|مع\s*السلامة|باي|اشوفكم|أشوفكم|خلصنا|كفاية\s*كده/i.test(
+      text
+    );
+  const isAudioCheck =
+    /سامعيني|سامعين|صوتي\s*(واضح|واصل)|حد\s*سامع/i.test(clean);
+
+  const hasQuestionInquiry =
+    /[؟?]|\b(what|why|how|which)\b/i.test(clean) ||
+    /(?:ازاي|إزاي|ليه|لماذا|كام|كم|ما\s*هو|ما\s*هي|ماذا|مين\s*(?:يقول|يعرف|يجاوب|اكبر|أكبر|اصغر|أصغر)|نكتب|تفتكروا|يساوي)/i.test(
+      clean
+    );
+
+  const isManagementOrPraise =
+    /شاطر|شاطرة|ممتاز|برافو|كويس\s*قوي|احسنت|أحسنت|شكرا|افتحوا|اسمعوا|اقعدوا|سكوت|هدوء/i.test(
+      clean
+    );
+
+  if (!hasQuestionInquiry) {
+    return "statement";
+  }
+
+  // Socratic / Deep Reasoning Triggers: "ليه"، "ماذا لو"، "إيه دليلك"، "كيف تفسر"
+  const isReasoningOrSocratic =
+    /(?:ليه|لماذا|ماذا\s*لو|ايه\s*السبب|إيه\s*السبب|ايه\s*دليلك|إيه\s*دليلك|ازاي\s*تثبت|إزاي\s*تثبت|كيف\s*تفسر|ايه\s*رايكم|إيه\s*رأيكم|تتفقوا|هل\s*تتفق)/i.test(clean);
+
+  // Factual / Recall / Definition Triggers (Closed questions):
+  // "يعني إيه كسر"، "نكتب النص إزاي"، "أقدر أكتبه إزاي"، "مين الأكبر"، "ما هي مراحل"، "يساوي كام"
+  const isFactualOrClosed =
+    /(?:يعني\s*(?:ايه|إيه)|مين\s*يقول\s*(?:لي\s*)?يعني|ما\s*(?:هو|هي|معنى|المقصود|تعريف)|(?:نكتب|اكتب|نعمل|نحسب|نعبر)[هها]*\s*(?:ازاي|إزاي)|(?:ازاي|إزاي)\s*(?:نكتب|اكتب|نعمل|نحسب|نعبر)|(?:مين|انهي|أنهي|ايهم|أيهم)\s*(?:ال)?(?:اكبر|أكبر|اصغر|أصغر)|(?:ال)?(?:اكبر|أكبر|اصغر|أصغر)\s*ولا|يساوي\s*كام|كام\s*(?:مرحلة|عدد|نوع)|صح\s*ولا\s*غلط|نعم\s*ام\s*لا|نعم\s*أم\s*لا)/i.test(clean);
+
+  if (isFactualOrClosed && !isReasoningOrSocratic) {
+    return "closed";
+  }
+
+  if (isReasoningOrSocratic) {
+    return "open";
+  }
+
+  // Strip leading praise before passing to prompt so LLM focuses on pedagogical inquiry
+  const textWithoutPraise = text
+    .replace(/^(?:ممتاز|برافو|أحسنت|احسنت|شاطر|شاطرة|كويس\s*قوي|عظيم)[\s!،,.-]*/i, "")
+    .trim();
+
+  const completion = await callGroqWithFallback({
+    model: CHAT_MODEL,
+    messages: [{ role: "user", content: buildQuestionClassifierPrompt(textWithoutPraise || text) }],
+    max_completion_tokens: 15,
+  });
+  const raw = (completion.choices[0]?.message?.content ?? "").trim().toLowerCase();
+  if (raw.includes("open")) return "open";
+  if (raw.includes("closed")) return "closed";
+  if (/[؟?]/.test(text) || /\b(what|why|how|which)\b/i.test(text)) {
+    return isReasoningOrSocratic ? "open" : "closed";
+  }
+  return "statement";
+}
+
+export function extractTeacherTitleAndGender(
+  teacherUtterance: string,
+  recentHistory: string = "",
+  voiceGender?: "male" | "female" | null,
+  lockedTeacherTitle?: string | null
+): { title: string; isFemale: boolean } {
+  const combined = `${recentHistory}\n${teacherUtterance}`;
+
+  // 1. Explicit correction / self-identification in text (Highest precedence)
+  const isFemaleSelfId =
+    /(?:أنا|انا)\s*(?:مش|غير)\s*(?:مستر|استاذ|أستاذ)|(?:أنا|انا)\s*(?:ميس|مس|معلمة|استاذة|أستاذة)|(?:ميس|مس)\s*[a-zA-Z\u0600-\u06FF]+/i.test(teacherUtterance) ||
+    /(?:أنا|انا)\s*(?:مش|غير)\s*(?:مستر|استاذ|أستاذ)|(?:أنا|انا)\s*(?:ميس|مس|معلمة|استاذة|أستاذة)|(?:ميس|مس)\s*(?:مريم|فاطمة|سارة|نور|منى|هدى|رنا|ياسمين)/i.test(combined);
+
+  const isMaleSelfId =
+    /(?:أنا|انا)\s*(?:مش|غير)\s*(?:ميس|مس|ابلة|أبلة)|(?:أنا|انا)\s*(?:مستر|استاذ|أستاذ|معلم)/i.test(teacherUtterance) ||
+    /(?:مستر|استاذ)\s*(?:أحمد|احمد|محمد|محمود|علي|عمرو|خالد|يوسف|طارق)/i.test(combined);
+
+  if (isFemaleSelfId) {
+    return { title: "يا ميس", isFemale: true };
+  }
+  if (isMaleSelfId) {
+    return { title: "يا مستر", isFemale: false };
+  }
+
+  // 2. Session-wide locked title if already fixed and no override given
+  if (lockedTeacherTitle) {
+    return { title: lockedTeacherTitle, isFemale: lockedTeacherTitle.includes("ميس") };
+  }
+
+  // 3. Explicit mention of titles in transcript
+  const hasMaleTitle = /(?<=^|[\s.,?!،؛:])(مستر|استاذ|أستاذ)(?=[\s.,?!،؛:]|$)/i.test(combined);
+  const hasFemaleTitle = /(?<=^|[\s.,?!،؛:])(ميس|مس|ابلة|أبلة)(?=[\s.,?!،؛:]|$)/i.test(combined);
+
+  if (hasMaleTitle && !hasFemaleTitle) {
+    return { title: "يا مستر", isFemale: false };
+  }
+  if (hasFemaleTitle && !hasMaleTitle) {
+    return { title: "يا ميس", isFemale: true };
+  }
+
+  // 4. Voice Pitch & Tone Analysis (Diagnosed from teacher's voice pitch)
+  if (voiceGender === "female") {
+    return { title: "يا ميس", isFemale: true };
+  }
+  if (voiceGender === "male") {
+    return { title: "يا مستر", isFemale: false };
+  }
+
+  // 5. Default if totally indeterminate
+  return { title: "يا مستر", isFemale: false };
+}
+
+export interface QuestionContext {
+  isWhyQuestion: boolean;
+  isComparison: boolean;
+  fractions: string[];
+  hasUnlikeDenominators: boolean;
+  targetConceptAspect?: string | null;
+}
+
+function parseDenominator(f: string): number | null {
+  const parts = f.split(/[/على]/).map((p) => p.trim());
+  if (parts.length < 2) return null;
+  const denStr = parts[1];
+  const num = parseInt(denStr, 10);
+  if (!isNaN(num)) return num;
+  const arabicWords: Record<string, number> = {
+    واحد: 1, اتنين: 2, اثنين: 2, تلاتة: 3, ثلاثة: 3, اربعة: 4, أربعة: 4,
+    خمسة: 5, ستة: 6, سبعة: 7, تمانية: 8, ثمانية: 8, تسعة: 9, عشرة: 10,
+  };
+  return arabicWords[denStr] ?? null;
+}
+
+export function extractQuestionContext(teacherUtterance: string): QuestionContext {
+  const clean = (teacherUtterance || "").trim();
+  const isWhyQuestion = /(?:ليه|إزاي|ازاي|علشان\s*إيه|عشان\s*إيه|السبب|فسر|وضح\s*ليه|اشرح\s*ليه)/i.test(clean);
+  const isComparison = /(?:مين\s*أكبر|مين\s*اكبر|أكبر\s*ولا|اكبر\s*ولا|مين\s*أصغر|مين\s*اصغر|أصغر\s*ولا|اصغر\s*ولا|مقارنة|أكبر\s*من|اكبر\s*من|الفرق\s*بين|إيه\s*الفرق|ايه\s*الفرق)/i.test(clean);
+
+  let targetConceptAspect: string | null = null;
+  if (/(?:شكل|أشكال|شكله|شكلها)/i.test(clean)) {
+    targetConceptAspect = "المقارنة أو الإجابة من حيث (الشكل): المادة السائلة (المية) تأخذ شكل الإناء، بينما الغاز (الهواء) ليس له شكل محدد وينتشر في المكان والبالونة.";
+  } else if (/(?:حجم|حجمه|حجمها)/i.test(clean)) {
+    targetConceptAspect = "المقارنة أو الإجابة من حيث (الحجم): المادة السائلة حجمها ثابت لا يتغير، بينما الغاز حجمه غير ثابت.";
+  } else if (/(?:بسط|مقام|فوق|تحت)/i.test(clean)) {
+    targetConceptAspect = "تحديد البسط (الرقم العلوي) والمقام (الرقم السفلي)";
+  } else if (/(?:تبخر|تكاثف|تكثف|هطول|سحاب|مطر)/i.test(clean)) {
+    targetConceptAspect = "مراحل دورة الماء (التبخر بالحرارة، ثم التكاثف لتكوين السحب، ثم الهطول كمطر)";
+  }
+
+  const fractionRegex = /(?:[0-9٠-٩]+\s*(?:\/|على)\s*[0-9٠-٩]+|(?:واحد|اتنين|تلاتة|ثلاثة|أربعة|اربعة|خمسة|ستة|سبعة|تمانية|ثمانية|تسعة|عشرة)\s*على\s*(?:واحد|اتنين|تلاتة|ثلاثة|أربعة|اربعة|خمسة|ستة|سبعة|تمانية|ثمانية|تسعة|عشرة|[0-9٠-٩]+))/gi;
+  const fractions: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = fractionRegex.exec(clean)) !== null) {
+    fractions.push(m[0].trim());
+  }
+
+  const denominators = fractions.map(parseDenominator).filter((d): d is number => d !== null);
+  const hasUnlikeDenominators = denominators.length >= 2 && new Set(denominators).size > 1;
+
+  return {
+    isWhyQuestion,
+    isComparison,
+    fractions,
+    hasUnlikeDenominators,
+    targetConceptAspect,
+  };
+}
+
+export function sanitizeStudentResponse(
+  rawText: string,
+  studentName: string,
+  teacherTitle: string,
+  context?: {
+    isDistracted?: boolean;
+    unknownStudentName?: string | null;
+    isWhyQuestion?: boolean;
+    isTeacherApology?: boolean;
+    currentFractions?: string[];
+    hasUnlikeDenominators?: boolean;
+    isCommonDenominatorTaught?: boolean;
+    activeMisconception?: any;
+  }
+): string {
+  let titleFormatted = (teacherTitle || "").trim();
+  titleFormatted = titleFormatted.replace(/(?:يا\s*)?(?:ميس|مس)\s+(?:ميس|مس)\b/gi, "يا ميس");
+  titleFormatted = titleFormatted.replace(/(?:يا\s*)?(?:مستر|استاذ|أستاذ)\s+(?:مستر|استاذ|أستاذ)\b/gi, "يا مستر");
+  const cleanTitle = titleFormatted.startsWith("يا ") ? titleFormatted : `يا ${titleFormatted}`;
+
+  // If student was distracted when called, they must be confused and ask to repeat:
+  if (context?.isDistracted) {
+    return `ها؟ معلش ${cleanTitle} مكنتش مركز.. ممكن تعيد السؤال؟`;
+  }
+
+  let text = (rawText || "").trim();
+
+  // 1. Remove surrounding quotes and brackets
+  text = text.replace(/^["'«“]+|["'»”]+$/g, "").trim();
+
+  // 2. Remove AI roleplay prefixes ("بصفتي طالب", "رد نور:", etc.)
+  text = text
+    .replace(/^(?:بصفتي\s*طالب[ةه]?|وفقاً\s*لدوري|أنا\s*كطالب[ةه]?|رد\s*\w+:\s*|الطالب\s*\w+:\s*)/i, "")
+    .trim();
+
+  // 3. Strip unsolicited service offers and assistant tropes
+  text = text
+    .replace(/(?:لو\s*(?:تحب|عايز|حضرتك\s*حابب)\s*[^.!؟\n]+(?:مستعد[ةه]|أشرح|أعمل|نعمل)[^.!؟\n]*)/gi, "")
+    .replace(/(?:أنا\s*(?:مستعد[ةه]|جاهز[ةه]\s*لـ?|حابة\s*أضيف|حابب\s*أضيف)[^.!؟\n]*)/gi, "")
+    .replace(/(?:مثال\s*جديد\s*:\s*[^.!؟\n]*)/gi, "")
+    .replace(/(?:أقدر\s*أساعدك\s*[^.!؟\n]*)/gi, "")
+    .trim();
+
+  // 3a. Customer Service / Call Center / Butler Hallucination Filter ("في خدمة المدام", "تحت أمر حضرتك")
+  text = text
+    .replace(/(?:أتفضلي|اتفضلي|أهلاً|اهلا)?\s*(?:في\s*خدم[ةه]\s*(?:المدام|حضرتك|سيادتك|الجميع|الزبائن)|تحت\s*أمر[كك]|تحت\s*أمر\s*حضرتك|أي\s*خدم[ةه]|أنا\s*في\s*الخدم[ةه])[^.!؟\n]*/gi, "")
+    .replace(/(?<=^|[\s.,?!،؛:؟])(?:يا\s*)?(?:فندم|هانم|مدام)(?=[\s.,?!،؛:؟]|$)/gi, cleanTitle)
+    .replace(/[,،؛]\s*([.!?؟])/g, "$1")
+    .replace(/[.,!،؛:؟\s]+$/, "")
+    .trim();
+
+  // If text became empty, truncated vocative, or was an apology response, give natural child reassurance
+  if (
+    !text ||
+    /^(?:اتفضلي|أتفضلي|اتفضل|تفضل|معلش|أنا\s*فاهم[ةه]?|فاهم[ةه]?)\s*(?:يا\s*(?:ميس|مستر)\s*)?[.!؟،,\s]*$/i.test(text)
+  ) {
+    if (context?.isTeacherApology || /معلش|اتلخبطت|لخبطت|سوري|أقصد|اقصد/i.test(rawText)) {
+      text = `ولا يهمك ${cleanTitle} عادي!`;
+    }
+  }
+
+  // 3b. Remove leaked prompt guidance, thought leakage, and stage directions
+  text = text
+    .replace(/^(?:التأكيد\s*للمعلم[^.:!؟\n]*|الاستعداد\s*للإجابة[^.:!؟\n]*|الرد\s*على[^.:!؟\n]*|هكمل\s*بحماس[^.:!؟\n]*|أنا\s*مستعد\s*للإجابة[^.:!؟\n]*)/gi, "")
+    .replace(/\[.*?\]|\(.*?\)/g, "")
+    .trim();
+
+  // 3c. Fix "مش هجاوب" bug when student is called
+  if (/(?:مش\s*(?:هجاوب|حجاوب|هرد|حرد)|مش\s*هقول)/i.test(text)) {
+    text = text.replace(/(?:مش\s*(?:هجاوب|حجاوب|هرد|حرد)|مش\s*هقول)/gi, "أنا هجاوب").trim();
+    if (text === "أنا هجاوب" || text === "أنا هجاوب يا مستر" || text === "أنا هجاوب يا ميس") {
+      text = `أنا هجاوب ${cleanTitle}!`;
+    }
+  }
+
+  // 3d. Fix double vocative ("يا يا مستر" / "يا يا ميس")
+  text = text.replace(/(?:يا\s+){2,}(مستر|ميس|استاذ|أستاذ)/gi, "يا $1").trim();
+
+  // 3e. Intercept AI recovery / garbled phrases ("سببلي تاني", "متشوش")
+  if (/(?:سببلي|متشوش|مشوش|سبب\s*لي)/i.test(text)) {
+    const isFemale = studentName === "سارة" || studentName === "نور";
+    text = `مش فاهم${isFemale ? "ة" : ""} قصدك ${cleanTitle}، ممكن تعيد السؤال؟`;
+  }
+
+  // 3f. Strip repetitive robotic praise / gratitude ("شكراً يا ميس أنا فرحانة جداً")
+  text = text
+    .replace(/(?:شكر[ااً]\s*يا\s*(?:ميس|مستر)[^.!؟\n]*أنا\s*فرحان[ةه]?[^.!؟\n]*)/gi, "")
+    .replace(/(?:شكر[ااً]\s*يا\s*(?:ميس|مستر)\s*[!.]*)/gi, "")
+    .trim();
+
+  // 3g. Modern Standard Arabic (MSA / فصحى) Normalization into Spontaneous Egyptian Child Dialect
+  text = text
+    .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?حسناً?(?=[\s.,?!،؛:؟]|$)/gi, "تمام")
+    .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?بالتأكيد(?=[\s.,?!،؛:؟]|$)/gi, "أكيد")
+    .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?أجل(?=[\s.,?!،؛:؟]|$)/gi, "أيوه")
+    .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?هيا\s*بنا(?=[\s.,?!،؛:؟]|$)/gi, "يلا")
+    .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?(?:لست\s*أدري|لا\s*أدري)(?=[\s.,?!،؛:؟]|$)/gi, studentName === "سارة" || studentName === "نور" ? "مش عارفة" : "مش عارف")
+    .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?ماذا\s+تقصد[ي]?(?=[\s.,?!،؛:؟]|$)/gi, "قصدك إيه")
+    .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?لماذا(?=[\s.,?!،؛:؟]|$)/gi, "ليه")
+    .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?بالفعل(?=[\s.,?!،؛:؟]|$)/gi, "فعلاً")
+    .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?نعم\s*(?:يا\s*)?(?:معلمي|أستاذي|معلمتي|أستاذتي)(?=[\s.,?!،؛:؟]|$)/gi, `أيوه ${cleanTitle}`)
+    .trim();
+
+  // 4. Stale Fraction Echo Interception:
+  if (context?.currentFractions && context.currentFractions.length >= 2) {
+    const hasCurrent = context.currentFractions.some((f) => {
+      const parts = f.split(/[/على]/).map((p) => p.trim());
+      return parts.length >= 2 && text.includes(parts[parts.length - 1]);
+    });
+    const hasOld = /(?:[24]\s*[/على]\s*5|خمسين|أربعة\s*أخماس|اربعة\s*اخماس)/.test(text);
+    if (!hasCurrent && hasOld) {
+      if (context.isWhyQuestion) {
+        text = `عشان المقامات متساوية وزي بعض ${cleanTitle}، فبنبص على البسط، والـ ${context.currentFractions[1] || "4 على 6"} أكبر.`;
+      } else {
+        text = `الـ ${context.currentFractions[1] || "4 على 6"} أكبر ${cleanTitle}.`;
+      }
+    }
+  }
+
+  // 5. Why question reasoning check:
+  if (context?.isWhyQuestion) {
+    if (
+      /(?:عشان|لأن|لان)\s*([0-9٠-٩]+(?:\s*[/على]\s*[0-9٠-٩]+)?)\s*(?:أكبر|اكبر)\s*من\s*\1/i.test(text) ||
+      /(?:عشان|لأن|لان)\s*الأربعة\s*فوق\s*والواحد\s*تحت/i.test(text)
+    ) {
+      text = `عشان المقامات متساوية ${cleanTitle}، فبنبص على البسط اللي فوق والرقم الأكبر بيبقى هو الكسر الأكبر.`;
+    }
+  }
+
+  // 5b. Knowledge Boundary Enforcement for Unlike Denominators:
+  // If denominators differ and teacher hasn't taught common denominators yet, block terms like "المقام المشترك"
+  if (context?.hasUnlikeDenominators && !context?.isCommonDenominatorTaught) {
+    if (/(?:مقام\s*مشترك|المقام\s*المشترك|توحيد\s*المقامات|المضاعف\s*المشترك)/i.test(text)) {
+      const isFemale = studentName === "سارة" || studentName === "نور";
+      text = `مش عارف${isFemale ? "ة" : ""} ${cleanTitle} عشان المقامات مختلفة ومش زي بعض.. إزاي نقارنهم؟`;
+    }
+  }
+
+  // 5c. Active Misconception Enforcement:
+  if (context?.activeMisconception) {
+    if (context.activeMisconception.conceptKey === "air_cannot_be_contained") {
+      if (!context.activeMisconception.isResolved) {
+        text = `المية بتاخد شكل الإناء ${cleanTitle}، بس الهواء مبيتحطش في حاجة خالص عشان مش بنشوفه ولا نمسكه.`;
+      } else {
+        text = `الهواء مادة غازية ملوش شكل ثابت وبيملا البالونة ${cleanTitle}.`;
+      }
+    } else if (context.activeMisconception.conceptKey === "air_is_liquid_because_takes_shape") {
+      if (!context.activeMisconception.isResolved) {
+        text = `الهواء سائل ${cleanTitle} عشان بياخد شكل البالونة زي المية؟`;
+      } else {
+        text = `الهواء مادة غازية ${cleanTitle} وبيملا البالونة كلها.`;
+      }
+    } else if (context.activeMisconception.conceptKey === "water_cycle_skip_condensation") {
+      if (!context.activeMisconception.isResolved) {
+        text = `المية بتسخن وتبقى بخار، وبعدين تمطر على طول ${cleanTitle}.`;
+      } else {
+        text = `المية بتتبخر وتعمل سحاب وبعدين تمطر ${cleanTitle}.`;
+      }
+    } else if (!context.activeMisconception.isResolved) {
+      if (context.isWhyQuestion) {
+        text = `عشان الـ 2 بتيجي الأول ${cleanTitle}، فـ 2 على 6 أكبر.`;
+      } else {
+        text = `الـ 2 على 6 أكبر ${cleanTitle}.`;
+      }
+    }
+  }
+
+  // 5d. Natural Child Farewell / Dismissal (Remove artificial chatbot enthusiasm):
+  if (/(?:متشوق[ةه]?\s*للحصة|أتطلع\s*لـ?|أراك[ي]?\s*غداً\s*بشوق|متحمس[ةه]?\s*جداً\s*للحصة|أراك[ي]?\s*في\s*الحصة|إلى\s*اللقاء\s*في\s*حصة)/i.test(text)) {
+    text = `مع السلامة ${cleanTitle}!`;
+  }
+
+  // 5e. Water Cycle Scientific Accuracy:
+  if (/(?:السحاب\s*بيقع|السحاب\s*يقع|يقع\s*كالسحاب|يقع\s*كالمطر)/i.test(text)) {
+    text = `البخار بيطلع فوق ويبرد ويعمل سحاب، ولما يتقل ينزل مطر ${cleanTitle}.`;
+  }
+
+  // 5f. Teacher Title Consistency
+  if (cleanTitle.includes("ميس")) {
+    text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:مستر|استاذ|أستاذ)(?:\s+[^\s.,?!،؛:]+)?(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
+    if (!text.includes(cleanTitle)) {
+      text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:ميس|مس|ابلة|أبلة)(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
+    }
+  } else if (cleanTitle.includes("مستر")) {
+    text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:ميس|مس|ابلة|أبلة)(?:\s+[^\s.,?!،؛:]+)?(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
+    if (!text.includes(cleanTitle)) {
+      text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:مستر|استاذ|أستاذ)(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
+    }
+  }
+
+  // 6. Length constraint: Children in 4th/5th grade do NOT write 30-word academic speeches!
+  // If text is longer than 18 words, take the first 1-2 short sentences.
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length > 18) {
+    const sentences = text.split(/([.!?؟\n]+)/).filter(Boolean);
+    let reconstructed = "";
+    for (let i = 0; i < sentences.length; i += 2) {
+      const sentence = (sentences[i] || "") + (sentences[i + 1] || "");
+      if ((reconstructed + sentence).split(/\s+/).filter(Boolean).length <= 16) {
+        reconstructed += sentence;
+      } else {
+        if (!reconstructed) reconstructed = sentence;
+        break;
+      }
+    }
+    text = reconstructed.trim();
+  }
+
+  return text || `أيوه ${cleanTitle} معاك.`;
+}
+
+export async function generateStudentReactions(params: {
+  personas: Persona[];
+  currentAttention: Record<string, number>;
+  timesSpoken?: Record<string, number>;
+  lastSpeakingPersonaId?: string | null;
+  recentSpeakerPersonaIds?: string[];
+  lastPhysicalActions?: Record<string, StudentPhysicalAction>;
+  lastSpeakingStudentName?: string | null;
+  greetingCompleted?: boolean;
+  lastTeacherUtterance?: string | null;
+  lessonContext: string | null;
+  teacherUtterance: string;
+  questionType: QuestionType;
+  recentHistory: string;
+  fullLessonHistory?: string;
+  teacherExplanations?: string[];
+  studentContributions?: Record<string, string[]>;
+  studentsWithHandRaised?: string[];
+  turnIndex?: number;
+  voiceGender?: "male" | "female" | null;
+  lockedTeacherTitle?: string | null;
+  resolvedUnknownNames?: string[];
+}): Promise<StudentTurnResult[]> {
+  const {
+    personas,
+    currentAttention,
+    timesSpoken = {},
+    lastSpeakingPersonaId = null,
+    recentSpeakerPersonaIds = [],
+    lastPhysicalActions = {},
+    lastSpeakingStudentName = null,
+    greetingCompleted = false,
+    lastTeacherUtterance = null,
+    lessonContext,
+    teacherUtterance,
+    recentHistory,
+    fullLessonHistory = "",
+    teacherExplanations = [],
+    studentContributions = {},
+    studentsWithHandRaised = [],
+    turnIndex = 1,
+    voiceGender = null,
+    lockedTeacherTitle = null,
+    resolvedUnknownNames = [],
+  } = params;
+
+  // 1. Convert DB personas to rich StudentBrainState
+  const studentBrains: StudentBrainState[] = personas.map((p) => {
+    const baseAtt = currentAttention[p.id] ?? p.base_attention ?? 70;
+    const spoken = timesSpoken[p.id] ?? 0;
+    const brain = initializeStudentBrain(p.id, p.name, p.age, baseAtt, spoken, lessonContext);
+    if (lastPhysicalActions[p.id]) {
+      brain.physicalAction = lastPhysicalActions[p.id];
+      brain.actionDescriptionAr = getActionDescription(brain.physicalAction, p.name);
+    }
+    return brain;
+  });
+
+  // 2. Run Context-Aware Intent Analysis & Classroom Decision Engine
+  const intentAnalysis = analyzeTeacherIntent(teacherUtterance, {
+    greetingCompleted,
+    lastTeacherUtterance,
+    recentHistory,
+    lastSpeakingStudentName,
+    studentsWithHandRaised,
+    resolvedUnknownNames,
+    lockedTeacherTitle,
+  });
+  const decision = decideClassroomReaction(
+    studentBrains,
+    intentAnalysis,
+    turnIndex,
+    lastSpeakingPersonaId,
+    recentSpeakerPersonaIds
+  );
+
+  // 3. SILENCE IS A VALID ACTION:
+  // If no student has motivation/permission to speak (e.g. during teacher explanation, silence command, or silent listening):
+  // Return immediately without calling LLM!
+  if (decision.candidateSpeakers.length === 0) {
+    return personas.map((p) => {
+      const updated = decision.updatedStudents.find((s) => s.personaId === p.id);
+      const action = updated?.physicalAction ?? "attentive";
+      const desc = updated?.actionDescriptionAr ?? getActionDescription(action, p.name);
+      const delta = updated?.attentionDelta ?? 0;
+      const newState = action === "hand_raised" ? "hand_raised" : action === "fidgeting" || action === "looking_away" ? "distracted" : "attentive";
+
+      return {
+        personaId: p.id,
+        name: p.name,
+        responded: false,
+        text: null,
+        newState,
+        attentionDelta: delta,
+        physicalAction: action,
+        actionDescriptionAr: desc,
+      };
+    });
+  }
+
+  // 4. Single-Speaker Pipeline (Spec: Turn manager selects 0 or 1 speaker; only active candidate calls LLM, other 3 students silent in code)
+  const teacherInfo = extractTeacherTitleAndGender(teacherUtterance, recentHistory, voiceGender, lockedTeacherTitle);
+  const title = teacherInfo.title;
+  const cleanTitle = title.startsWith("يا ") ? title : `يا ${title}`;
+
+  const isRedirectOrCalling =
+    /(?:عايز[ةه]?|عاوز[ةه]?|محتاج[ةه]?|دور|فين|لا\s*عايز|يا\s*\w+\s*(?:جاوب|قول)|اتفضل|اتفضلي|تفضل|تفضلي)/i.test(teacherUtterance) ||
+    intentAnalysis.intent === "permission_to_speak";
+
+  const currentQuestionText =
+    isRedirectOrCalling && lastTeacherUtterance
+      ? `${lastTeacherUtterance} (${teacherUtterance})`
+      : teacherUtterance;
+
+  const qContext = extractQuestionContext(currentQuestionText);
+
+  const allTeacherHistory = `${fullLessonHistory} ${teacherUtterance}`;
+  const isCommonDenominatorTaught =
+    /(?:مقام\s*مشترك|المقام\s*المشترك|توحيد\s*المقامات|نوحد\s*المقامات|المضاعف\s*المشترك|طرفين\s*في\s*وسطين|ضرب\s*المقص)/i.test(
+      allTeacherHistory
+    );
+
+  const isGreeting = intentAnalysis.intent === "greeting";
+  const isRollCall = intentAnalysis.intent === "roll_call";
+
+  const isEnglish =
+    !isGreeting &&
+    !isRollCall &&
+    /english|grammar|past\s*simple|verb|vocab|انجليزي|انجلش|جرامر|لغة\s*انجليزية|someone|give\s*me|example|tense|did|was|were|played|ate|drank|went/i.test(
+      `${teacherUtterance} ${recentHistory}`
+    );
+
+  const isCorrectiveFeedback =
+    /(?:مش\s*(?:صح|مضبوط|صحيح|كده)|مش\s*قوي|غلط|راجع\s*نفسك|فكر\s*تاني|ركز\s*شوية|ليه\s*قلت\s*كده|متأكد)/i.test(
+      teacherUtterance
+    );
+
+  const systemPrompt = buildClassroomSwarmSystemPrompt(lessonContext);
+
+  async function generateSpeechForCandidate(candidate: (typeof decision.candidateSpeakers)[0]): Promise<string | null> {
+    const studentBrain = studentBrains.find((s) => s.personaId === candidate.personaId);
+    const persona = personas.find((p) => p.id === candidate.personaId);
+
+    const studentPrompt = buildCandidateStudentPrompt({
+      studentName: candidate.name,
+      age: studentBrain?.age ?? persona?.age ?? 10,
+      understanding: studentBrain?.understanding ?? 75,
+      confidence: studentBrain?.confidence ?? 70,
+      emotion: candidate.spokenEmotion || "confident",
+      reasonToSpeak: candidate.reasonToSpeak,
+      lessonContext,
+      teacherUtterance,
+      recentHistory: recentHistory.slice(-1000),
+      currentQuestionText,
+      targetConceptAspect: qContext.targetConceptAspect,
+      teacherTitle: cleanTitle,
+      isTargetStudent: true,
+      activeMisconception: candidate.activeMisconception,
+    });
+
+    const userPrompt = `${studentPrompt}\n\nرد بصيغة JSON فقط بهذا الشكل تماماً:\n{\n  "text": "كلام الطالب المنطوق هنا فقط"\n}`;
+
+    try {
+      const completion = await callGroqWithFallback({
+        model: CHAT_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.65,
+        max_completion_tokens: 150,
+        response_format: { type: "json_object" },
+      });
+
+      const raw = completion.choices[0]?.message?.content ?? "{}";
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+      if (typeof parsed.text === "string" && parsed.text.trim().length > 0) {
+        return parsed.text.trim();
+      }
+    } catch (err) {
+      console.error(`Failed to generate speech for candidate student ${candidate.name}:`, err);
+    }
+    return null;
+  }
+
+  // Generate speech ONLY for candidate speaker(s) (never for silenced students)
+  const candidateMap = new Map(decision.candidateSpeakers.map((c) => [c.personaId, c]));
+  const spokenResults = new Map<string, string | null>();
+
+  if (decision.candidateSpeakers.length === 1) {
+    const single = decision.candidateSpeakers[0];
+    const text = await generateSpeechForCandidate(single);
+    spokenResults.set(single.personaId, text);
+  } else if (decision.candidateSpeakers.length > 1) {
+    const entries = await Promise.all(
+      decision.candidateSpeakers.map(async (c) => {
+        const text = await generateSpeechForCandidate(c);
+        return [c.personaId, text] as const;
+      })
+    );
+    for (const [id, text] of entries) {
+      spokenResults.set(id, text);
+    }
+  }
+
+  return personas.map((p) => {
+    const candidate = candidateMap.get(p.id);
+    const updated = decision.updatedStudents.find((s) => s.personaId === p.id);
+    const action = updated?.physicalAction ?? "attentive";
+    const desc = updated?.actionDescriptionAr ?? getActionDescription(action, p.name);
+
+    // Strictly enforce: if NOT in candidate speakers, MUST remain silent in code!
+    if (!candidate || !candidate.shouldSpeak) {
+      const newState =
+        action === "hand_raised"
+          ? "hand_raised"
+          : action === "fidgeting" || action === "looking_away"
+          ? "distracted"
+          : "attentive";
+      return {
+        personaId: p.id,
+        name: p.name,
+        responded: false,
+        text: null,
+        newState,
+        attentionDelta: updated?.attentionDelta ?? 0,
+        physicalAction: action,
+        actionDescriptionAr: desc,
+      };
+    }
+
+    const rawText = spokenResults.get(p.id) || null;
+
+    const isNumeratorDenominatorQuestion = /(?:فوق|تحت|بسط|مقام|اسمه\s*(?:ايه|إيه))/i.test(
+      currentQuestionText
+    );
+    const isMatterStateQuestion = /(?:صلب|سائل|غاز|حالات\s*المادة|الكتاب|البالون|البالونة|الهواء|المية|الماء)/i.test(
+      currentQuestionText
+    );
+
+    const hasActiveMisconception = candidate.activeMisconception && !candidate.activeMisconception.isResolved;
+    const hasResolvedMisconception = candidate.activeMisconception && candidate.activeMisconception.isResolved;
+
+    const defaultFallback =
+      intentAnalysis.intent === "session_farewell"
+        ? (p.name === "سارة" || p.name === "نور" ? `مع السلامة ${cleanTitle}!` : `باي ${cleanTitle} مع السلامة!`)
+        : intentAnalysis.intent === "clarification_request"
+        ? (p.name === "عمر"
+            ? `قصدي بركة المية في الحوش ${cleanTitle} لما الشمس طلعت نشفتها، فهل ده برضه تبخر؟`
+            : `قصدي ${cleanTitle} أوضح سؤالي عن النقطة دي في الدرس.`)
+        : intentAnalysis.intent === "teacher_apology"
+        ? (p.name === "سارة" || p.name === "نور"
+            ? `ولا يهمك ${cleanTitle} عادي!`
+            : `ولا يهمك ${cleanTitle} حصل خير!`)
+        : candidate.isDistracted
+        ? `ها؟ معلش ${cleanTitle} مكنتش مركز.. ممكن تعيد السؤال؟`
+        : hasActiveMisconception && candidate.activeMisconception?.conceptKey === "air_cannot_be_contained"
+        ? `المية بتاخد شكل الإناء ${cleanTitle}، بس الهواء مبيتحطش في حاجة خالص.`
+        : hasResolvedMisconception && candidate.activeMisconception?.conceptKey === "air_cannot_be_contained"
+        ? `الهواء مادة غازية ملوش شكل ثابت وبيملا البالونة ${cleanTitle}.`
+        : hasActiveMisconception && candidate.activeMisconception?.conceptKey === "air_is_liquid_because_takes_shape"
+        ? `الهواء سائل ${cleanTitle} عشان بياخد شكل البالونة زي المية؟`
+        : hasResolvedMisconception && candidate.activeMisconception?.conceptKey === "air_is_liquid_because_takes_shape"
+        ? `الهواء مادة غازية ${cleanTitle} وبيملا البالونة كلها.`
+        : hasActiveMisconception && candidate.activeMisconception?.conceptKey === "water_cycle_skip_condensation"
+        ? `المية بتسخن وتبقى بخار، وبعدين تمطر على طول ${cleanTitle}.`
+        : hasResolvedMisconception && candidate.activeMisconception?.conceptKey === "water_cycle_skip_condensation"
+        ? `المية بتتبخر وتعمل سحاب وبعدين تمطر ${cleanTitle}.`
+        : qContext.hasUnlikeDenominators && !isCommonDenominatorTaught
+        ? `مش عارف${p.name === "سارة" || p.name === "نور" ? "ة" : ""} ${cleanTitle} عشان المقامات مختلفة ومش زي بعض.. إزاي نقارنهم؟`
+        : hasActiveMisconception && qContext.isComparison
+        ? `الـ 2 على 6 أكبر ${cleanTitle}.`
+        : hasResolvedMisconception && qContext.isComparison
+        ? `الـ 5 على 6 أكبر ${cleanTitle} عشان بسطها أكبر والمقامات متساوية.`
+        : intentAnalysis.intent === "attention_check"
+        ? `أنا هجاوب ${cleanTitle}! سامعينك ومتابعين.`
+        : isMatterStateQuestion
+        ? (/(?:شكل).*(?:مية|ماء).*(?:هواء|هوا)|(?:فرق).*(?:مية|ماء).*(?:هواء|هوا)/i.test(currentQuestionText)
+            ? `المية بتاخد شكل الإناء ${cleanTitle}، بس الهواء ملوش شكل ثابت وبيملا المكان.`
+            : /(?:كتاب|صلب)/i.test(currentQuestionText)
+            ? `الكتاب مادة صلبة ${cleanTitle} عشان شكله وحجمه ثابتين.`
+            : /(?:مية|ماء|سائل)/i.test(currentQuestionText)
+            ? `المية مادة سائلة ${cleanTitle} عشان بتاخد شكل الإناء.`
+            : `الهواء مادة غازية ${cleanTitle} وبيملا المكان.`)
+        : isNumeratorDenominatorQuestion
+        ? `اللي فوق البسط واللي تحت المقام ${cleanTitle}.`
+        : qContext.isWhyQuestion
+        ? `عشان المقامات متساوية ${cleanTitle}، فبنبص على البسط والـ 4 أكبر من الـ 1.`
+        : qContext.isComparison && qContext.fractions.length >= 2
+        ? `الـ ${qContext.fractions[1]} أكبر ${cleanTitle}.`
+        : intentAnalysis.intent === "permission_to_speak"
+        ? (qContext.fractions.length >= 2
+            ? `الـ ${qContext.fractions[1]} أكبر ${cleanTitle}.`
+            : isNumeratorDenominatorQuestion
+            ? `اللي فوق البسط واللي تحت المقام ${cleanTitle}.`
+            : `الـ 5 على 7 أكبر ${cleanTitle}.`)
+        : intentAnalysis.referencedStudentName
+        ? (p.name === "سارة" || p.name === "نور"
+            ? `أنا متفقة مع كلام ${intentAnalysis.referencedStudentName} ${cleanTitle}!`
+            : `أنا متفق مع كلام ${intentAnalysis.referencedStudentName} ${cleanTitle}!`)
+        : isGreeting
+        ? `وعليكم السلام ${cleanTitle}!`
+        : intentAnalysis.intent === "open_discussion"
+        ? p.name === "عمر"
+          ? `${cleanTitle} أنا ممكن أحكي عن ماتش الكورة؟`
+          : p.name === "سارة"
+          ? `${cleanTitle} ينفع أحكي موقف حصل معايا النهاردة؟`
+          : p.name === "ياسين"
+          ? `${cleanTitle} أنا عندي حاجة مضحكة حصلت امبارح!`
+          : `${cleanTitle} رسمت رسمة جديدة وعايزة أوريها لحضرتك.`
+        : isCorrectiveFeedback
+        ? `مش صح ${cleanTitle}؟ طب إزاي؟`
+        : p.name === "عمر"
+        ? `أنا عارف ${cleanTitle}!`
+        : p.name === "سارة"
+        ? `ممكن أقول ${cleanTitle}؟`
+        : p.name === "ياسين"
+        ? `اللي فوق البسط واللي تحت المقام ${cleanTitle}.`
+        : `أيوه ${cleanTitle} معاك.`;
+
+    const sanitized = rawText
+      ? sanitizeStudentResponse(rawText, p.name, title, {
+          isDistracted: candidate.isDistracted,
+          unknownStudentName: intentAnalysis.unknownStudentName,
+          isWhyQuestion: qContext.isWhyQuestion,
+          isTeacherApology: intentAnalysis.intent === "teacher_apology",
+          currentFractions: qContext.fractions,
+          hasUnlikeDenominators: qContext.hasUnlikeDenominators,
+          isCommonDenominatorTaught,
+          activeMisconception: candidate.activeMisconception,
+        })
+      : null;
+    const finalText = sanitized || defaultFallback;
+
+    return {
+      personaId: p.id,
+      name: p.name,
+      responded: true,
+      text: finalText,
+      newState: "attentive",
+      attentionDelta: updated?.attentionDelta ?? 5,
+      physicalAction: action,
+      actionDescriptionAr: desc,
+      emotion: candidate.spokenEmotion,
+    };
+  });
+}
+
+export function generateFallbackReactions(params: {
+  personas: Persona[];
+  teacherUtterance: string;
+  recentHistory?: string;
+  turnIndex?: number;
+  lastPhysicalActions?: Record<string, StudentPhysicalAction>;
+  greetingCompleted?: boolean;
+  lastTeacherUtterance?: string | null;
+  lastSpeakingStudentName?: string | null;
+  lastSpeakingPersonaId?: string | null;
+  recentSpeakerPersonaIds?: string[];
+  timesSpoken?: Record<string, number>;
+  studentsWithHandRaised?: string[];
+  voiceGender?: "male" | "female" | null;
+  lockedTeacherTitle?: string | null;
+  resolvedUnknownNames?: string[];
+  lessonContext?: string | null;
+  fullLessonHistory?: string;
+}): StudentTurnResult[] {
+  const {
+    personas,
+    teacherUtterance,
+    turnIndex = 1,
+    lastPhysicalActions = {},
+    greetingCompleted = false,
+    lastTeacherUtterance = null,
+    lastSpeakingStudentName = null,
+    lastSpeakingPersonaId = null,
+    recentSpeakerPersonaIds = [],
+    timesSpoken = {},
+    recentHistory = "",
+    studentsWithHandRaised = [],
+    voiceGender = null,
+    lockedTeacherTitle = null,
+    resolvedUnknownNames = [],
+    lessonContext = null,
+    fullLessonHistory = "",
+  } = params;
+
+  const studentBrains: StudentBrainState[] = personas.map((p) => {
+    const spoken = timesSpoken[p.id] ?? 0;
+    const brain = initializeStudentBrain(p.id, p.name, p.age, p.base_attention ?? 70, spoken, lessonContext);
+    if (lastPhysicalActions[p.id]) {
+      brain.physicalAction = lastPhysicalActions[p.id];
+      brain.actionDescriptionAr = getActionDescription(brain.physicalAction, p.name);
+    }
+    return brain;
+  });
+
+  const intentAnalysis = analyzeTeacherIntent(teacherUtterance, {
+    greetingCompleted,
+    lastTeacherUtterance,
+    recentHistory,
+    lastSpeakingStudentName,
+    studentsWithHandRaised,
+    resolvedUnknownNames,
+    lockedTeacherTitle,
+  });
+
+  const decision = decideClassroomReaction(
+    studentBrains,
+    intentAnalysis,
+    turnIndex,
+    lastSpeakingPersonaId,
+    recentSpeakerPersonaIds
+  );
+  const teacherInfo = extractTeacherTitleAndGender(teacherUtterance, recentHistory, voiceGender, lockedTeacherTitle);
+  const title = teacherInfo.title;
+
+  const candidateSpeakerMap = new Map(decision.candidateSpeakers.map((c) => [c.name, c]));
+  const allTeacherHistory = `${fullLessonHistory} ${recentHistory} ${teacherUtterance}`;
+  const isCommonDenominatorTaught =
+    /(?:مقام\s*مشترك|المقام\s*المشترك|توحيد\s*المقامات|نوحد\s*المقامات|المضاعف\s*المشترك|طرفين\s*في\s*وسطين|ضرب\s*المقص)/i.test(
+      allTeacherHistory
+    );
+
+  return personas.map((p) => {
+    const candidate = candidateSpeakerMap.get(p.name);
+    const updated = decision.updatedStudents.find((s) => s.personaId === p.id);
+    const action = updated?.physicalAction ?? "attentive";
+    const desc = updated?.actionDescriptionAr ?? getActionDescription(action, p.name);
+
+    if (!candidate || !candidate.shouldSpeak) {
+      const newState = action === "hand_raised" ? "hand_raised" : action === "fidgeting" || action === "looking_away" ? "distracted" : "attentive";
+      return {
+        personaId: p.id,
+        name: p.name,
+        responded: false,
+        text: null,
+        newState,
+        attentionDelta: updated?.attentionDelta ?? 0,
+        physicalAction: action,
+        actionDescriptionAr: desc,
+      };
+    }
+
+    const qContext = extractQuestionContext(teacherUtterance);
+    const isWhyQuestion = qContext.isWhyQuestion;
+    const isCorrective =
+      /(?:مش\s*(?:صح|مضبوط|صحيح|كده)|مش\s*قوي|غلط|راجع\s*نفسك|فكر\s*تاني|ركز\s*شوية|ليه\s*قلت\s*كده|متأكد)/i.test(
+        teacherUtterance
+      );
+
+    const cleanTitle = title.startsWith("يا ") ? title : `يا ${title}`;
+    const hasActiveMisconception = candidate.activeMisconception && !candidate.activeMisconception.isResolved;
+    const hasResolvedMisconception = candidate.activeMisconception && candidate.activeMisconception.isResolved;
+
+    const fallbackText =
+      intentAnalysis.intent === "teacher_apology"
+        ? (p.name === "سارة" || p.name === "نور"
+            ? `ولا يهمك ${cleanTitle} عادي!`
+            : `ولا يهمك ${cleanTitle} حصل خير!`)
+        : candidate.isDistracted
+        ? `ها؟ معلش ${cleanTitle} مكنتش مركز.. ممكن تعيد السؤال؟`
+        : hasActiveMisconception && candidate.activeMisconception?.conceptKey === "air_cannot_be_contained"
+        ? `المية بتاخد شكل الإناء ${cleanTitle}، بس الهواء مبيتحطش في حاجة خالص.`
+        : hasResolvedMisconception && candidate.activeMisconception?.conceptKey === "air_cannot_be_contained"
+        ? `الهواء مادة غازية ملوش شكل ثابت وبيملا البالونة ${cleanTitle}.`
+        : hasActiveMisconception && candidate.activeMisconception?.conceptKey === "air_is_liquid_because_takes_shape"
+        ? `الهواء سائل ${cleanTitle} عشان بياخد شكل البالونة زي المية؟`
+        : hasResolvedMisconception && candidate.activeMisconception?.conceptKey === "air_is_liquid_because_takes_shape"
+        ? `الهواء مادة غازية ${cleanTitle} وبيملا البالونة كلها.`
+        : hasActiveMisconception && candidate.activeMisconception?.conceptKey === "water_cycle_skip_condensation"
+        ? `المية بتسخن وتبقى بخار، وبعدين تمطر على طول ${cleanTitle}.`
+        : hasResolvedMisconception && candidate.activeMisconception?.conceptKey === "water_cycle_skip_condensation"
+        ? `المية بتتبخر وتعمل سحاب وبعدين تمطر ${cleanTitle}.`
+        : qContext.hasUnlikeDenominators && !isCommonDenominatorTaught
+        ? `مش عارف${p.name === "سارة" || p.name === "نور" ? "ة" : ""} ${cleanTitle} عشان المقامات مختلفة ومش زي بعض.. إزاي نقارنهم؟`
+        : hasActiveMisconception && qContext.isComparison
+        ? `الـ 2 على 6 أكبر ${cleanTitle}.`
+        : hasResolvedMisconception && qContext.isComparison
+        ? `الـ 5 على 6 أكبر ${cleanTitle} عشان بسطها أكبر والمقامات متساوية.`
+        : intentAnalysis.intent === "greeting"
+        ? `وعليكم السلام ${cleanTitle}!`
+        : intentAnalysis.intent === "religious_blessing"
+        ? "عليه الصلاة والسلام."
+        : intentAnalysis.intent === "teacher_identity"
+        ? `أهلاً بحضرتك ${cleanTitle}، خلاص حفظنا!`
+        : intentAnalysis.intent === "attention_check"
+        ? `أيوة ${cleanTitle}، سامعينك ومتابعين!`
+        : isWhyQuestion
+        ? `عشان المقامات متساوية ${cleanTitle}، فبنبص على البسط والـ 4 أكبر من الـ 1.`
+        : qContext.isComparison && qContext.fractions.length >= 2
+        ? `الـ ${qContext.fractions[1]} أكبر ${cleanTitle}.`
+        : intentAnalysis.referencedStudentName
+        ? (p.name === "سارة" || p.name === "نور"
+            ? `أنا متفقة مع كلام ${intentAnalysis.referencedStudentName} ${cleanTitle}!`
+            : `أنا متفق مع كلام ${intentAnalysis.referencedStudentName} ${cleanTitle}!`)
+        : intentAnalysis.intent === "permission_to_speak"
+        ? p.name === "عمر"
+          ? `أنا كنت عايز أجاوب ${cleanTitle}!`
+          : p.name === "سارة"
+          ? `عندي فكرة ${cleanTitle}!`
+          : p.name === "ياسين"
+          ? `أنا عارف الإجابة ${cleanTitle}!`
+          : `كتبت الملاحظة دي في الكشكول ${cleanTitle}.`
+        : intentAnalysis.intent === "direct_question"
+        ? isCorrective
+          ? `مش صح ${cleanTitle}؟ طب إزاي؟`
+          : /(?:صلب|سائل|غاز|حالات\s*المادة|الكتاب|البالون|البالونة|الهواء|المية|الماء)/i.test(teacherUtterance)
+          ? (/(?:شكل).*(?:مية|ماء).*(?:هواء|هوا)|(?:فرق).*(?:مية|ماء).*(?:هواء|هوا)/i.test(teacherUtterance)
+              ? `المية بتاخد شكل الإناء ${cleanTitle}، بس الهواء ملوش شكل ثابت وبيملا المكان.`
+              : /(?:كتاب|صلب)/i.test(teacherUtterance)
+              ? `الكتاب مادة صلبة ${cleanTitle} عشان شكله وحجمه ثابتين.`
+              : /(?:مية|ماء|سائل)/i.test(teacherUtterance)
+              ? `المية مادة سائلة ${cleanTitle} عشان بتاخد شكل الإناء.`
+              : `الهواء مادة غازية ${cleanTitle} وبيملا المكان.`)
+          : /(?:فوق|تحت|بسط|مقام)/i.test(teacherUtterance)
+          ? `اللي فوق البسط واللي تحت المقام ${cleanTitle}.`
+          : p.name === "عمر"
+          ? `أنا عارف ${cleanTitle}!`
+          : p.name === "ياسين"
+          ? `أنا جاهز ومتابع ${cleanTitle}.`
+          : p.name === "سارة"
+          ? `أنا متابعة مع حضرتك ${cleanTitle}.`
+          : `معاك ${cleanTitle}.`
+        : intentAnalysis.intent === "roll_call"
+        ? `أنا ${p.name}، عندي ${p.age} سنين وبحب ${p.name === "عمر" ? "الكورة" : p.name === "سارة" ? "الرسم" : p.name === "ياسين" ? "الألعاب" : "المذاكرة"} ${cleanTitle}!`
+        : intentAnalysis.intent === "open_discussion"
+        ? p.name === "عمر" ? `${cleanTitle} عايز أحكي عن ماتش الكورة!` : `${cleanTitle} ممكن أحكي حاجة حصلتلي؟`
+        : `معاك ${cleanTitle}.`;
+
+    return {
+      personaId: p.id,
+      name: p.name,
+      responded: true,
+      text: fallbackText,
+      newState: "attentive" as const,
+      attentionDelta: updated?.attentionDelta ?? 5,
+      physicalAction: action,
+      actionDescriptionAr: desc,
+    };
+  });
+}
