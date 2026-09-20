@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { type Language } from "@/lib/i18n";
 import { TeacherDashboardClient } from "./TeacherDashboardClient";
 
+import { DEMO_USER_ID } from "@/lib/auth/demo";
+
 async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([
     Promise.resolve(promise),
@@ -37,7 +39,7 @@ export default async function TeacherDashboardPage() {
 
     // Treat as demo if cookie is set or if unauthenticated
     const isDemo = isDemoCookie || !user;
-    const userId = user?.id || "e948bbf0-0a93-46dd-9b01-b85f229477dd";
+    const userId = isDemo ? DEMO_USER_ID : (user?.id || DEMO_USER_ID);
 
     let userProfile = finalProfile;
     if (!isDemo && user) {

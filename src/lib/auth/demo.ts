@@ -1,6 +1,6 @@
 import type { User } from '@supabase/supabase-js';
 
-export const DEMO_USER_ID = 'e948bbf0-0a93-46dd-9b01-b85f229477dd';
+export const DEMO_USER_ID = 'd3300000-0000-4000-8000-000000000001';
 export const DEMO_USER_EMAIL = 'demo@fitna.ai';
 export const DEMO_USER_NAME = 'معلم تجريبي (Demo Teacher)';
 export const DEMO_COOKIE_NAME = 'fitna_demo';
