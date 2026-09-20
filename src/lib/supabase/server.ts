@@ -13,12 +13,17 @@ export async function createClient() {
   const isDemo = cookieStore.get(DEMO_COOKIE_NAME)?.value === "true";
 
   if (isDemo) {
-    const admin = createAdminClient();
-    return new Proxy(admin, {
+    let baseClient: any = null;
+    try {
+      baseClient = createAdminClient();
+    } catch {
+      baseClient = {};
+    }
+
+    return new Proxy(baseClient, {
       get(target: any, prop: string | symbol, receiver: any) {
         if (prop === "auth") {
           return {
-            ...target.auth,
             getUser: async () => ({ data: { user: DEMO_USER }, error: null }),
             getSession: async () => ({
               data: {
@@ -41,14 +46,20 @@ export async function createClient() {
             },
           };
         }
+        if (typeof target[prop] === "function") {
+          return target[prop].bind(target);
+        }
         return Reflect.get(target, prop, receiver);
       },
     });
   }
 
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy.supabase.co";
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy";
+
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
@@ -80,9 +91,12 @@ export async function createClient() {
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 export function createAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy.supabase.co";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy";
+
   return createSupabaseClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    url,
+    key,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 }

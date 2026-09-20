@@ -156,7 +156,11 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
             </button>
             <a
               href="/demo"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-400/40 hover:bg-amber-500/25 hover:border-amber-400 transition-all shadow-[0_0_12px_rgba(245,158,11,0.15)] no-underline"
+              onClick={() => {
+                document.cookie = "fitna_demo=true; path=/; max-age=31536000; SameSite=Lax";
+                document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
+              }}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-950 bg-amber-400/30 border border-amber-500/50 hover:bg-amber-400/50 dark:text-amber-300 dark:bg-amber-500/20 dark:border-amber-400/40 dark:hover:bg-amber-500/30 transition-all shadow-sm no-underline cursor-pointer"
             >
               <span>{t.demoCta}</span>
             </a>
@@ -182,7 +186,11 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
               <div className="hero-buttons flex-wrap items-center gap-3">
                 <a
                   href="/demo"
-                  className="amber-button cta-primary !bg-gradient-to-r !from-amber-400 !via-amber-500 !to-teal-500 !text-slate-950 font-bold shadow-[0_0_25px_rgba(245,158,11,0.35)] flex items-center gap-2 no-underline"
+                  onClick={() => {
+                    document.cookie = "fitna_demo=true; path=/; max-age=31536000; SameSite=Lax";
+                    document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
+                  }}
+                  className="amber-button cta-primary !bg-gradient-to-r !from-amber-400 !via-amber-500 !to-teal-500 !text-slate-950 font-bold shadow-[0_0_25px_rgba(245,158,11,0.35)] flex items-center gap-2 no-underline cursor-pointer"
                 >
                   <Sparkles size={17} className="animate-pulse text-slate-950" />
                   <span>{t.demoCta}</span>

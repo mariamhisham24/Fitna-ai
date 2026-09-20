@@ -246,6 +246,10 @@ function LoginPageContent() {
               {/* Instant 1-Click Demo Account */}
               <Link
                 href="/demo"
+                onClick={() => {
+                  document.cookie = "fitna_demo=true; path=/; max-age=31536000; SameSite=Lax";
+                  document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
+                }}
                 className="w-full mb-3.5 py-3 px-4 rounded-2xl flex flex-col items-center justify-center gap-0.5 bg-gradient-to-r from-amber-500/20 via-teal-500/20 to-amber-500/20 hover:from-amber-500/30 hover:via-teal-500/30 hover:to-amber-500/30 text-amber-300 border border-amber-400/50 hover:border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.18)] transition-all duration-200 group no-underline text-center cursor-pointer active:scale-[0.99]"
               >
                 <div className="flex items-center gap-2 font-bold text-sm text-amber-200">
