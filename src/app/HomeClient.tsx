@@ -126,6 +126,13 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
     document.documentElement.dir = nextLang === "en" ? "ltr" : "rtl";
   };
 
+  const handleEnterDemo = (e: React.MouseEvent) => {
+    e.preventDefault();
+    document.cookie = "fitna_demo=true; path=/; max-age=31536000; SameSite=Lax";
+    document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
+    window.location.href = "/dashboard/teacher";
+  };
+
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
   const NextArrow = ({ size = 16, className = "" }: { size?: number; className?: string }) =>
@@ -148,6 +155,13 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
             <button onClick={() => { scrollTo("how"); setMenu(false); }}>{t.nav[0]}</button>
             <button onClick={() => { scrollTo("features"); setMenu(false); }}>{t.nav[1]}</button>
             <button onClick={() => { scrollTo("pricing"); setMenu(false); }}>{t.nav[2]}</button>
+            <button
+              onClick={(e) => { setMenu(false); handleEnterDemo(e); }}
+              className="sm:hidden font-black text-amber-500 py-2.5 text-center flex items-center justify-center gap-1.5"
+            >
+              <Sparkles size={15} />
+              <span>{t.demoCta}</span>
+            </button>
           </nav>
           <div className="header-actions">
             <ThemeToggle />
@@ -155,13 +169,11 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
               {t.language}
             </button>
             <a
-              href="/demo"
-              onClick={() => {
-                document.cookie = "fitna_demo=true; path=/; max-age=31536000; SameSite=Lax";
-                document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
-              }}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-950 bg-amber-400/30 border border-amber-500/50 hover:bg-amber-400/50 dark:text-amber-300 dark:bg-amber-500/20 dark:border-amber-400/40 dark:hover:bg-amber-500/30 transition-all shadow-sm no-underline cursor-pointer"
+              href="/dashboard/teacher"
+              onClick={handleEnterDemo}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black bg-[#071b3a] text-[#ffb52e] border-2 border-[#ffb52e] hover:bg-[#0b2548] shadow-md dark:bg-[#ffb52e] dark:text-[#071b3a] dark:border-[#ffb52e] dark:hover:bg-[#f5a81e] transition-all no-underline cursor-pointer"
             >
+              <Sparkles size={14} className="shrink-0 animate-pulse text-[#ffb52e] dark:text-[#071b3a]" />
               <span>{t.demoCta}</span>
             </a>
             <button className="ghost-button" onClick={() => { window.location.href = getTrainingEntryPath(); }}>
@@ -185,12 +197,9 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
               <p className="hero-desc">{t.desc}</p>
               <div className="hero-buttons flex-wrap items-center gap-3">
                 <a
-                  href="/demo"
-                  onClick={() => {
-                    document.cookie = "fitna_demo=true; path=/; max-age=31536000; SameSite=Lax";
-                    document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
-                  }}
-                  className="amber-button cta-primary !bg-gradient-to-r !from-amber-400 !via-amber-500 !to-teal-500 !text-slate-950 font-bold shadow-[0_0_25px_rgba(245,158,11,0.35)] flex items-center gap-2 no-underline cursor-pointer"
+                  href="/dashboard/teacher"
+                  onClick={handleEnterDemo}
+                  className="amber-button cta-primary !bg-gradient-to-r !from-amber-400 !via-amber-500 !to-teal-500 !text-slate-950 font-black shadow-[0_0_25px_rgba(245,158,11,0.35)] flex items-center gap-2 no-underline cursor-pointer"
                 >
                   <Sparkles size={17} className="animate-pulse text-slate-950" />
                   <span>{t.demoCta}</span>

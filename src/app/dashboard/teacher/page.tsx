@@ -14,7 +14,7 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
 export default async function TeacherDashboardPage() {
   const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
-  const isDemo = cookieStore.get("fitna_demo")?.value === "true";
+  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
 
   const finalProfile = {
     full_name: "معلم تجريبي (Demo Teacher)",
@@ -35,15 +35,14 @@ export default async function TeacherDashboardPage() {
       user = userRes?.data?.user ?? null;
     } catch {}
 
-    if (!user && !isDemo) {
-      redirect("/login");
-    }
-
+    // Treat as demo if cookie is set or if unauthenticated
+    const isDemo = isDemoCookie || !user;
     const userId = user?.id || "e948bbf0-0a93-46dd-9b01-b85f229477dd";
 
-    const profileRes = isDemo
-      ? { data: null }
-      : await withTimeout(
+    let userProfile = finalProfile;
+    if (!isDemo && user) {
+      try {
+        const profileRes = await withTimeout(
           supabase
             .from("users")
             .select("full_name, email, teaching_experience, teaching_level, subject, preferred_theme, preferred_language, role")
@@ -52,22 +51,28 @@ export default async function TeacherDashboardPage() {
           2000,
           { data: null, error: null }
         );
+        if (profileRes?.data) {
+          userProfile = profileRes.data;
+        }
+      } catch {}
+    }
 
-    const userProfile = profileRes.data ?? finalProfile;
+    let completed: any[] = [];
+    try {
+      const sessionsRes = await withTimeout(
+        supabase
+          .from("sessions")
+          .select("id, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, started_at, status, topic_id")
+          .eq("teacher_id", userId)
+          .eq("status", "completed")
+          .order("started_at", { ascending: false })
+          .limit(5),
+        2000,
+        { data: [], error: null }
+      );
+      completed = (sessionsRes?.data ?? []) as any[];
+    } catch {}
 
-    const sessionsRes = await withTimeout(
-      supabase
-        .from("sessions")
-        .select("id, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, started_at, status, topic_id")
-        .eq("teacher_id", userId)
-        .eq("status", "completed")
-        .order("started_at", { ascending: false })
-        .limit(5),
-      2000,
-      { data: [], error: null }
-    );
-
-    const completed = (sessionsRes.data ?? []) as any[];
     const avgScore =
       completed.length > 0
         ? Math.round(
@@ -76,19 +81,20 @@ export default async function TeacherDashboardPage() {
         : null;
 
     // Fetch topics for display names
-    const topicIds = [...new Set(completed.map((s: any) => s.topic_id).filter(Boolean))] as string[];
-    const topicsRes = topicIds.length
-      ? await withTimeout(
+    const topicTitleObj: Record<string, string> = {};
+    try {
+      const topicIds = [...new Set(completed.map((s: any) => s.topic_id).filter(Boolean))] as string[];
+      if (topicIds.length) {
+        const topicsRes = await withTimeout(
           supabase.from("lesson_topics").select("id, title_ar, title_en").in("id", topicIds),
           2000,
           { data: [] as { id: string; title_ar: string; title_en: string | null }[], error: null }
-        )
-      : { data: [] as { id: string; title_ar: string; title_en: string | null }[], error: null };
-
-    const topicTitleObj: Record<string, string> = {};
-    for (const item of topicsRes.data ?? []) {
-      topicTitleObj[item.id] = lang === "en" && item.title_en ? item.title_en : item.title_ar;
-    }
+        );
+        for (const item of topicsRes?.data ?? []) {
+          topicTitleObj[item.id] = lang === "en" && item.title_en ? item.title_en : item.title_ar;
+        }
+      }
+    } catch {}
 
     return (
       <TeacherDashboardClient

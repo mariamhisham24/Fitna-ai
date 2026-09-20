@@ -8,6 +8,10 @@ import { cookies } from "next/headers";
 import type { Database } from "@/lib/supabase/types";
 import { DEMO_COOKIE_NAME, DEMO_USER } from "@/lib/auth/demo";
 
+const DEFAULT_SUPABASE_URL = "https://sadnddnbsihvhfthelcb.supabase.co";
+const DEFAULT_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhZG5kZG5ic2lodmhmdGhlbGNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDMzNjQsImV4cCI6MjEwMzY3OTM2NH0.zZwzCLPtHiFZbcOmne_qQUFwxjP1wE6R2a7SyAua7_c";
+const DEFAULT_SERVICE_ROLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhZG5kZG5ic2lodmhmdGhlbGNiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODEwMzM2NCwiZXhwIjoyMTAzNjc5MzY0fQ.zSTS9RgOYbb_c2rb-y8MdjCGcKmkOE6uNqRZ7cE609U";
+
 export async function createClient() {
   const cookieStore = await cookies();
   const isDemo = cookieStore.get(DEMO_COOKIE_NAME)?.value === "true";
@@ -54,8 +58,8 @@ export async function createClient() {
     });
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy.supabase.co";
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy";
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON;
 
   return createServerClient<Database>(
     url,
@@ -91,8 +95,8 @@ export async function createClient() {
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 export function createAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy.supabase.co";
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy";
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SERVICE_ROLE;
 
   return createSupabaseClient<Database>(
     url,
@@ -100,3 +104,4 @@ export function createAdminClient() {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 }
+
