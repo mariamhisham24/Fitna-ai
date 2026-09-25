@@ -31,7 +31,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   if (!mounted) {
     return (
       <button
-        className={`w-8 h-8 rounded-full border border-white/15 bg-white/5 flex items-center justify-center text-white/50 ${className}`}
+        className={`w-8 h-8 rounded-full border border-slate-300 dark:border-white/15 bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-white/50 ${className}`}
         aria-label="Toggle dark/light theme"
         disabled
       >
@@ -44,14 +44,14 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     <button
       type="button"
       onClick={toggleTheme}
-      className={`w-8 h-8 rounded-full border border-white/15 hover:border-white/30 bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all duration-200 transform active:scale-95 ${className}`}
+      className={`w-8 h-8 rounded-full border border-slate-300 hover:border-slate-400 dark:border-white/15 dark:hover:border-white/30 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center transition-all duration-200 transform active:scale-95 text-[#071B3A] dark:text-[#FFB52E] ${className}`}
       title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
       aria-label="Toggle dark/light theme"
     >
       {theme === "dark" ? (
         <Sun size={16} className="text-[#FFB52E] drop-shadow-[0_0_8px_rgba(255,181,46,0.6)] transition-transform duration-200 hover:rotate-45" />
       ) : (
-        <Moon size={16} className="text-[#F6F0E4] transition-transform duration-200 hover:-rotate-12" />
+        <Moon size={16} className="text-[#071B3A] drop-shadow-[0_0_4px_rgba(7,27,58,0.15)] transition-transform duration-200 hover:-rotate-12" />
       )}
     </button>
   );

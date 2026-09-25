@@ -52,7 +52,7 @@ const words = {
     roleTeacherDesc: "تدريب فردي ومحاكاة لمواقف الفصل",
     roleAdminTitle: "مشرف تربوي / مؤسسة",
     roleAdminDesc: "إدارة وتدريب فريق المعلمين ومتابعة نموهم",
-    demoBtn: "⚡ تجربة المنصة فوراً بحساب تجريبي (بدون تسجيل)",
+    demoBtn: "تجربة المنصة فوراً بحساب تجريبي (بدون تسجيل)",
     demoSub: "وصول كامل ومجاني للمعلم والمحاكاة بنقرة واحدة"
   },
   en: {
@@ -96,7 +96,7 @@ const words = {
     roleTeacherDesc: "Individual classroom practice & simulation",
     roleAdminTitle: "Leader / Institution",
     roleAdminDesc: "Manage and train teacher teams",
-    demoBtn: "⚡ 1-Click Instant Demo (No Signup Required)",
+    demoBtn: "1-Click Instant Demo (No Signup Required)",
     demoSub: "Full instant access to the simulation & classroom"
   }
 };
@@ -187,9 +187,6 @@ function LoginPageContent() {
           <span className="agent-line line-a" />
           <span className="agent-line line-b" />
           <span className="agent-line line-c" />
-          <div className="agent-label">
-            <Sparkles size={14} /> AGENTIC PRACTICE
-          </div>
         </div>
         <div className="auth-visual-footer">
           <span>
@@ -250,13 +247,13 @@ function LoginPageContent() {
                   document.cookie = "fitna_demo=true; path=/; max-age=31536000; SameSite=Lax";
                   document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
                 }}
-                className="w-full mb-3.5 py-3 px-4 rounded-2xl flex flex-col items-center justify-center gap-0.5 bg-gradient-to-r from-amber-500/20 via-teal-500/20 to-amber-500/20 hover:from-amber-500/30 hover:via-teal-500/30 hover:to-amber-500/30 text-amber-300 border border-amber-400/50 hover:border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.18)] transition-all duration-200 group no-underline text-center cursor-pointer active:scale-[0.99]"
+                className="demo-pop-btn w-full mb-3 py-2.5 px-4 rounded-xl flex flex-col items-center justify-center gap-0.5 bg-amber-500/[0.07] hover:bg-amber-500/[0.12] dark:bg-amber-400/10 dark:hover:bg-amber-400/15 border border-amber-400/40 hover:border-amber-400/80 group no-underline text-center cursor-pointer"
               >
-                <div className="flex items-center gap-2 font-bold text-sm text-amber-200">
-                  <Sparkles size={16} className="text-amber-400 animate-pulse" />
+                <div className="flex items-center gap-2 font-bold text-sm text-[#071b3a] dark:text-[#ffb52e]">
+                  <Sparkles size={15} className="text-amber-500 dark:text-[#ffb52e] shrink-0 transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12" />
                   <span>{t.demoBtn}</span>
                 </div>
-                <span className="text-[11px] text-slate-300/80 font-normal">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
                   {t.demoSub}
                 </span>
               </Link>
@@ -278,8 +275,8 @@ function LoginPageContent() {
               </button>
 
               {googleComingSoon && (
-                <div className="mt-2.5 p-3 bg-amber-500/15 border border-amber-400/30 rounded-xl text-xs text-amber-300 font-medium text-center flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+                <div className="mt-2.5 p-3 bg-amber-50 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-400/30 rounded-xl text-xs text-amber-900 dark:text-amber-200 font-semibold text-center flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200 shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-ping shrink-0" />
                   <span>{t.googleComingSoon}</span>
                 </div>
               )}

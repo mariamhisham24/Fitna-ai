@@ -39,7 +39,6 @@ const copy = {
     ctaTitle: "الفصل القادم يبدأ هنا",
     ctaText: "حوّل القلق إلى ممارسة، والممارسة إلى حضور واثق.",
     cta: "ابدأ رحلتك التدريبية الآن",
-    demoCta: "⚡ دخول تجريبي فوري (بدون تسجيل)",
     language: "EN",
     dark: "الوضع الداكن",
     light: "الوضع الفاتح"
@@ -72,7 +71,6 @@ const copy = {
     ctaTitle: "Your next classroom starts here",
     ctaText: "Turn uncertainty into practice, and practice into confident presence.",
     cta: "Start your training journey",
-    demoCta: "⚡ Instant 1-Click Demo (No Signup)",
     language: "عربي",
     dark: "Dark mode",
     light: "Light mode"
@@ -126,13 +124,6 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
     document.documentElement.dir = nextLang === "en" ? "ltr" : "rtl";
   };
 
-  const handleEnterDemo = (e: React.MouseEvent) => {
-    e.preventDefault();
-    document.cookie = "fitna_demo=true; path=/; max-age=31536000; SameSite=Lax";
-    document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
-    window.location.href = "/dashboard/teacher";
-  };
-
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
   const NextArrow = ({ size = 16, className = "" }: { size?: number; className?: string }) =>
@@ -155,27 +146,12 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
             <button onClick={() => { scrollTo("how"); setMenu(false); }}>{t.nav[0]}</button>
             <button onClick={() => { scrollTo("features"); setMenu(false); }}>{t.nav[1]}</button>
             <button onClick={() => { scrollTo("pricing"); setMenu(false); }}>{t.nav[2]}</button>
-            <button
-              onClick={(e) => { setMenu(false); handleEnterDemo(e); }}
-              className="sm:hidden font-black text-amber-500 py-2.5 text-center flex items-center justify-center gap-1.5"
-            >
-              <Sparkles size={15} />
-              <span>{t.demoCta}</span>
-            </button>
           </nav>
           <div className="header-actions">
             <ThemeToggle />
             <button className="language-button" onClick={flipLanguage} title={lang === "ar" ? "Switch to English" : "التحويل إلى العربية"}>
               {t.language}
             </button>
-            <a
-              href="/dashboard/teacher"
-              onClick={handleEnterDemo}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black bg-[#071b3a] text-[#ffb52e] border-2 border-[#ffb52e] hover:bg-[#0b2548] shadow-md dark:bg-[#ffb52e] dark:text-[#071b3a] dark:border-[#ffb52e] dark:hover:bg-[#f5a81e] transition-all no-underline cursor-pointer"
-            >
-              <Sparkles size={14} className="shrink-0 animate-pulse text-[#ffb52e] dark:text-[#071b3a]" />
-              <span>{t.demoCta}</span>
-            </a>
             <button className="ghost-button" onClick={() => { window.location.href = getTrainingEntryPath(); }}>
               {t.login}
             </button>
@@ -196,15 +172,13 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
               <h1>{t.title}</h1>
               <p className="hero-desc">{t.desc}</p>
               <div className="hero-buttons flex-wrap items-center gap-3">
-                <a
-                  href="/dashboard/teacher"
-                  onClick={handleEnterDemo}
-                  className="amber-button cta-primary !bg-gradient-to-r !from-amber-400 !via-amber-500 !to-teal-500 !text-slate-950 font-black shadow-[0_0_25px_rgba(245,158,11,0.35)] flex items-center gap-2 no-underline cursor-pointer"
+                <button
+                  className="amber-button cta-primary"
+                  onClick={() => { window.location.href = getTrainingEntryPath(); }}
                 >
-                  <Sparkles size={17} className="animate-pulse text-slate-950" />
-                  <span>{t.demoCta}</span>
+                  <span>{t.primary}</span>
                   <NextArrow size={17} />
-                </a>
+                </button>
                 <button className="outline-button" onClick={() => scrollTo("how")}>
                   <CirclePlay size={18} />
                   {t.secondary}
