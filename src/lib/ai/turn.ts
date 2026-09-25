@@ -201,6 +201,8 @@ export function sanitizeStudentResponse(
     unknownStudentName?: string | null;
     isWhyQuestion?: boolean;
     isTeacherApology?: boolean;
+    isGreeting?: boolean;
+    teacherUtterance?: string;
     currentFractions?: string[];
     hasUnlikeDenominators?: boolean;
     isCommonDenominatorTaught?: boolean;
@@ -382,6 +384,28 @@ export function sanitizeStudentResponse(
     }
   }
 
+  // 5g. Intercept accidental lesson hallucinations during greetings or social check-ins
+  const teacherSpeech = context?.teacherUtterance || "";
+  const isGreetingInteraction =
+    Boolean(context?.isGreeting) ||
+    /(?:صباح\s*الخير|مساء\s*الخير|سلام\s*عليكم|السلام\s*عليكم|سلامو\s*عليكم|عاملين\s*(?:ايه|إيه|اي)|ازيكم|ازيكو)/i.test(
+      teacherSpeech
+    );
+
+  if (isGreetingInteraction) {
+    if (/(?:تغير\s*مناخي|مناخ|درجات\s*حرارة|بيئة|كوكب|كسر|مقام|بسط|تبخر|تكاثف|مادة|صلب|سائل|غاز)/i.test(text)) {
+      if (/صباح\s*الخير/i.test(teacherSpeech)) {
+        text = `صباح النور ${cleanTitle}! الحمد لله كويسين.`;
+      } else if (/مساء\s*الخير/i.test(teacherSpeech)) {
+        text = `مساء النور ${cleanTitle}!`;
+      } else if (/سلام/i.test(teacherSpeech)) {
+        text = `وعليكم السلام ${cleanTitle}! الحمد لله كويسين.`;
+      } else {
+        text = `الحمد لله ${cleanTitle} كويسين ومتحمسين للحصة!`;
+      }
+    }
+  }
+
   // 6. Length constraint: Children in 4th/5th grade do NOT write 30-word academic speeches!
   // If text is longer than 18 words, take the first 1-2 short sentences.
   const words = text.split(/\s+/).filter(Boolean);
@@ -540,9 +564,45 @@ export async function generateStudentReactions(params: {
       teacherUtterance
     );
 
-  const systemPrompt = buildClassroomSwarmSystemPrompt(lessonContext);
+  const systemPrompt = buildClassroomSwarmSystemPrompt(isGreeting ? null : lessonContext);
 
   async function generateSpeechForCandidate(candidate: (typeof decision.candidateSpeakers)[0]): Promise<string | null> {
+    // 1. Direct, instant, natural Egyptian responses for classroom conversational rituals (Zero hallucination):
+    if (isGreeting) {
+      if (/صباح\s*الخير/i.test(teacherUtterance)) {
+        return `صباح النور ${cleanTitle}! الحمد لله كويسين.`;
+      }
+      if (/مساء\s*الخير/i.test(teacherUtterance)) {
+        return `مساء النور ${cleanTitle}!`;
+      }
+      if (/سلام/i.test(teacherUtterance)) {
+        return `وعليكم السلام ${cleanTitle}! الحمد لله كويسين.`;
+      }
+      if (/عاملين\s*(?:ايه|إيه|اي)|ازيكم|ازيكو/i.test(teacherUtterance)) {
+        return `الحمد لله ${cleanTitle} تمام، حضرتك عامل${cleanTitle.includes("ميس") ? "ة" : ""} إيه؟`;
+      }
+      if (/سامعيني|صوتي\s*واضح/i.test(teacherUtterance)) {
+        return `أيوه ${cleanTitle} سامعين حضرتك كويس!`;
+      }
+      return `أهلاً ${cleanTitle}! الحمد لله كويسين.`;
+    }
+
+    if (intentAnalysis.intent === "religious_blessing") {
+      return "عليه أفضل الصلاة والسلام.";
+    }
+
+    if (intentAnalysis.intent === "teacher_identity") {
+      return `آسفين ${cleanTitle} خلاص حفظنا!`;
+    }
+
+    if (intentAnalysis.intent === "attention_check") {
+      return `معاك${cleanTitle.includes("ميس") ? "ِ" : ""} ${cleanTitle} ومركزين!`;
+    }
+
+    if (intentAnalysis.intent === "session_farewell") {
+      return `مع السلامة ${cleanTitle}! شكراً لحضرتك.`;
+    }
+
     const studentBrain = studentBrains.find((s) => s.personaId === candidate.personaId);
     const persona = personas.find((p) => p.id === candidate.personaId);
 
@@ -553,7 +613,7 @@ export async function generateStudentReactions(params: {
       confidence: studentBrain?.confidence ?? 70,
       emotion: candidate.spokenEmotion || "confident",
       reasonToSpeak: candidate.reasonToSpeak,
-      lessonContext,
+      lessonContext: isGreeting ? null : lessonContext,
       teacherUtterance,
       recentHistory: recentHistory.slice(-1000),
       currentQuestionText,
@@ -762,6 +822,8 @@ export async function generateStudentReactions(params: {
           hasUnlikeDenominators: qContext.hasUnlikeDenominators,
           isCommonDenominatorTaught,
           activeMisconception: candidate.activeMisconception,
+          isGreeting,
+          teacherUtterance,
         })
       : null;
     const finalText = sanitized || defaultFallback;
