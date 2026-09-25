@@ -12,9 +12,35 @@ const DEFAULT_SUPABASE_URL = "https://sadnddnbsihvhfthelcb.supabase.co";
 const DEFAULT_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhZG5kZG5ic2lodmhmdGhlbGNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDMzNjQsImV4cCI6MjEwMzY3OTM2NH0.zZwzCLPtHiFZbcOmne_qQUFwxjP1wE6R2a7SyAua7_c";
 const DEFAULT_SERVICE_ROLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhZG5kZG5ic2lodmhmdGhlbGNiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODEwMzM2NCwiZXhwIjoyMTAzNjc5MzY0fQ.zSTS9RgOYbb_c2rb-y8MdjCGcKmkOE6uNqRZ7cE609U";
 
-export async function createClient() {
+async function createRealServerClient(cookieStore: any) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON;
+
+  return createServerClient<Database>(
+    url,
+    anonKey,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Server Component context
+          }
+        },
+      },
+    }
+  );
+}
+
+export async function createClient(options?: { bypassDemo?: boolean }) {
   const cookieStore = await cookies();
-  const isDemo = cookieStore.get(DEMO_COOKIE_NAME)?.value === "true";
+  const isDemo = !options?.bypassDemo && cookieStore.get(DEMO_COOKIE_NAME)?.value === "true";
 
   if (isDemo) {
     let baseClient: any = null;
@@ -48,6 +74,48 @@ export async function createClient() {
               } catch {}
               return { error: null };
             },
+            signInWithPassword: async (credentials: any) => {
+              try {
+                cookieStore.delete(DEMO_COOKIE_NAME);
+                const real = await createRealServerClient(cookieStore);
+                return await real.auth.signInWithPassword(credentials);
+              } catch (e: any) {
+                return { data: { user: null, session: null }, error: e };
+              }
+            },
+            signUp: async (credentials: any) => {
+              try {
+                cookieStore.delete(DEMO_COOKIE_NAME);
+                const real = await createRealServerClient(cookieStore);
+                return await real.auth.signUp(credentials);
+              } catch (e: any) {
+                return { data: { user: null, session: null }, error: e };
+              }
+            },
+            resetPasswordForEmail: async (email: string, opts?: any) => {
+              try {
+                const real = await createRealServerClient(cookieStore);
+                return await real.auth.resetPasswordForEmail(email, opts);
+              } catch (e: any) {
+                return { data: {}, error: e };
+              }
+            },
+            verifyOtp: async (params: any) => {
+              try {
+                const real = await createRealServerClient(cookieStore);
+                return await real.auth.verifyOtp(params);
+              } catch (e: any) {
+                return { data: { user: null, session: null }, error: e };
+              }
+            },
+            updateUser: async (attributes: any) => {
+              try {
+                const real = await createRealServerClient(cookieStore);
+                return await real.auth.updateUser(attributes);
+              } catch (e: any) {
+                return { data: { user: null }, error: e };
+              }
+            },
           };
         }
         if (typeof target[prop] === "function") {
@@ -58,31 +126,7 @@ export async function createClient() {
     });
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON;
-
-  return createServerClient<Database>(
-    url,
-    anonKey,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Called from a Server Component with no request context to
-            // write to — safe to ignore because middleware refreshes the
-            // session on every request anyway.
-          }
-        },
-      },
-    }
-  );
+  return createRealServerClient(cookieStore);
 }
 
 /**

@@ -153,7 +153,8 @@ function LoginPageContent() {
   const t = words[lang];
   const isLogin = mode === "login";
 
-  const activeError = showForgot ? resetState.error : isLogin ? signInState.error : signUpState.error;
+  const queryError = searchParams.get("error");
+  const activeError = (showForgot ? resetState.error : isLogin ? signInState.error : signUpState.error) || (!signInState.error && !signUpState.error && !resetState.error ? queryError : null);
   const resetSent = resetSuccessParam || (!resetState.error && !resetPending && resetState !== initialState);
 
   return (
@@ -280,7 +281,13 @@ function LoginPageContent() {
 
           {resetSent && showForgot && (
             <div className="p-3 mb-4 bg-teal-500/10 border border-teal-500/30 rounded-lg text-xs text-teal-400 font-medium text-center">
-              {t.resetLinkSent}
+              {resetState.info || t.resetLinkSent}
+            </div>
+          )}
+
+          {signUpState.info && !isLogin && !showForgot && (
+            <div className="p-3.5 mb-4 bg-emerald-500/15 border border-emerald-500/40 rounded-xl text-xs text-emerald-600 dark:text-emerald-400 font-medium text-center leading-relaxed animate-in fade-in">
+              {signUpState.info}
             </div>
           )}
 

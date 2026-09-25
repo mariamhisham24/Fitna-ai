@@ -38,10 +38,11 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = searchParams.get("next") ?? "/reset-password";
+  const defaultNext = type === "recovery" ? "/reset-password" : "/dashboard/teacher";
+  const next = searchParams.get("next") ?? defaultNext;
 
   if (tokenHash && type) {
-    const supabase = await createClient();
+    const supabase = await createClient({ bypassDemo: true });
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
@@ -49,7 +50,11 @@ export async function GET(request: NextRequest) {
     console.error("verifyOtp failed:", error.message);
   }
 
+  const failMsg = type === "recovery" 
+    ? "رابط استعادة كلمة المرور غير صالح أو منتهي الصلاحية"
+    : "رابط تأكيد الحساب غير صالح أو منتهي الصلاحية";
+
   return NextResponse.redirect(
-    `${origin}/login?error=${encodeURIComponent("رابط الاسترجاع غير صالح أو منتهي الصلاحية")}`
+    `${origin}/login?error=${encodeURIComponent(failMsg)}`
   );
 }

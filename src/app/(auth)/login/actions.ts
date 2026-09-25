@@ -1,119 +1,206 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { DEMO_COOKIE_NAME } from "@/lib/auth/demo";
 
-export type ActionState = { error: string | null };
+export type ActionState = { error: string | null; info?: string | null };
 
 function validateEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-/** Real sign-in against Supabase Auth. No mock/localStorage flag. */
+/** Real sign-in against Supabase Auth. */
 export async function signInAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const email = String(formData.get("email") || "").trim();
-  const password = String(formData.get("password") || "");
+  let targetDashboard: string | null = null;
 
-  if (!validateEmail(email)) return { error: "البريد الإلكتروني غير صالح" };
-  if (password.length < 6) return { error: "كلمة المرور لازم تكون 6 أحرف على الأقل" };
+  try {
+    const email = String(formData.get("email") || "").trim();
+    const password = String(formData.get("password") || "");
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!validateEmail(email)) return { error: "البريد الإلكتروني غير صالح" };
+    if (password.length < 6) return { error: "كلمة المرور لازم تكون 6 أحرف على الأقل" };
 
-  if (error) {
-    if (error.message.includes("Invalid login credentials")) {
-      return { error: "البريد الإلكتروني أو كلمة المرور غلط" };
-    }
-    return { error: error.message };
-  }
-
-  // Route to the right dashboard based on the role stored in public.users.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role, preferred_theme")
-    .eq("id", user!.id)
-    .single();
-
-  // Apply the account's saved theme preference on this device
-  // immediately (spec §6.2: preference follows the account, not just
-  // the browser). Without this, someone who set dark mode on another
-  // device wouldn't see it here until they visited Settings again.
-  if (profile?.preferred_theme) {
     const cookieStore = await cookies();
-    cookieStore.set("theme", profile.preferred_theme, { path: "/", maxAge: 60 * 60 * 24 * 365 });
+    // Wipe demo cookie so caller uses authentic session
+    cookieStore.delete(DEMO_COOKIE_NAME);
+
+    const supabase = await createClient({ bypassDemo: true });
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      if (error.message.includes("Invalid login credentials")) {
+        return { error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" };
+      }
+      if (error.message.includes("Email not confirmed")) {
+        return { error: "يرجى تأكيد بريدك الإلكتروني أولاً عبر الرابط المرسل إلى بريدك." };
+      }
+      return { error: error.message };
+    }
+
+    // Safely retrieve user
+    let user = authData?.user;
+    if (!user) {
+      const userRes = await supabase.auth.getUser();
+      user = userRes.data?.user;
+    }
+
+    if (!user) {
+      return { error: "تعذر التحقق من بيانات الدخول، يرجى المحاولة مرة أخرى." };
+    }
+
+    // Safe profile lookup
+    let role = "teacher";
+    try {
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role, preferred_theme")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profile?.role) {
+        role = profile.role;
+      }
+
+      if (profile?.preferred_theme) {
+        cookieStore.set("theme", profile.preferred_theme, { path: "/", maxAge: 60 * 60 * 24 * 365 });
+      }
+    } catch {
+      // Default to teacher if user profile query has any issue
+    }
+
+    targetDashboard = role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
+  } catch (err: any) {
+    if (err?.digest?.startsWith("NEXT_REDIRECT")) {
+      throw err;
+    }
+    console.error("signInAction error:", err);
+    return { error: err?.message || "حدث خطأ غير متوقع أثناء تسجيل الدخول" };
   }
 
-  redirect(profile?.role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher");
+  if (targetDashboard) {
+    redirect(targetDashboard);
+  }
+
+  return { error: null };
 }
 
-/** Real sign-up against Supabase Auth. Role is stored in user metadata
- * and picked up by the `handle_new_auth_user` trigger (see schema.sql)
- * to populate public.users.role server-side. */
+/** Real sign-up against Supabase Auth. */
 export async function signUpAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const email = String(formData.get("email") || "").trim();
-  const password = String(formData.get("password") || "");
-  const fullName = String(formData.get("full_name") || "").trim();
-  const role = String(formData.get("role") || "teacher");
+  let targetDashboard: string | null = null;
 
-  if (!validateEmail(email)) return { error: "البريد الإلكتروني غير صالح" };
-  if (password.length < 6) return { error: "كلمة المرور لازم تكون 6 أحرف على الأقل" };
-  if (!fullName) return { error: "من فضلك اكتب اسمك" };
-  if (role !== "teacher" && role !== "institution_admin") {
-    return { error: "من فضلك اختر كيف هتستخدم فِطنة" };
-  }
+  try {
+    const email = String(formData.get("email") || "").trim();
+    const password = String(formData.get("password") || "");
+    const fullName = String(formData.get("full_name") || "").trim();
+    const role = String(formData.get("role") || "teacher");
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: fullName, role } },
-  });
-
-  if (error) {
-    if (error.message.includes("already registered")) {
-      return { error: "الإيميل ده متسجل بالفعل، جرب تسجيل الدخول" };
+    if (!validateEmail(email)) return { error: "البريد الإلكتروني غير صالح" };
+    if (password.length < 6) return { error: "كلمة المرور لازم تكون 6 أحرف على الأقل" };
+    if (!fullName) return { error: "من فضلك اكتب اسمك" };
+    if (role !== "teacher" && role !== "institution_admin") {
+      return { error: "من فضلك اختر كيف ستستخدم فِطنة" };
     }
-    return { error: error.message };
+
+    const cookieStore = await cookies();
+    cookieStore.delete(DEMO_COOKIE_NAME);
+
+    const supabase = await createClient({ bypassDemo: true });
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fitna-ai.vercel.app";
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName, role },
+        emailRedirectTo: `${appUrl}/auth/confirm?next=${role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher"}`,
+      },
+    });
+
+    if (error) {
+      if (error.message.includes("already registered") || error.message.includes("User already registered")) {
+        return { error: "هذا البريد مسجل بالفعل، يرجى تسجيل الدخول" };
+      }
+      return { error: error.message };
+    }
+
+    // Safety fallback: ensure profile exists in public.users
+    try {
+      if (data?.user?.id) {
+        const adminClient = createAdminClient();
+        await adminClient.from("users").upsert({
+          id: data.user.id,
+          email,
+          full_name: fullName,
+          role,
+        }, { onConflict: "id" });
+      }
+    } catch {
+      // Non-fatal if schema trigger already created it
+    }
+
+    // If session was granted immediately (email confirmation disabled in Supabase)
+    if (data?.session) {
+      targetDashboard = role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
+    } else {
+      // Email confirmation is required by Supabase project settings
+      return {
+        error: null,
+        info: "تم إنشاء الحساب بنجاح! تم إرسال رابط تأكيد إلى بريدك الإلكتروني، يرجى تفقد صندوق الوارد أو البريد غير الهام (Spam) لتفعيل الحساب ثم تسجيل الدخول.",
+      };
+    }
+  } catch (err: any) {
+    if (err?.digest?.startsWith("NEXT_REDIRECT")) {
+      throw err;
+    }
+    console.error("signUpAction error:", err);
+    return { error: err?.message || "حدث خطأ غير متوقع أثناء إنشاء الحساب" };
   }
 
-  redirect(role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher");
+  if (targetDashboard) {
+    redirect(targetDashboard);
+  }
+
+  return { error: null };
 }
 
-/** Sends a real password-reset email via Supabase Auth (SMTP configured
- * in the Supabase dashboard, or swap for a Resend-backed custom flow). */
+/** Sends a real password-reset email via Supabase Auth */
 export async function requestPasswordResetAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const email = String(formData.get("email") || "").trim();
-  if (!validateEmail(email)) return { error: "البريد الإلكتروني غير صالح" };
+  try {
+    const email = String(formData.get("email") || "").trim();
+    if (!validateEmail(email)) return { error: "البريد الإلكتروني غير صالح" };
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
-  });
+    const cookieStore = await cookies();
+    cookieStore.delete(DEMO_COOKIE_NAME);
 
-  if (error) return { error: error.message };
-  return { error: null };
+    const supabase = await createClient({ bypassDemo: true });
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fitna-ai.vercel.app";
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${appUrl}/auth/confirm?type=recovery&next=/reset-password`,
+    });
+
+    if (error) return { error: error.message };
+    return { error: null, info: "تم إرسال رابط استعادة كلمة المرور إلى بريدك." };
+  } catch (err: any) {
+    return { error: err?.message || "حدث خطأ غير متوقع" };
+  }
 }
 
-import { DEMO_COOKIE_NAME } from "@/lib/auth/demo";
-
 export async function signOutAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete(DEMO_COOKIE_NAME);
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete(DEMO_COOKIE_NAME);
+    const supabase = await createClient({ bypassDemo: true });
+    await supabase.auth.signOut();
+  } catch {}
   redirect("/login");
 }
