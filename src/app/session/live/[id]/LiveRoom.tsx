@@ -632,6 +632,7 @@ export function LiveRoom({
               await new Promise<void>((resolve) => {
                 const finish = () => {
                   setSpeakingPersonaId(null);
+                  speakingPersonaIdRef.current = null;
                   setActiveSpeakingAudio(null);
                   if (shouldRevoke) {
                     URL.revokeObjectURL(audioUrl);
@@ -645,6 +646,7 @@ export function LiveRoom({
                 // CRITICAL: Activate speaking state only when audio playback actually starts!
                 audio.onplay = () => {
                   setSpeakingPersonaId(s.personaId);
+                  speakingPersonaIdRef.current = s.personaId;
                   setActiveSpeakingAudio(audio);
                 };
 
@@ -655,10 +657,12 @@ export function LiveRoom({
               await new Promise((r) => setTimeout(r, 200));
             } else {
               setSpeakingPersonaId(null);
+              speakingPersonaIdRef.current = null;
               setActiveSpeakingAudio(null);
             }
           } catch {
             setSpeakingPersonaId(null);
+            speakingPersonaIdRef.current = null;
             setActiveSpeakingAudio(null);
           }
         } else if (!loggedSystemEvent && s.state === "distracted" && prevStudent?.state !== "distracted") {
@@ -804,6 +808,13 @@ export function LiveRoom({
         if (err?.error !== "no-speech") {
           console.warn("SpeechRecognition notice:", err?.error);
         }
+        if (err?.error === "aborted" || err?.error === "network" || err?.error === "audio-capture") {
+          setTimeout(() => {
+            if (isLiveOpenMicRef.current && !isTeacherMutedRef.current && !isProcessingRef.current && speakingPersonaIdRef.current === null) {
+              restartSpeechRecognitionRef.current?.();
+            }
+          }, 350);
+        }
       };
 
       rec.onend = () => {
@@ -859,8 +870,17 @@ export function LiveRoom({
       speechRecognitionRef.current = rec;
       try {
         rec.start();
+        isRecognitionRunningRef.current = true;
       } catch (err) {
-        console.warn("Error starting speech recognition:", err);
+        console.warn("Error starting speech recognition, retrying shortly:", err);
+        setTimeout(() => {
+          try {
+            if (speechRecognitionRef.current === rec && !isRecognitionRunningRef.current) {
+              rec.start();
+              isRecognitionRunningRef.current = true;
+            }
+          } catch {}
+        }, 200);
       }
     }
   }, [initSpeechRecognition]);
@@ -939,12 +959,10 @@ export function LiveRoom({
       const blob = new Blob(openMicChunksRef.current, { type: "audio/webm" });
       openMicChunksRef.current = [];
 
-      const hasDirect = directTranscript && directTranscript.length >= 2;
-      // Speech recognition support check: if browser supports SpeechRecognition, only trigger turn if speech was recognized!
-      // This strictly prevents room noise/fan silence from being sent to Whisper and creating ghost turns ("كيغانا وتحجيل رائعاً ناما كونطلحات")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const isSpeechRecSupported = typeof window !== "undefined" && Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-      const canFallbackToAudio = !isSpeechRecSupported && blob && blob.size >= 2500 && durationMs >= 800;
+      const hasDirect = Boolean(directTranscript && directTranscript.trim().length >= 2);
+      // Voice detection fallback: if browser SpeechRecognition produced text OR real voice audio was captured (> 1500 bytes and > 500ms),
+      // we ALWAYS process the turn (falling back to server Whisper STT if needed) so teacher's speech is NEVER lost!
+      const canFallbackToAudio = Boolean(blob && blob.size >= 1500 && durationMs >= 500);
 
       if (hasDirect || canFallbackToAudio) {
         const preview = directTranscript
@@ -952,7 +970,7 @@ export function LiveRoom({
           : (isRtl ? "جارِ التعرف على صوتك بدقة..." : "Transcribing audio...");
         setLiveTranscriptPreview(preview);
         setIsTranscriptProcessing(true);
-        await handleRecordingComplete(blob, Math.max(durationMs, 800), directTranscript);
+        await handleRecordingComplete(blob, Math.max(durationMs, 600), directTranscript);
       } else {
         setLiveTranscriptPreview("");
         setIsTranscriptProcessing(false);
@@ -974,6 +992,16 @@ export function LiveRoom({
       const ctx = new AudioCtx();
       audioContextRef.current = ctx;
 
+      // Ensure AudioContext is active and not suspended by browser autoplay policy
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+      ctx.onstatechange = () => {
+        if (ctx.state === "suspended") {
+          ctx.resume().catch(() => {});
+        }
+      };
+
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
@@ -984,8 +1012,8 @@ export function LiveRoom({
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
 
-      const VAD_THRESHOLD = 36; // Calibrated above laptop fan/ambient hiss to only capture intentional speech
-      const SILENCE_COMMIT_MS = 1200; // 1.2s natural pause to trigger turn
+      // Calibrated VAD threshold for conversational human speech (bins 1-28: ~150Hz - 4000Hz)
+      const VAD_THRESHOLD = 15;
 
       if (vadIntervalRef.current) clearInterval(vadIntervalRef.current);
 
@@ -1024,18 +1052,20 @@ export function LiveRoom({
         }
 
         analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
+        // Measure energy specifically in the human speech frequency band (bins 1 to 28, ~150Hz to ~4kHz)
+        let speechSum = 0;
+        const speechBinsCount = Math.min(bufferLength, 28);
+        for (let i = 1; i < speechBinsCount; i++) {
+          speechSum += dataArray[i];
         }
-        const average = sum / bufferLength;
+        const speechAverage = speechSum / Math.max(1, speechBinsCount - 1);
 
-        // Visualizer level 0-100
-        const level = Math.min(100, Math.round((average / 50) * 100));
+        // Visualizer level 0-100 based on voice activity
+        const level = Math.min(100, Math.round((speechAverage / 55) * 100));
         setAudioLevel(level);
 
         const now = Date.now();
-        if (average > VAD_THRESHOLD) {
+        if (speechAverage > VAD_THRESHOLD) {
           if (!speechDetectedRef.current) {
             speechDetectedRef.current = true;
             speechStartTimeRef.current = now;
@@ -1052,7 +1082,7 @@ export function LiveRoom({
             // Dynamic silence threshold: if Web Speech API has already transcribed text, commit faster (650ms vs 950ms)!
             const hasAccumulatedText = nativeTranscriptAccumulatorRef.current.trim().length >= 2;
             const effectiveSilenceMs = hasAccumulatedText ? 650 : 950;
-            const minSpeechMs = hasAccumulatedText ? 350 : 700;
+            const minSpeechMs = hasAccumulatedText ? 350 : 600;
 
             if (silenceDuration > effectiveSilenceMs) {
               speechDetectedRef.current = false;
