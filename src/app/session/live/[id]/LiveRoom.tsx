@@ -1012,8 +1012,8 @@ export function LiveRoom({
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
 
-      // Calibrated VAD threshold for conversational human speech (bins 1-28: ~150Hz - 4000Hz)
-      const VAD_THRESHOLD = 15;
+      let ambientNoiseFloor = 14;
+      const MAX_CONTINUOUS_SPEECH_MS = 7500;
 
       if (vadIntervalRef.current) clearInterval(vadIntervalRef.current);
 
@@ -1060,12 +1060,27 @@ export function LiveRoom({
         }
         const speechAverage = speechSum / Math.max(1, speechBinsCount - 1);
 
-        // Visualizer level 0-100 based on voice activity
-        const level = Math.min(100, Math.round((speechAverage / 55) * 100));
+        // Adapt ambient noise floor dynamically when not actively speaking
+        if (!speechDetectedRef.current) {
+          ambientNoiseFloor = ambientNoiseFloor * 0.9 + speechAverage * 0.1;
+        }
+
+        // Adaptive thresholds with hysteresis:
+        // Must surpass startThreshold to trigger speech; must stay above continueThreshold to maintain speech
+        const startThreshold = Math.max(22, Math.min(48, ambientNoiseFloor + 10));
+        const continueThreshold = Math.max(16, Math.min(38, ambientNoiseFloor + 5));
+
+        // Visualizer level 0-100 based on voice activity relative to ambient floor
+        const dynamicLevel = Math.max(0, speechAverage - ambientNoiseFloor);
+        const level = Math.min(100, Math.round((dynamicLevel / 38) * 100));
         setAudioLevel(level);
 
         const now = Date.now();
-        if (speechAverage > VAD_THRESHOLD) {
+        const isVoiceActive = speechDetectedRef.current
+          ? speechAverage > continueThreshold
+          : speechAverage > startThreshold;
+
+        if (isVoiceActive) {
           if (!speechDetectedRef.current) {
             speechDetectedRef.current = true;
             speechStartTimeRef.current = now;
@@ -1073,16 +1088,24 @@ export function LiveRoom({
           }
           lastSpeechTimeRef.current = now;
           setIsTeacherSpeaking(true);
+
+          // Force commit turn if continuous speech reaches maximum ceiling (e.g., 7.5s)
+          if (now - speechStartTimeRef.current > MAX_CONTINUOUS_SPEECH_MS) {
+            speechDetectedRef.current = false;
+            setIsTeacherSpeaking(false);
+            commitOpenMicTurn();
+            return;
+          }
         } else {
           setIsTeacherSpeaking(false);
           if (speechDetectedRef.current) {
             const silenceDuration = now - lastSpeechTimeRef.current;
             const speechDuration = lastSpeechTimeRef.current - speechStartTimeRef.current;
 
-            // Dynamic silence threshold: if Web Speech API has already transcribed text, commit faster (650ms vs 950ms)!
+            // Fast silence commit: 500ms when text is already transcribed, 800ms for pure audio
             const hasAccumulatedText = nativeTranscriptAccumulatorRef.current.trim().length >= 2;
-            const effectiveSilenceMs = hasAccumulatedText ? 650 : 950;
-            const minSpeechMs = hasAccumulatedText ? 350 : 600;
+            const effectiveSilenceMs = hasAccumulatedText ? 500 : 800;
+            const minSpeechMs = hasAccumulatedText ? 280 : 500;
 
             if (silenceDuration > effectiveSilenceMs) {
               speechDetectedRef.current = false;
