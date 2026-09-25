@@ -39,9 +39,15 @@ export default function RootError({
           حدث خطأ غير متوقع أثناء المعالجة
         </h1>
 
-        <p className="text-sm text-slate-300 leading-relaxed mb-8">
+        <p className="text-sm text-slate-300 leading-relaxed mb-4">
           نعتذر عن هذا الخلل المؤقت. يمكنك إعادة تحميل الصفحة فوراً، أو الدخول مباشرة للوحة المحاكاة بالحساب التجريبي بدون أي خطوات تسجيل.
         </p>
+
+        {error?.message && (
+          <div className="mb-6 p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-xs font-mono text-red-200 text-center break-all">
+            {error.message}
+          </div>
+        )}
 
         <div className="flex flex-col gap-3">
           <button
