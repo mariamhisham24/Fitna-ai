@@ -672,11 +672,11 @@ export async function generateStudentReactions(params: {
         ? `المية بتسخن وتبقى بخار، وبعدين تمطر على طول ${cleanTitle}.`
         : hasResolvedMisconception && candidate.activeMisconception?.conceptKey === "water_cycle_skip_condensation"
         ? `المية بتتبخر وتعمل سحاب وبعدين تمطر ${cleanTitle}.`
-        : qContext.hasUnlikeDenominators && !isCommonDenominatorTaught
+        : qContext.hasUnlikeDenominators && !isCommonDenominatorTaught && qContext.fractions.length >= 2
         ? `مش عارف${p.name === "سارة" || p.name === "نور" ? "ة" : ""} ${cleanTitle} عشان المقامات مختلفة ومش زي بعض.. إزاي نقارنهم؟`
-        : hasActiveMisconception && qContext.isComparison
+        : hasActiveMisconception && qContext.isComparison && qContext.fractions.length >= 2
         ? `الـ 2 على 6 أكبر ${cleanTitle}.`
-        : hasResolvedMisconception && qContext.isComparison
+        : hasResolvedMisconception && qContext.isComparison && qContext.fractions.length >= 2
         ? `الـ 5 على 6 أكبر ${cleanTitle} عشان بسطها أكبر والمقامات متساوية.`
         : intentAnalysis.intent === "attention_check"
         ? `أنا هجاوب ${cleanTitle}! سامعينك ومتابعين.`
@@ -688,10 +688,26 @@ export async function generateStudentReactions(params: {
             : /(?:مية|ماء|سائل)/i.test(currentQuestionText)
             ? `المية مادة سائلة ${cleanTitle} عشان بتاخد شكل الإناء.`
             : `الهواء مادة غازية ${cleanTitle} وبيملا المكان.`)
+        : /(?:مناخ|مناخي|طقس|جو|حرارة|climate)/i.test(`${currentQuestionText} ${lessonContext || ""}`)
+        ? (/(?:سمع|عارف|رأي|مفهوم|يعني|حد)/i.test(currentQuestionText)
+            ? (p.name === "سارة"
+                ? `أنا سمعت عنه يا ${cleanTitle}، إن درجات الحرارة بتزيد والطقس بيتغير!`
+                : p.name === "عمر"
+                ? `عارف يا ${cleanTitle}، الجو بيبقى حر أوي والجليد بيدوب!`
+                : p.name === "ياسين"
+                ? `أنا سمعت إن التلوث ودخان المصانع بيغير درجات الحرارة ${cleanTitle}.`
+                : `هو يعني درجات الحرارة في كوكب الأرض بتعلى يا ${cleanTitle}؟`)
+            : `التغير المناخي بيأثر على درجات الحرارة والبيئة في كوكبنا ${cleanTitle}.`)
         : isNumeratorDenominatorQuestion
         ? `اللي فوق البسط واللي تحت المقام ${cleanTitle}.`
-        : qContext.isWhyQuestion
+        : qContext.isWhyQuestion && qContext.fractions.length >= 2
         ? `عشان المقامات متساوية ${cleanTitle}، فبنبص على البسط والـ 4 أكبر من الـ 1.`
+        : qContext.isWhyQuestion
+        ? (p.name === "سارة"
+            ? `عشان ده السبب الأساسي في تغير الظاهرة دي ${cleanTitle}.`
+            : p.name === "عمر"
+            ? `علشان في عوامل تانية بتأثر عليها ${cleanTitle}!`
+            : `علشان دي النتيجة المباشرة ${cleanTitle}.`)
         : qContext.isComparison && qContext.fractions.length >= 2
         ? `الـ ${qContext.fractions[1]} أكبر ${cleanTitle}.`
         : intentAnalysis.intent === "permission_to_speak"
@@ -699,7 +715,19 @@ export async function generateStudentReactions(params: {
             ? `الـ ${qContext.fractions[1]} أكبر ${cleanTitle}.`
             : isNumeratorDenominatorQuestion
             ? `اللي فوق البسط واللي تحت المقام ${cleanTitle}.`
-            : `الـ 5 على 7 أكبر ${cleanTitle}.`)
+            : /(?:مناخ|مناخي|طقس|جو|حرارة|climate)/i.test(`${currentQuestionText} ${lessonContext || ""}`)
+            ? (p.name === "سارة"
+                ? `أنا سمعت عنه قبل كده ${cleanTitle}، وكنت حابة أقول رأيي في النقطة دي!`
+                : p.name === "عمر"
+                ? `أنا سمعت عنه ومتحمس أقول اللي أعرفه ${cleanTitle}!`
+                : `أنا كنت حابب أشارك رأيي في موضوع التغير المناخي ${cleanTitle}.`)
+            : p.name === "سارة"
+            ? `عندي فكرة عن الموضوع ${cleanTitle} وكنت حابة أشاركها مع حضرتك!`
+            : p.name === "عمر"
+            ? `أنا كنت عايز أجاوب ومتحمس ${cleanTitle}!`
+            : p.name === "ياسين"
+            ? `عارف الإجابة وكنت حابب أقولها ${cleanTitle}.`
+            : `كنت عايزة أشارك إجابتي مع حضرتك ${cleanTitle}.`)
         : intentAnalysis.referencedStudentName
         ? (p.name === "سارة" || p.name === "نور"
             ? `أنا متفقة مع كلام ${intentAnalysis.referencedStudentName} ${cleanTitle}!`
@@ -721,7 +749,7 @@ export async function generateStudentReactions(params: {
         : p.name === "سارة"
         ? `ممكن أقول ${cleanTitle}؟`
         : p.name === "ياسين"
-        ? `اللي فوق البسط واللي تحت المقام ${cleanTitle}.`
+        ? `أنا متابع ومستعد أجاوب ${cleanTitle}.`
         : `أيوه ${cleanTitle} معاك.`;
 
     const sanitized = rawText
@@ -878,11 +906,11 @@ export function generateFallbackReactions(params: {
         ? `المية بتسخن وتبقى بخار، وبعدين تمطر على طول ${cleanTitle}.`
         : hasResolvedMisconception && candidate.activeMisconception?.conceptKey === "water_cycle_skip_condensation"
         ? `المية بتتبخر وتعمل سحاب وبعدين تمطر ${cleanTitle}.`
-        : qContext.hasUnlikeDenominators && !isCommonDenominatorTaught
+        : qContext.hasUnlikeDenominators && !isCommonDenominatorTaught && qContext.fractions.length >= 2
         ? `مش عارف${p.name === "سارة" || p.name === "نور" ? "ة" : ""} ${cleanTitle} عشان المقامات مختلفة ومش زي بعض.. إزاي نقارنهم؟`
-        : hasActiveMisconception && qContext.isComparison
+        : hasActiveMisconception && qContext.isComparison && qContext.fractions.length >= 2
         ? `الـ 2 على 6 أكبر ${cleanTitle}.`
-        : hasResolvedMisconception && qContext.isComparison
+        : hasResolvedMisconception && qContext.isComparison && qContext.fractions.length >= 2
         ? `الـ 5 على 6 أكبر ${cleanTitle} عشان بسطها أكبر والمقامات متساوية.`
         : intentAnalysis.intent === "greeting"
         ? `وعليكم السلام ${cleanTitle}!`
@@ -892,8 +920,20 @@ export function generateFallbackReactions(params: {
         ? `أهلاً بحضرتك ${cleanTitle}، خلاص حفظنا!`
         : intentAnalysis.intent === "attention_check"
         ? `أيوة ${cleanTitle}، سامعينك ومتابعين!`
-        : isWhyQuestion
+        : /(?:مناخ|مناخي|طقس|جو|حرارة|climate)/i.test(`${teacherUtterance} ${lessonContext || ""}`)
+        ? (p.name === "سارة"
+            ? `أنا سمعت عنه يا ${cleanTitle}، إن درجات الحرارة بتزيد والطقس بيتغير!`
+            : p.name === "عمر"
+            ? `عارف يا ${cleanTitle}، الجو بيبقى حر أوي والجليد بيدوب!`
+            : p.name === "ياسين"
+            ? `أنا سمعت إن التلوث ودخان المصانع بيغير درجات الحرارة ${cleanTitle}.`
+            : `هو يعني درجات الحرارة في كوكب الأرض بتعلى يا ${cleanTitle}؟`)
+        : isWhyQuestion && qContext.fractions.length >= 2
         ? `عشان المقامات متساوية ${cleanTitle}، فبنبص على البسط والـ 4 أكبر من الـ 1.`
+        : isWhyQuestion
+        ? (p.name === "سارة"
+            ? `عشان ده السبب الأساسي في الموضوع ده ${cleanTitle}.`
+            : `علشان دي النتيجة المباشرة ${cleanTitle}.`)
         : qContext.isComparison && qContext.fractions.length >= 2
         ? `الـ ${qContext.fractions[1]} أكبر ${cleanTitle}.`
         : intentAnalysis.referencedStudentName
@@ -901,13 +941,17 @@ export function generateFallbackReactions(params: {
             ? `أنا متفقة مع كلام ${intentAnalysis.referencedStudentName} ${cleanTitle}!`
             : `أنا متفق مع كلام ${intentAnalysis.referencedStudentName} ${cleanTitle}!`)
         : intentAnalysis.intent === "permission_to_speak"
-        ? p.name === "عمر"
-          ? `أنا كنت عايز أجاوب ${cleanTitle}!`
-          : p.name === "سارة"
-          ? `عندي فكرة ${cleanTitle}!`
-          : p.name === "ياسين"
-          ? `أنا عارف الإجابة ${cleanTitle}!`
-          : `كتبت الملاحظة دي في الكشكول ${cleanTitle}.`
+        ? (/(?:مناخ|مناخي|طقس|جو|حرارة|climate)/i.test(`${teacherUtterance} ${lessonContext || ""}`)
+            ? (p.name === "سارة"
+                ? `أنا سمعت عنه قبل كده ${cleanTitle}، وكنت حابة أقول رأيي في النقطة دي!`
+                : `أنا عندي فكرة عن التغير المناخي ومتحمس أقولها ${cleanTitle}!`)
+            : p.name === "عمر"
+            ? `أنا كنت عايز أجاوب ${cleanTitle}!`
+            : p.name === "سارة"
+            ? `عندي فكرة ${cleanTitle}!`
+            : p.name === "ياسين"
+            ? `أنا عارف الإجابة ${cleanTitle}!`
+            : `كتبت الملاحظة دي في الكشكول ${cleanTitle}.`)
         : intentAnalysis.intent === "direct_question"
         ? isCorrective
           ? `مش صح ${cleanTitle}؟ طب إزاي؟`
