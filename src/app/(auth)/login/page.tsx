@@ -179,15 +179,6 @@ function LoginPageContent() {
           <strong>{t.sideArabic}</strong>
           <small>{t.sideNote}</small>
         </div>
-        <div className="auth-agents">
-          <span className="agent-dot dot-a" />
-          <span className="agent-dot dot-b" />
-          <span className="agent-dot dot-c" />
-          <span className="agent-dot dot-d" />
-          <span className="agent-line line-a" />
-          <span className="agent-line line-b" />
-          <span className="agent-line line-c" />
-        </div>
         <div className="auth-visual-footer">
           <span>
             <ShieldCheck size={14} /> {t.secure}
