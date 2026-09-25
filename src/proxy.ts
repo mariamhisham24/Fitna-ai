@@ -76,7 +76,7 @@ export async function proxy(request: NextRequest) {
     try {
       const authRes = await Promise.race([
         supabase.auth.getUser(),
-        new Promise<any>((resolve) => setTimeout(() => resolve({ data: { user: null } }), 1500)),
+        new Promise<any>((resolve) => setTimeout(() => resolve({ data: { user: null } }), 4000)),
       ]);
       user = authRes?.data?.user ?? null;
     } catch {
