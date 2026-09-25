@@ -1013,7 +1013,7 @@ export function LiveRoom({
       const dataArray = new Uint8Array(bufferLength);
 
       let ambientNoiseFloor = 14;
-      const MAX_CONTINUOUS_SPEECH_MS = 7500;
+      const MAX_CONTINUOUS_SPEECH_MS = 25000;
 
       if (vadIntervalRef.current) clearInterval(vadIntervalRef.current);
 
@@ -1062,13 +1062,13 @@ export function LiveRoom({
 
         // Adapt ambient noise floor dynamically when not actively speaking
         if (!speechDetectedRef.current) {
-          ambientNoiseFloor = ambientNoiseFloor * 0.9 + speechAverage * 0.1;
+          ambientNoiseFloor = ambientNoiseFloor * 0.92 + speechAverage * 0.08;
         }
 
         // Adaptive thresholds with hysteresis:
         // Must surpass startThreshold to trigger speech; must stay above continueThreshold to maintain speech
-        const startThreshold = Math.max(22, Math.min(48, ambientNoiseFloor + 10));
-        const continueThreshold = Math.max(16, Math.min(38, ambientNoiseFloor + 5));
+        const startThreshold = Math.max(18, Math.min(38, ambientNoiseFloor + 6));
+        const continueThreshold = Math.max(11, Math.min(26, ambientNoiseFloor + 2));
 
         // Visualizer level 0-100 based on voice activity relative to ambient floor
         const dynamicLevel = Math.max(0, speechAverage - ambientNoiseFloor);
@@ -1089,7 +1089,7 @@ export function LiveRoom({
           lastSpeechTimeRef.current = now;
           setIsTeacherSpeaking(true);
 
-          // Force commit turn if continuous speech reaches maximum ceiling (e.g., 7.5s)
+          // Force commit turn if continuous speech reaches maximum ceiling (e.g., 25s)
           if (now - speechStartTimeRef.current > MAX_CONTINUOUS_SPEECH_MS) {
             speechDetectedRef.current = false;
             setIsTeacherSpeaking(false);
@@ -1097,18 +1097,23 @@ export function LiveRoom({
             return;
           }
         } else {
-          setIsTeacherSpeaking(false);
           if (speechDetectedRef.current) {
             const silenceDuration = now - lastSpeechTimeRef.current;
             const speechDuration = lastSpeechTimeRef.current - speechStartTimeRef.current;
 
-            // Fast silence commit: 500ms when text is already transcribed, 800ms for pure audio
+            // Only switch UI indicator off after a brief grace period (300ms)
+            if (silenceDuration > 300) {
+              setIsTeacherSpeaking(false);
+            }
+
+            // Natural human pause before committing turn (1.2s when text accumulated, 1.5s for audio)
             const hasAccumulatedText = nativeTranscriptAccumulatorRef.current.trim().length >= 2;
-            const effectiveSilenceMs = hasAccumulatedText ? 500 : 800;
-            const minSpeechMs = hasAccumulatedText ? 280 : 500;
+            const effectiveSilenceMs = hasAccumulatedText ? 1200 : 1500;
+            const minSpeechMs = hasAccumulatedText ? 300 : 600;
 
             if (silenceDuration > effectiveSilenceMs) {
               speechDetectedRef.current = false;
+              setIsTeacherSpeaking(false);
               if (speechDuration >= minSpeechMs || hasAccumulatedText) {
                 commitOpenMicTurn();
               } else {
@@ -1123,6 +1128,8 @@ export function LiveRoom({
                 openMicChunksRef.current = [];
               }
             }
+          } else {
+            setIsTeacherSpeaking(false);
           }
         }
       }, 100);
