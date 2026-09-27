@@ -144,8 +144,9 @@ async function handleEnd(request: NextRequest, params: Promise<{ id: string }>) 
     badgesToAward.push("streak_master");
   }
 
+  const adminClient = createAdminClient();
   for (const badgeKey of badgesToAward) {
-    await supabase
+    await adminClient
       .from("badges")
       .upsert(
         { user_id: user.id, badge_key: badgeKey, session_id: sessionId },
@@ -169,7 +170,7 @@ async function handleEnd(request: NextRequest, params: Promise<{ id: string }>) 
       lessonContext: session.lesson_context,
     });
 
-    const adminClient = createAdminClient();
+    // Save report using existing adminClient
     const basePayload = {
       session_id: sessionId,
       summary_ar: report.summaryAr,

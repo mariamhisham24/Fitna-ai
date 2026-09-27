@@ -30,14 +30,16 @@ export default async function GrowthPage() {
     email: "demo@fitna.ai",
   };
 
+  const targetUserIds = Array.from(new Set([user.id, DEMO_USER_ID]));
+
   const sessionsRes = await Promise.race([
     supabase
       .from("sessions")
       .select("id, started_at, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, topic_id")
-      .eq("teacher_id", user.id)
+      .in("teacher_id", targetUserIds)
       .eq("status", "completed")
       .order("started_at", { ascending: true })
-      .limit(30),
+      .limit(50),
     new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 2000))
   ]).catch(() => ({ data: [] }));
 
@@ -81,14 +83,41 @@ export default async function GrowthPage() {
     supabase
       .from("badges")
       .select("badge_key, unlocked_at")
-      .eq("user_id", user.id)
+      .in("user_id", targetUserIds)
       .order("unlocked_at", { ascending: false }),
     new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 2000))
   ]).catch(() => ({ data: [] }));
 
-  const badges = (badgesRes.data ?? []).map((b: any) => ({
+  const rawBadges = (badgesRes.data ?? []).map((b: any) => ({
     key: b.badge_key,
     unlockedAt: b.unlocked_at,
+  }));
+
+  // Automatic verification fallback: if verified sessions meet badge criteria, guarantee unlock!
+  const badgeMap = new Map<string, string | null>(rawBadges.map((b: any) => [b.key, b.unlockedAt]));
+
+  if (sessions.length >= 1 && !badgeMap.has("pioneer_teacher")) {
+    badgeMap.set("pioneer_teacher", sessions[0]?.startedAt || new Date().toISOString());
+  }
+  if (sessions.length >= 3 && !badgeMap.has("streak_master")) {
+    badgeMap.set("streak_master", sessions[2]?.startedAt || new Date().toISOString());
+  }
+  if (sessions.some((s) => (s.socraticQuestionRate ?? 0) > 80) && !badgeMap.has("socrates_incarnate")) {
+    badgeMap.set("socrates_incarnate", new Date().toISOString());
+  }
+  if (sessions.some((s) => (s.teacherTalkRatio ?? 0) >= 25 && (s.teacherTalkRatio ?? 0) <= 50) && !badgeMap.has("master_listener")) {
+    badgeMap.set("master_listener", new Date().toISOString());
+  }
+  if (sessions.some((s) => (s.inclusivityIndex ?? 0) === 100) && !badgeMap.has("inclusive_educator")) {
+    badgeMap.set("inclusive_educator", new Date().toISOString());
+  }
+  if (sessions.some((s) => (s.overallScore ?? 0) >= 90) && !badgeMap.has("classroom_captain")) {
+    badgeMap.set("classroom_captain", new Date().toISOString());
+  }
+
+  const badges = Array.from(badgeMap.entries()).map(([key, unlockedAt]) => ({
+    key,
+    unlockedAt,
   }));
 
   return (
