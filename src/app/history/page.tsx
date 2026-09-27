@@ -2,7 +2,7 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { type Language } from "@/lib/i18n";
-import { HistoryClient } from "./HistoryClient";
+import { HistoryClient, type SessionItem } from "./HistoryClient";
 
 const PAGE_SIZE = 10;
 
@@ -56,25 +56,43 @@ export default async function HistoryPage({
     ? await db.from("lesson_topics").select("id, title_ar, title_en").in("id", topicIds)
     : { data: [] as { id: string; title_ar: string; title_en: string | null }[] };
 
-  const mappedSessions = (sessions ?? []).map((s) => {
-    const topic = topics?.find((t) => t.id === s.topic_id);
-    const title = topic
-      ? lang === "en" && topic.title_en
-        ? topic.title_en
-        : topic.title_ar
-      : null;
+  const mappedSessions: SessionItem[] = (sessions ?? []).map((s) => {
+    const d = new Date(s.started_at);
+    const dateStr = d.toLocaleDateString(isEn ? "en-US" : "ar-EG", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const timeStr = d.toLocaleTimeString(isEn ? "en-US" : "ar-EG", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const topicObj = topics?.find((t) => t.id === s.topic_id);
+    const topicTitle =
+      (topicObj && (isEn && topicObj.title_en ? topicObj.title_en : topicObj.title_ar)) ||
+      (isEn ? "Classroom Simulation" : "محاكاة تفاعل الفصل");
+    const topicSubtitle = isEn ? "Pedagogical • Interactive Session" : "تربوي • تدريب تفاعلي";
+
     return {
-      ...s,
-      topic_title: title,
+      id: s.id,
+      started_at: s.started_at,
+      dateStr,
+      timeStr,
+      topicTitle,
+      topicSubtitle,
+      overall_score: s.overall_score,
+      classroom_pattern: s.classroom_pattern,
     };
   });
+
+  const totalPages = count ? Math.ceil(count / PAGE_SIZE) : 1;
 
   return (
     <HistoryClient
       sessions={mappedSessions}
       totalCount={count ?? 0}
-      page={page}
-      pageSize={PAGE_SIZE}
+      currentPage={page}
+      totalPages={totalPages}
       lang={lang}
     />
   );
