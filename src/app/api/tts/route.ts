@@ -521,6 +521,7 @@ async function synthesizeGeminiTTS(text: string, personaName?: string): Promise<
               },
             },
           }),
+          signal: AbortSignal.timeout(4500),
         });
 
       if (!res.ok) {
@@ -737,7 +738,28 @@ export async function synthesizeStudentSpeech(
 
   let resultAudio: { buffer: Buffer; contentType: string } | null = null;
 
-  // 1. Priority 1: Microsoft Edge Neural TTS (ar-EG-ShakirNeural / ar-EG-SalmaNeural) - Instantaneous native Egyptian youth voices (~1.2s)
+  // 1. Priority 1: Google AI Studio Gemini Direct TTS (Puck, Kore, Zephyr, Aoede - Authentic expressive Egyptian youth voices)
+  if (!resultAudio && !voiceOverride && (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GEMINI_BACKUP_KEYS)) {
+    try {
+      resultAudio = await synthesizeGeminiTTS(normalizedText, personaName);
+    } catch (e) {
+      console.warn("Google AI Studio Gemini TTS synthesis error:", e);
+    }
+  }
+
+  // 2. Priority 2: ElevenLabs Fast Turbo v2.5 (~500ms realistic youth voices)
+  if (!resultAudio && !voiceOverride && (process.env.ELEVENLABS_API_KEY || process.env.ELEVENLABS_BACKUP_KEYS)) {
+    try {
+      const elevenBuf = await synthesizeElevenLabs(normalizedText, personaName);
+      if (elevenBuf) {
+        resultAudio = { buffer: elevenBuf, contentType: "audio/mpeg" };
+      }
+    } catch (e) {
+      console.warn("ElevenLabs synthesis error:", e);
+    }
+  }
+
+  // 3. Priority 3: Microsoft Edge Neural TTS (ar-EG-ShakirNeural / ar-EG-SalmaNeural) (Fast reliable backup)
   if (!resultAudio) {
     try {
       const tts = new MsEdgeTTS();
@@ -757,28 +779,7 @@ export async function synthesizeStudentSpeech(
     }
   }
 
-  // 2. Priority 2: ElevenLabs Fast Turbo v2.5 (~500ms realistic youth voices)
-  if (!resultAudio && !voiceOverride && (process.env.ELEVENLABS_API_KEY || process.env.ELEVENLABS_BACKUP_KEYS)) {
-    try {
-      const elevenBuf = await synthesizeElevenLabs(normalizedText, personaName);
-      if (elevenBuf) {
-        resultAudio = { buffer: elevenBuf, contentType: "audio/mpeg" };
-      }
-    } catch (e) {
-      console.warn("ElevenLabs synthesis error:", e);
-    }
-  }
-
-  // 3. Priority 3: Google AI Studio Gemini Direct TTS
-  if (!resultAudio && !voiceOverride && (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GEMINI_BACKUP_KEYS)) {
-    try {
-      resultAudio = await synthesizeGeminiTTS(normalizedText, personaName);
-    } catch (e) {
-      console.warn("Google AI Studio Gemini TTS synthesis error:", e);
-    }
-  }
-
-  // 4. Priority 4: Fish Audio
+  // 4. Final Fallback: Fish Audio
   if (!resultAudio && !voiceOverride && process.env.FISH_AUDIO_API_KEY) {
     const fishBuf = await synthesizeFishAudio(normalizedText, personaName);
     if (fishBuf) {
