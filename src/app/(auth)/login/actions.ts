@@ -23,8 +23,10 @@ export async function signInAction(
     if (password.length < 6) return { error: "كلمة المرور لازم تكون 6 أحرف على الأقل" };
 
     const cookieStore = await cookies();
+    cookieStore.delete("fitna_demo");
 
     const supabase = await createClient();
+    await supabase.auth.signOut();
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
@@ -169,6 +171,14 @@ export async function requestPasswordResetAction(
 
 export async function signOutAction() {
   try {
+    const cookieStore = await cookies();
+    cookieStore.delete("fitna_demo");
+    const all = cookieStore.getAll();
+    for (const c of all) {
+      if (c.name.startsWith("sb-") || c.name === "fitna_demo") {
+        cookieStore.delete(c.name);
+      }
+    }
     const supabase = await createClient();
     await supabase.auth.signOut();
   } catch {}

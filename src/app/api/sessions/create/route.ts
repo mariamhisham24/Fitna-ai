@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { DEMO_USER_ID } from "@/lib/auth/demo";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 /**
  * Creates a real `sessions` row (spec Stage 5: "بدء محاكاة الفصل").

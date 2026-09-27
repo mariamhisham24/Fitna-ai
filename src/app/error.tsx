@@ -15,9 +15,6 @@ export default function RootError({
     console.error("Fitna AI Runtime caught error:", error);
   }, [error]);
 
-  const handleDemoAccess = () => {
-    window.location.href = "/demo";
-  };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-6 bg-[#071b3a] text-[#f6f0e4] font-sans selection:bg-amber-400 selection:text-slate-900" dir="rtl">
@@ -56,13 +53,6 @@ export default function RootError({
             <span>إعادة المحاولة الآن</span>
           </button>
 
-          <button
-            onClick={handleDemoAccess}
-            className="w-full py-3.5 px-5 rounded-xl font-bold bg-white/10 hover:bg-white/15 border border-white/20 text-white transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] cursor-pointer"
-          >
-            <Sparkles size={18} className="text-amber-300" />
-            <span>دخول تجريبي فوري (تخطي إلى لوحة المعلم)</span>
-          </button>
 
           <Link
             href="/"

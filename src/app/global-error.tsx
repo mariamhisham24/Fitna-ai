@@ -9,10 +9,6 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const handleDemoAccess = () => {
-    window.location.href = "/demo";
-  };
-
   return (
     <html lang="ar" dir="rtl">
       <body style={{ margin: 0, padding: 0, backgroundColor: "#071b3a", color: "#f6f0e4", fontFamily: "system-ui, sans-serif" }}>
@@ -25,7 +21,7 @@ export default function GlobalError({
               نعتذر، حدث خطأ في النظام
             </h1>
             <p style={{ fontSize: "14px", color: "#94a3b8", lineHeight: "1.6", marginBottom: "24px" }}>
-              يمكنك إعادة المحاولة أو تجربة المنصة مباشرة عبر الحساب التجريبي.
+              يمكنك إعادة المحاولة أو العودة للصفحة الرئيسية.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <button
@@ -33,12 +29,6 @@ export default function GlobalError({
                 style={{ width: "100%", padding: "14px", borderRadius: "12px", background: "#ffb52e", color: "#071b3a", border: "none", fontWeight: "bold", cursor: "pointer", fontSize: "14px" }}
               >
                 إعادة المحاولة
-              </button>
-              <button
-                onClick={handleDemoAccess}
-                style={{ width: "100%", padding: "14px", borderRadius: "12px", background: "rgba(255,255,255,0.1)", color: "#ffffff", border: "1px solid rgba(255,255,255,0.2)", fontWeight: "bold", cursor: "pointer", fontSize: "14px" }}
-              >
-                دخول تجريبي فوري (بدون تسجيل)
               </button>
               <a
                 href="/"

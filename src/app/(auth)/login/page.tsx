@@ -127,6 +127,7 @@ function LoginPageContent() {
   };
 
   useEffect(() => {
+    document.cookie = "fitna_demo=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     const match = document.cookie.match(/(?:^|;\s*)language=(ar|en)(?:;|$)/);
     if (match && (match[1] === "ar" || match[1] === "en")) {
       setLang(match[1]);
@@ -244,20 +245,6 @@ function LoginPageContent() {
 
           {!showForgot && (
             <>
-              {/* Instant 1-Click Demo Account */}
-              <Link
-                href="/demo"
-                className="demo-pop-btn w-full mb-3 py-2.5 px-4 rounded-xl flex flex-col items-center justify-center gap-0.5 bg-amber-500/[0.07] hover:bg-amber-500/[0.12] dark:bg-amber-400/10 dark:hover:bg-amber-400/15 border border-amber-400/40 hover:border-amber-400/80 group no-underline text-center cursor-pointer"
-              >
-                <div className="flex items-center gap-2 font-bold text-sm text-[#071b3a] dark:text-[#ffb52e]">
-                  <Sparkles size={15} className="text-amber-500 dark:text-[#ffb52e] shrink-0 transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12" />
-                  <span>{t.demoBtn}</span>
-                </div>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
-                  {t.demoSub}
-                </span>
-              </Link>
-
               <button
                 className={`google-button relative overflow-hidden transition-all duration-300 ${
                   googleComingSoon ? "!border-amber-400/60 !bg-amber-400/10 shadow-[0_0_15px_rgba(255,181,46,0.15)]" : ""
@@ -564,15 +551,39 @@ function LoginPageContent() {
           )}
 
           {!showForgot && (
-            <p className="switch-copy">
-              {isLogin ? t.switchLogin : t.switchSignup}{" "}
-              <button
-                type="button"
-                onClick={() => setMode(isLogin ? "signup" : "login")}
-              >
-                {isLogin ? t.switchLoginLink : t.switchSignupLink}
-              </button>
-            </p>
+            <>
+              <p className="switch-copy">
+                {isLogin ? t.switchLogin : t.switchSignup}{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode(isLogin ? "signup" : "login")}
+                >
+                  {isLogin ? t.switchLoginLink : t.switchSignupLink}
+                </button>
+              </p>
+
+              <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.08)", textAlign: "center" }}>
+                <Link
+                  href="/demo"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: "var(--amber)",
+                    textDecoration: "none",
+                    opacity: 0.85,
+                    transition: "opacity 0.2s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+                >
+                  <Sparkles size={13} />
+                  <span>{t.demoBtn}</span>
+                </Link>
+              </div>
+            </>
           )}
         </div>
 
