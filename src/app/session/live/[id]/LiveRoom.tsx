@@ -1347,7 +1347,11 @@ export function LiveRoom({
   async function handleEndSimulation() {
     setEnding(true);
     try {
-      const res = await fetch(`/api/sessions/${sessionId}/end`, { method: "POST" });
+      const res = await fetch(`/api/sessions/${sessionId}/end`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ liveTeacherTalkRatio: teacherTalkRatio }),
+      });
       if (res.ok) {
         router.push(`/report/${sessionId}`);
       } else {

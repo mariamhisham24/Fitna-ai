@@ -17,17 +17,23 @@ export const runtime = "nodejs";
  * events actually logged during the session — the same computation
  * used for the live HUD, just run one final time on the full transcript.
  */
-export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    return await handleEnd(params);
+    return await handleEnd(request, params);
   } catch (err) {
     console.error("Ending session failed:", err);
     return NextResponse.json({ error: "حصل خطأ أثناء إنهاء الجلسة. جرب تاني." }, { status: 500 });
   }
 }
 
-async function handleEnd(params: Promise<{ id: string }>) {
+async function handleEnd(request: NextRequest, params: Promise<{ id: string }>) {
   const { id: sessionId } = await params;
+
+  let bodyJson: { liveTeacherTalkRatio?: number } | null = null;
+  try {
+    bodyJson = await request.json();
+  } catch {}
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -63,7 +69,11 @@ async function handleEnd(params: Promise<{ id: string }>) {
     ? Math.max(...allEvents.map((e) => e.occurred_at_ms))
     : session.duration_minutes * 60 * 1000;
 
-  const teacherTalkRatio = computeTeacherTalkRatio(allEvents, totalElapsedMs);
+  const computedRatio = computeTeacherTalkRatio(allEvents, totalElapsedMs);
+  const teacherTalkRatio =
+    typeof bodyJson?.liveTeacherTalkRatio === "number" && bodyJson.liveTeacherTalkRatio > 0
+      ? bodyJson.liveTeacherTalkRatio
+      : computedRatio;
   const socraticQuestionRate = computeSocraticQuestionRate(allEvents);
   const inclusivityIndex = computeInclusivityIndex(allEvents, studentCount ?? 0);
   const overallScore = computeOverallScore({

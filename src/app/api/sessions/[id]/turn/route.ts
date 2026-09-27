@@ -395,6 +395,7 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
         voice_gender: effectiveVoiceGender,
         teacher_title: activeStudentTitle,
         full_teacher_title: lockedTeacherTitle || activeStudentTitle,
+        duration_ms: teacherSpeechDurationMs,
       },
       occurred_at_ms: effectiveTeacherMs,
     },

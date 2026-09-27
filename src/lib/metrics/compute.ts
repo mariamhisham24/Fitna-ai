@@ -15,16 +15,25 @@ export function computeTeacherTalkRatio(events: SessionEvent[], _totalElapsedMs?
   const teacherMs = events
     .filter((e) => e.event_type === "teacher_utterance")
     .reduce((sum, e) => {
-      const meta = e.metadata as { duration_ms?: number } | null;
-      return sum + (meta?.duration_ms ?? 0);
+      const meta = e.metadata as { duration_ms?: number; speech_duration_ms?: number } | null;
+      if (typeof meta?.duration_ms === "number" && meta.duration_ms > 0) {
+        return sum + meta.duration_ms;
+      }
+      if (typeof meta?.speech_duration_ms === "number" && meta.speech_duration_ms > 0) {
+        return sum + meta.speech_duration_ms;
+      }
+      const wordCount = (e.content ?? "").trim().split(/\s+/).filter(Boolean).length;
+      return sum + Math.max(1800, wordCount * 450);
     }, 0);
 
   const studentMs = events
     .filter((e) => e.event_type === "student_response")
     .reduce((sum, e) => {
       const meta = e.metadata as { duration_ms?: number } | null;
-      if (meta?.duration_ms) return sum + meta.duration_ms;
-      const wordCount = (e.content ?? "").trim().split(/\s+/).length;
+      if (typeof meta?.duration_ms === "number" && meta.duration_ms > 0) {
+        return sum + meta.duration_ms;
+      }
+      const wordCount = (e.content ?? "").trim().split(/\s+/).filter(Boolean).length;
       return sum + Math.max(1500, wordCount * 380);
     }, 0);
 
