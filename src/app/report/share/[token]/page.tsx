@@ -1,8 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { EvidenceAndTranscript } from "../../[id]/EvidenceAndTranscript";
-import { SessionPlayback } from "../../[id]/SessionPlayback";
 import { FrameworkScorecard, type FrameworkScoresProps } from "../../[id]/FrameworkScorecard";
 import { Logo } from "@/components/Logo";
 import { getDictionary, type Language } from "@/lib/i18n";
@@ -41,53 +39,6 @@ export default async function SharedReportPage({
     .single();
 
   if (!session) notFound();
-
-  const { data: events } = await adminClient
-    .from("session_events")
-    .select("id, event_type, actor, content, occurred_at_ms, audio_url, created_at")
-    .eq("session_id", report.session_id)
-    .order("created_at", { ascending: true });
-
-  const { data: personaRows } = await adminClient.from("student_personas").select("id, name");
-  const personaNameById = new Map((personaRows ?? []).map((p) => [p.id, p.name]));
-
-  const sortedEvents = [...(events ?? [])].sort((a, b) => {
-    const timeA = new Date(a.created_at || 0).getTime();
-    const timeB = new Date(b.created_at || 0).getTime();
-    if (timeA !== timeB) return timeA - timeB;
-    if (a.occurred_at_ms !== b.occurred_at_ms && Math.abs(a.occurred_at_ms - b.occurred_at_ms) > 5) {
-      return a.occurred_at_ms - b.occurred_at_ms;
-    }
-    if (a.event_type === "teacher_utterance" && b.event_type !== "teacher_utterance") return -1;
-    if (b.event_type === "teacher_utterance" && a.event_type !== "teacher_utterance") return 1;
-    return 0;
-  });
-
-  const rawTranscript = sortedEvents.filter(
-    (e) => e.event_type === "teacher_utterance" || e.event_type === "student_response"
-  );
-
-  let cumulativeTimeMs = 0;
-  const transcript = rawTranscript.map((e, idx) => {
-    let ts = typeof e.occurred_at_ms === "number" && e.occurred_at_ms > 0 ? e.occurred_at_ms : 0;
-    if (ts <= cumulativeTimeMs && idx > 0) {
-      ts = cumulativeTimeMs + 2500;
-    }
-    cumulativeTimeMs = Math.max(cumulativeTimeMs, ts);
-
-    return {
-      id: e.id,
-      speaker: e.actor === "teacher" ? t.liveRoom.teacherLabel : personaNameById.get(e.actor) ?? e.actor,
-      content: e.content,
-      timestampMs: ts,
-      isTeacher: e.actor === "teacher",
-      audioUrl: e.audio_url as string | null | undefined,
-    };
-  });
-
-  const evidenceMoments = (
-    (report?.evidence_moments as { label: string; timestamp_ms: number; event_id: string }[] | null) ?? []
-  ).map((m) => ({ eventId: m.event_id, label: cleanPedagogicalText(m.label), timestampMs: m.timestamp_ms }));
 
   return (
     <div className="min-h-screen bg-[#F5F1E8] dark:bg-[#071B3A] p-6 md:p-8">
@@ -181,12 +132,6 @@ export default async function SharedReportPage({
         )}
 
         <FrameworkScorecard scores={report.framework_scores as unknown as FrameworkScoresProps | null} />
-
-        {/* Dedicated Session Playback Section (Real Voice + AI Student dialogue) */}
-        <SessionPlayback transcript={transcript} durationMinutes={session.duration_minutes ?? 5} />
-
-        {/* Evidence & Transcript Breakdown */}
-        <EvidenceAndTranscript evidenceMoments={evidenceMoments} transcript={transcript} />
       </div>
     </div>
   );
