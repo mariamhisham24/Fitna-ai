@@ -30,17 +30,19 @@ export default async function TeacherDashboardPage() {
   };
 
   try {
-    const supabase = await createClient();
-    const isDemo = isDemoCookie;
+    const supabase = await createClient({ bypassDemo: true });
     let user: any = null;
-    if (!isDemo) {
-      try {
-        const userRes = await supabase.auth.getUser();
-        user = userRes?.data?.user ?? null;
-      } catch {}
+    try {
+      const userRes = await supabase.auth.getUser();
+      user = userRes?.data?.user ?? null;
+    } catch {}
+
+    const isDemo = !user && isDemoCookie;
+    if (user && isDemoCookie) {
+      cookieStore.delete("fitna_demo");
     }
 
-    if (!isDemo && !user) {
+    if (!user && !isDemo) {
       redirect("/login");
     }
 

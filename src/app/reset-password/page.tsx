@@ -29,7 +29,13 @@ export default function ResetPasswordPage() {
           </p>
         </div>
 
-        <form action={formAction} className="space-y-4">
+        <form
+          action={formAction}
+          onSubmit={() => {
+            document.cookie = "fitna_demo=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          }}
+          className="space-y-4"
+        >
           <div>
             <label htmlFor="password" className="text-xs font-semibold text-[#071B3A] dark:text-white mb-1 block">
               {t.settings.newPasswordLabel}

@@ -72,7 +72,50 @@ export async function proxy(request: NextRequest) {
       // Supabase auth network timeout fallback
     }
 
-    // 1. If in Demo Mode: Demo Account is an open account for teacher simulation
+    // 1. If visitor is logged in with a real account: they are an authentic user
+    if (user) {
+      if (request.cookies.has("fitna_demo")) {
+        response.cookies.delete("fitna_demo");
+      }
+
+      // Look up the caller's real role.
+      let role = null;
+      try {
+        const { data: profile } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        role = profile?.role;
+      } catch {}
+
+      const wantsTeacherArea = TEACHER_ONLY_PREFIXES.some((p) => pathname.startsWith(p));
+      const wantsAdminArea = ADMIN_ONLY_PREFIXES.some((p) => pathname.startsWith(p));
+
+      if (wantsTeacherArea && role && role !== "teacher") {
+        const url = request.nextUrl.clone();
+        if (role === "institution_admin" || role === "super_admin") {
+          url.pathname = "/dashboard/institution";
+          return NextResponse.redirect(url);
+        }
+        url.pathname = "/unauthorized";
+        return NextResponse.redirect(url);
+      }
+
+      if (wantsAdminArea && role !== "institution_admin" && role !== "super_admin") {
+        const url = request.nextUrl.clone();
+        if (role === "teacher") {
+          url.pathname = "/dashboard/teacher";
+          return NextResponse.redirect(url);
+        }
+        url.pathname = "/unauthorized";
+        return NextResponse.redirect(url);
+      }
+
+      return response;
+    }
+
+    // 2. If visitor is NOT logged in: check if they are in Demo Mode
     if (isDemo) {
       const wantsAdminArea = ADMIN_ONLY_PREFIXES.some((p) => pathname.startsWith(p));
       if (wantsAdminArea) {
@@ -83,48 +126,10 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
-    // 2. If visitor is NOT logged in and not in demo mode: redirect to login
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
-    }
-
-    // 3. Authentic Account: Look up the caller's real role.
-    let role = null;
-    try {
-      const { data: profile } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-      role = profile?.role;
-    } catch {}
-
-    const wantsTeacherArea = TEACHER_ONLY_PREFIXES.some((p) => pathname.startsWith(p));
-    const wantsAdminArea = ADMIN_ONLY_PREFIXES.some((p) => pathname.startsWith(p));
-
-    if (wantsTeacherArea && role && role !== "teacher") {
-      const url = request.nextUrl.clone();
-      if (role === "institution_admin" || role === "super_admin") {
-        url.pathname = "/dashboard/institution";
-        return NextResponse.redirect(url);
-      }
-      url.pathname = "/unauthorized";
-      return NextResponse.redirect(url);
-    }
-
-    if (wantsAdminArea && role !== "institution_admin" && role !== "super_admin") {
-      const url = request.nextUrl.clone();
-      if (role === "teacher") {
-        url.pathname = "/dashboard/teacher";
-        return NextResponse.redirect(url);
-      }
-      url.pathname = "/unauthorized";
-      return NextResponse.redirect(url);
-    }
-
-    return response;
+    // 3. Visitor is NOT logged in and not demo: redirect to login
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
   } catch (err) {
     console.error("Proxy middleware error:", err);
     return NextResponse.next({ request });

@@ -18,15 +18,18 @@ export default async function HistoryPage({
   const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
   const isEn = lang === "en";
-  const isDemo = cookieStore.get("fitna_demo")?.value === "true";
+  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
 
-  const supabase = await createClient();
+  const supabase = await createClient({ bypassDemo: true });
   let user: any = null;
-  if (!isDemo) {
-    try {
-      const userRes = await supabase.auth.getUser();
-      user = userRes?.data?.user ?? null;
-    } catch {}
+  try {
+    const userRes = await supabase.auth.getUser();
+    user = userRes?.data?.user ?? null;
+  } catch {}
+
+  const isDemo = !user && isDemoCookie;
+  if (user && isDemoCookie) {
+    cookieStore.delete("fitna_demo");
   }
 
   if (!user && !isDemo) redirect("/login");

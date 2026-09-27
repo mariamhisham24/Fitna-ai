@@ -318,7 +318,12 @@ function LoginPageContent() {
 
           {/* Form: Sign In */}
           {!showForgot && isLogin && (
-            <form action={signInFormAction}>
+            <form
+              action={signInFormAction}
+              onSubmit={() => {
+                document.cookie = "fitna_demo=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+              }}
+            >
               <label>
                 {t.email}
                 <span className="input-wrap">
@@ -393,7 +398,12 @@ function LoginPageContent() {
 
           {/* Form: Sign Up */}
           {!showForgot && !isLogin && (
-            <form action={signUpFormAction}>
+            <form
+              action={signUpFormAction}
+              onSubmit={() => {
+                document.cookie = "fitna_demo=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+              }}
+            >
               {/* Role Selection inside Sign Up */}
               <div style={{ marginBottom: "14px" }}>
                 <label style={{ fontSize: "11px", fontWeight: "700", marginBottom: "8px", display: "block" }}>
@@ -527,7 +537,12 @@ function LoginPageContent() {
 
           {/* Form: Forgot Password */}
           {showForgot && (
-            <form action={resetFormAction}>
+            <form
+              action={resetFormAction}
+              onSubmit={() => {
+                document.cookie = "fitna_demo=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+              }}
+            >
               <label>
                 {t.email}
                 <span className="input-wrap">

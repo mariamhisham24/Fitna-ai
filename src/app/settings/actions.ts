@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import { DEMO_COOKIE_NAME } from "@/lib/auth/demo";
 import type { ActionState } from "@/app/(auth)/login/actions";
 
 /**
@@ -22,7 +23,10 @@ export async function updateProfileAction(
   if (!fullName) return { error: "الاسم مطلوب" };
   if (fullName.length > 100) return { error: "الاسم طويل جدًا" };
 
-  const supabase = await createClient();
+  const cookieStore = await cookies();
+  cookieStore.delete(DEMO_COOKIE_NAME);
+
+  const supabase = await createClient({ bypassDemo: true });
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -58,7 +62,10 @@ export async function updateEmailAction(
     return { error: "البريد الإلكتروني غير صالح" };
   }
 
-  const supabase = await createClient();
+  const cookieStore = await cookies();
+  cookieStore.delete(DEMO_COOKIE_NAME);
+
+  const supabase = await createClient({ bypassDemo: true });
   const { error } = await supabase.auth.updateUser({ email });
   if (error) return { error: error.message };
 
@@ -77,7 +84,10 @@ export async function updatePasswordAction(
   if (password.length < 6) return { error: "كلمة المرور لازم تكون 6 أحرف على الأقل" };
   if (password !== confirmPassword) return { error: "كلمتا المرور مش متطابقتين" };
 
-  const supabase = await createClient();
+  const cookieStore = await cookies();
+  cookieStore.delete(DEMO_COOKIE_NAME);
+
+  const supabase = await createClient({ bypassDemo: true });
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: error.message };
 
@@ -91,12 +101,6 @@ export async function updatePasswordAction(
  * too) AND sets a `theme` cookie so the root layout — a Server
  * Component that reads the cookie on every request — applies it on
  * the very next page load with no flash of the old theme.
- *
- * [NOTE] Scope note: `preferred_language` IS saved for real here, but the
- * app does not yet re-render its UI text in English — that's a much
- * larger localization effort (translating every page) that hasn't
- * been started. Saving the preference now means the infrastructure is
- * ready for it; actually switching rendered language is future work.
  */
 export async function updatePreferencesAction(
   _prev: ActionState,
@@ -108,7 +112,10 @@ export async function updatePreferencesAction(
   if (theme !== "light" && theme !== "dark") return { error: "قيمة غير صالحة" };
   if (language !== "ar" && language !== "en") return { error: "قيمة غير صالحة" };
 
-  const supabase = await createClient();
+  const cookieStore = await cookies();
+  cookieStore.delete(DEMO_COOKIE_NAME);
+
+  const supabase = await createClient({ bypassDemo: true });
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -124,7 +131,6 @@ export async function updatePreferencesAction(
     return { error: "حصل خطأ أثناء حفظ التفضيلات" };
   }
 
-  const cookieStore = await cookies();
   cookieStore.set("theme", theme, { path: "/", maxAge: 60 * 60 * 24 * 365 });
   cookieStore.set("language", language, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
 

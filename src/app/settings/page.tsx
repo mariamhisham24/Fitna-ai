@@ -6,13 +6,15 @@ import { SettingsForm } from "./SettingsForm";
 import { getDictionary, type Language } from "@/lib/i18n";
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
+  const cookieStore = await cookies();
+  cookieStore.delete("fitna_demo");
+
+  const supabase = await createClient({ bypassDemo: true });
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
   const t = getDictionary(lang);
 

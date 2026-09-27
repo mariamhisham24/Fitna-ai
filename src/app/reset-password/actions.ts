@@ -1,7 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { DEMO_COOKIE_NAME } from "@/lib/auth/demo";
 import type { ActionState } from "@/app/(auth)/login/actions";
 
 export async function updatePasswordAction(
@@ -18,12 +20,13 @@ export async function updatePasswordAction(
     return { error: "كلمتا المرور مش متطابقتين" };
   }
 
-  const supabase = await createClient();
+  const cookieStore = await cookies();
+  cookieStore.delete(DEMO_COOKIE_NAME);
+
+  const supabase = await createClient({ bypassDemo: true });
 
   // Requires a valid session — established by /auth/confirm verifying
-  // the recovery token just before the browser landed here. If someone
-  // reaches this page without going through that link, this call fails
-  // with an auth error rather than silently succeeding.
+  // the recovery token just before the browser landed here.
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
     if (error.message.includes("session")) {
@@ -32,5 +35,5 @@ export async function updatePasswordAction(
     return { error: error.message };
   }
 
-  redirect("/login?reset=success");
+  redirect("/dashboard/teacher");
 }

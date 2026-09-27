@@ -45,7 +45,9 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient({ bypassDemo: true });
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      const response = NextResponse.redirect(`${origin}${next}`);
+      response.cookies.delete("fitna_demo");
+      return response;
     }
     console.error("verifyOtp failed:", error.message);
   }
