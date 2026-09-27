@@ -113,12 +113,7 @@ export function extractTeacherTitleAndGender(
     return { title: "يا مستر", isFemale: false };
   }
 
-  // 2. Session-wide locked title chosen in Session Setup (Primary Source of Truth)
-  if (lockedTeacherTitle) {
-    return { title: lockedTeacherTitle, isFemale: lockedTeacherTitle.includes("ميس") };
-  }
-
-  // 3. Fallback: Profile full name & feminine grammar markers (only if no title was chosen in Session Setup)
+  // 2. Profile full name & feminine grammar markers (e.g. Maryam / مريم, عايزة)
   const isFemaleName = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(
     teacherFullName || ""
   );
@@ -128,6 +123,11 @@ export function extractTeacherTitleAndGender(
 
   if (isFemaleName || isFemaleGrammar) {
     return { title: "يا ميس", isFemale: true };
+  }
+
+  // 3. Session-wide locked title if already fixed and no override given
+  if (lockedTeacherTitle) {
+    return { title: lockedTeacherTitle, isFemale: lockedTeacherTitle.includes("ميس") };
   }
 
   // 4. Explicit mention of titles in transcript

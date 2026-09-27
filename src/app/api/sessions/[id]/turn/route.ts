@@ -214,42 +214,23 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
     }
   }
 
-  // 1. Primary Source of Truth: Session-wide locked teacher title from Session Setup settings
+  // Determine session-wide locked teacher title
   let lockedTeacherTitle: string | null = null;
-  for (const e of chronologicalEvents) {
-    if (e.event_type === "session_config" && e.metadata) {
-      const meta = e.metadata as {
-        teacher_title?: string;
-        full_teacher_title?: string;
-      };
-      if (meta.full_teacher_title) {
-        lockedTeacherTitle = meta.full_teacher_title;
-        break;
-      } else if (meta.teacher_title) {
-        lockedTeacherTitle = meta.teacher_title;
-        break;
-      }
+  for (const e of descendingEvents) {
+    const meta = e.metadata as {
+      teacher_title?: string;
+      full_teacher_title?: string;
+    } | null;
+    if (meta?.full_teacher_title) {
+      lockedTeacherTitle = meta.full_teacher_title;
+      break;
+    } else if (meta?.teacher_title) {
+      lockedTeacherTitle = meta.teacher_title;
+      break;
     }
   }
 
-  // If not found in session_config, check past events metadata
-  if (!lockedTeacherTitle) {
-    for (const e of descendingEvents) {
-      const meta = e.metadata as {
-        teacher_title?: string;
-        full_teacher_title?: string;
-      } | null;
-      if (meta?.full_teacher_title) {
-        lockedTeacherTitle = meta.full_teacher_title;
-        break;
-      } else if (meta?.teacher_title) {
-        lockedTeacherTitle = meta.teacher_title;
-        break;
-      }
-    }
-  }
-
-  // 2. Only allow explicit verbal self-identification/correction during speech to override:
+  // Check for explicit self-identification in current or recent text
   const isFemaleSelf =
     /(?:أنا|انا)\s*(?:مش|غير)\s*(?:مستر|استاذ|أستاذ)|(?:أنا|انا)\s*(?:ميس|مس|معلمة|استاذة|أستاذة)/i.test(
       teacherText
@@ -258,22 +239,22 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
     /(?:أنا|انا)\s*(?:مش|غير)\s*(?:ميس|مس|ابلة|أبلة)|(?:أنا|انا)\s*(?:مستر|استاذ|أستاذ|معلم)/i.test(
       teacherText
     );
+  const isFemaleName = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(
+    teacherFullName
+  );
+  const isFemaleGrammar = /(?:عايزة|عاوزة|شايفة|سامعة|معلمتكم|مدرستكم|أبلتكم|انا\s*ميس|أنا\s*ميس|أنا\s*معلمة|انا\s*معلمة)/i.test(
+    teacherText
+  );
 
-  if (isFemaleSelf) {
+  if (isFemaleSelf || isFemaleName || isFemaleGrammar) {
     lockedTeacherTitle = "يا ميس";
   } else if (isMaleSelf) {
     lockedTeacherTitle = "يا مستر";
   } else if (!lockedTeacherTitle) {
-    // Only if NEVER configured in session settings, infer fallback from voice or profile:
     if (effectiveVoiceGender === "female") {
       lockedTeacherTitle = "يا ميس";
     } else if (effectiveVoiceGender === "male") {
       lockedTeacherTitle = "يا مستر";
-    } else {
-      const isFemaleName = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(
-        teacherFullName || ""
-      );
-      lockedTeacherTitle = isFemaleName ? "يا ميس" : "يا مستر";
     }
   }
 
