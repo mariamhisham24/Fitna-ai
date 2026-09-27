@@ -184,3 +184,31 @@ export async function signOutAction() {
   } catch {}
   redirect("/login");
 }
+
+/** Explicitly sign in as the dedicated Demo Teacher account (POST only, never prefetched) */
+export async function loginAsDemoAction() {
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete("fitna_demo");
+    const all = cookieStore.getAll();
+    for (const c of all) {
+      if (c.name.startsWith("sb-") || c.name === "fitna_demo") {
+        cookieStore.delete(c.name);
+      }
+    }
+    const supabase = await createClient();
+    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: "demo@fitna.ai",
+      password: "DemoPassword2026!",
+    });
+    if (error) {
+      console.error("Demo login error:", error);
+      redirect("/login?error=" + encodeURIComponent("تعذر الدخول للحساب التجريبي حالياً"));
+    }
+  } catch (err: any) {
+    if (err?.digest?.includes("NEXT_REDIRECT") || err?.message?.includes("NEXT_REDIRECT")) throw err;
+    console.error("Demo action error:", err);
+  }
+  redirect("/dashboard/teacher");
+}

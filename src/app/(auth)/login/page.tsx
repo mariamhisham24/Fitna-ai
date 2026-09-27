@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, UserRound, UsersRound } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { signInAction, signUpAction, requestPasswordResetAction, type ActionState } from "./actions";
+import { signInAction, signUpAction, requestPasswordResetAction, loginAsDemoAction, type ActionState } from "./actions";
 
 const logo = "/manus-storage/fitna-logo-lockup-transparent_3e70d851.png";
 
@@ -245,28 +245,30 @@ function LoginPageContent() {
 
           {!showForgot && (
             <>
-              {/* Dedicated Demo Account Access */}
-              <Link
-                href="/demo"
-                className="demo-pop-btn w-full mb-3 py-3 px-4 rounded-xl flex items-center justify-between bg-amber-500/[0.08] hover:bg-amber-500/[0.14] dark:bg-amber-400/10 dark:hover:bg-amber-400/15 border border-amber-400/40 hover:border-amber-400/80 group no-underline text-start cursor-pointer shadow-sm hover:shadow transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-amber-400/20 text-amber-500 dark:text-[#ffb52e] flex items-center justify-center shrink-0">
-                    <Sparkles size={16} className="transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-xs sm:text-sm text-[#071b3a] dark:text-[#ffb52e]">
-                      {t.demoBtn}
+              {/* Dedicated Demo Account Access (Form Action: Never prefetched by Next.js) */}
+              <form action={loginAsDemoAction} className="w-full mb-3">
+                <button
+                  type="submit"
+                  className="demo-pop-btn w-full py-3 px-4 rounded-xl flex items-center justify-between bg-amber-500/[0.08] hover:bg-amber-500/[0.14] dark:bg-amber-400/10 dark:hover:bg-amber-400/15 border border-amber-400/40 hover:border-amber-400/80 group text-start cursor-pointer shadow-sm hover:shadow transition-all"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-400/20 text-amber-500 dark:text-[#ffb52e] flex items-center justify-center shrink-0">
+                      <Sparkles size={16} className="transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12" />
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
-                      {t.demoSub}
+                    <div>
+                      <div className="font-bold text-xs sm:text-sm text-[#071b3a] dark:text-[#ffb52e]">
+                        {t.demoBtn}
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                        {t.demoSub}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 group-hover:translate-x-[-2px] rtl:group-hover:translate-x-[-2px] ltr:group-hover:translate-x-[2px] transition-transform">
-                  {lang === "ar" ? "دخول ←" : "Enter →"}
-                </span>
-              </Link>
+                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400 group-hover:translate-x-[-2px] rtl:group-hover:translate-x-[-2px] ltr:group-hover:translate-x-[2px] transition-transform">
+                    {lang === "ar" ? "دخول ←" : "Enter →"}
+                  </span>
+                </button>
+              </form>
 
               <div className="or-divider">
                 <span>{lang === "ar" ? "أو الدخول بحسابك الخاص" : "Or sign in to your personal account"}</span>
