@@ -37,12 +37,21 @@ export default async function TeacherDashboardPage() {
       user = userRes?.data?.user ?? null;
     } catch {}
 
-    // Treat as demo if cookie is set or if unauthenticated
-    const isDemo = isDemoCookie || !user;
-    const userId = isDemo ? DEMO_USER_ID : (user?.id || DEMO_USER_ID);
+    // Strict Separation: A logged-in user is ALWAYS their own authentic account.
+    // Demo mode is ONLY active when the visitor is NOT authenticated.
+    const isDemo = !user && isDemoCookie;
+    if (user && isDemoCookie) {
+      cookieStore.delete("fitna_demo");
+    }
+
+    if (!user && !isDemo) {
+      redirect("/login");
+    }
+
+    const userId = user ? user.id : DEMO_USER_ID;
 
     let userProfile = finalProfile;
-    if (!isDemo && user) {
+    if (user) {
       try {
         const profileRes = await withTimeout(
           supabase

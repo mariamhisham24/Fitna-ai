@@ -6,37 +6,45 @@ import { GrowthClient } from "./GrowthClient";
 import { DEMO_USER_ID } from "@/lib/auth/demo";
 
 export default async function GrowthPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
   const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
   const isEn = lang === "en";
+  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
 
-  const isDemo = user.id === DEMO_USER_ID;
+  const supabase = await createClient();
+  let user: any = null;
+  try {
+    const userRes = await supabase.auth.getUser();
+    user = userRes?.data?.user ?? null;
+  } catch {}
 
-  const profileRes = isDemo
-    ? { data: null }
-    : await Promise.race([
+  // Strict Separation: Logged in user is NEVER demo.
+  const isDemo = !user && isDemoCookie;
+  if (user && isDemoCookie) {
+    cookieStore.delete("fitna_demo");
+  }
+
+  if (!user && !isDemo) redirect("/login");
+
+  const effectiveUserId = user ? user.id : DEMO_USER_ID;
+
+  const profileRes = user
+    ? await Promise.race([
         supabase.from("users").select("full_name, email").eq("id", user.id).single(),
         new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 2000))
-      ]).catch(() => ({ data: null }));
+      ]).catch(() => ({ data: null }))
+    : { data: null };
 
-  const profile = profileRes.data ?? {
+  const profile = profileRes?.data ?? {
     full_name: "معلم تجريبي (Demo Teacher)",
     email: "demo@fitna.ai",
   };
-
-  const targetUserIds = Array.from(new Set([user.id, DEMO_USER_ID]));
 
   const sessionsRes = await Promise.race([
     supabase
       .from("sessions")
       .select("id, started_at, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, topic_id")
-      .in("teacher_id", targetUserIds)
+      .eq("teacher_id", effectiveUserId)
       .eq("status", "completed")
       .order("started_at", { ascending: true })
       .limit(50),
@@ -83,7 +91,7 @@ export default async function GrowthPage() {
     supabase
       .from("badges")
       .select("badge_key, unlocked_at")
-      .in("user_id", targetUserIds)
+      .eq("user_id", effectiveUserId)
       .order("unlocked_at", { ascending: false }),
     new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 2000))
   ]).catch(() => ({ data: [] }));

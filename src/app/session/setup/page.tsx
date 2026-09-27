@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DEMO_USER_ID } from "@/lib/auth/demo";
 import { SessionSetupForm } from "./SessionSetupForm";
@@ -25,16 +26,26 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
 }
 
 export default async function SessionSetupPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const cookieStore = await cookies();
+  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
 
-  const isDemo = user.id === DEMO_USER_ID;
+  const supabase = await createClient();
+  let user: any = null;
+  try {
+    const userRes = await supabase.auth.getUser();
+    user = userRes?.data?.user ?? null;
+  } catch {}
+
+  // Strict Separation: Logged in user is NEVER demo.
+  const isDemo = !user && isDemoCookie;
+  if (user && isDemoCookie) {
+    cookieStore.delete("fitna_demo");
+  }
+
+  if (!user && !isDemo) redirect("/login");
 
   let role = isDemo ? "teacher" : null;
-  if (!role) {
+  if (user) {
     const profileRes = await withTimeout(
       supabase.from("users").select("role").eq("id", user.id).single(),
       2000,

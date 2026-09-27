@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { type Language } from "@/lib/i18n";
 import { HistoryClient } from "./HistoryClient";
+import { DEMO_USER_ID } from "@/lib/auth/demo";
 
 const PAGE_SIZE = 10;
 
@@ -14,15 +15,26 @@ export default async function HistoryPage({
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
   const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
   const isEn = lang === "en";
+  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
+
+  const supabase = await createClient();
+  let user: any = null;
+  try {
+    const userRes = await supabase.auth.getUser();
+    user = userRes?.data?.user ?? null;
+  } catch {}
+
+  const isDemo = !user && isDemoCookie;
+  if (user && isDemoCookie) {
+    cookieStore.delete("fitna_demo");
+  }
+
+  if (!user && !isDemo) redirect("/login");
+
+  const effectiveUserId = user ? user.id : DEMO_USER_ID;
 
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -37,7 +49,7 @@ export default async function HistoryPage({
         "id, started_at, duration_minutes, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, topic_id",
         { count: "exact" }
       )
-      .eq("teacher_id", user.id)
+      .eq("teacher_id", effectiveUserId)
       .eq("status", "completed")
       .order("started_at", { ascending: false })
       .range(from, to),

@@ -17,22 +17,41 @@ export async function POST(request: NextRequest) {
   }
 }
 
+import { cookies } from "next/headers";
+
 async function handleCreate(request: NextRequest) {
+  const cookieStore = await cookies();
+  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
+
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  let user: any = null;
+  try {
+    const userRes = await supabase.auth.getUser();
+    user = userRes?.data?.user ?? null;
+  } catch {}
+
+  // Strict Separation: Logged-in user is NEVER demo.
+  const isDemo = !user && isDemoCookie;
+  if (user && isDemoCookie) {
+    cookieStore.delete("fitna_demo");
+  }
+
+  const effectiveUserId = user ? user.id : (isDemo ? DEMO_USER_ID : null);
+  if (!effectiveUserId) {
     return NextResponse.json({ error: "غير مصرّح" }, { status: 401 });
   }
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role, institution_id")
-    .eq("id", user.id)
-    .single();
-
-  const isTeacher = profile?.role === "teacher" || user.id === DEMO_USER_ID;
+  let isTeacher = isDemo;
+  let institutionId: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role, institution_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    isTeacher = profile?.role === "teacher";
+    institutionId = profile?.institution_id ?? null;
+  }
 
   // Spec §2.1: institution_admin must not be able to start a simulation
   // from their admin account — enforced server-side, not just hidden UI.
@@ -82,8 +101,8 @@ async function handleCreate(request: NextRequest) {
   const { data: session, error: sessionError } = await supabase
     .from("sessions")
     .insert({
-      teacher_id: user.id,
-      institution_id: profile?.institution_id ?? null,
+      teacher_id: effectiveUserId,
+      institution_id: institutionId,
       topic_id: validTopicId,
       lesson_context: lessonContext || null,
       duration_minutes: durationMinutes,
