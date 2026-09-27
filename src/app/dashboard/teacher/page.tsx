@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { type Language } from "@/lib/i18n";
@@ -30,10 +30,10 @@ export default async function TeacherDashboardPage() {
   };
 
   try {
-    const supabase = await createClient({ bypassDemo: true });
+    const authClient = await createClient({ bypassDemo: true });
     let user: any = null;
     try {
-      const userRes = await supabase.auth.getUser();
+      const userRes = await authClient.auth.getUser();
       user = userRes?.data?.user ?? null;
     } catch {}
 
@@ -47,17 +47,18 @@ export default async function TeacherDashboardPage() {
     }
 
     const userId = isDemo ? DEMO_USER_ID : user.id;
+    const db = createAdminClient();
 
     let userProfile = finalProfile;
     if (!isDemo && user) {
       try {
         const profileRes = await withTimeout(
-          supabase
+          db
             .from("users")
             .select("full_name, email, teaching_experience, teaching_level, subject, preferred_theme, preferred_language, role")
             .eq("id", userId)
             .single(),
-          2000,
+          10000,
           { data: null, error: null }
         );
         if (profileRes?.data) {
@@ -69,14 +70,14 @@ export default async function TeacherDashboardPage() {
     let completed: any[] = [];
     try {
       const sessionsRes = await withTimeout(
-        supabase
+        db
           .from("sessions")
           .select("id, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, started_at, status, topic_id")
           .eq("teacher_id", userId)
           .eq("status", "completed")
           .order("started_at", { ascending: false })
           .limit(5),
-        2000,
+        10000,
         { data: [], error: null }
       );
       completed = (sessionsRes?.data ?? []) as any[];
@@ -95,8 +96,8 @@ export default async function TeacherDashboardPage() {
       const topicIds = [...new Set(completed.map((s: any) => s.topic_id).filter(Boolean))] as string[];
       if (topicIds.length) {
         const topicsRes = await withTimeout(
-          supabase.from("lesson_topics").select("id, title_ar, title_en").in("id", topicIds),
-          2000,
+          db.from("lesson_topics").select("id, title_ar, title_en").in("id", topicIds),
+          10000,
           { data: [] as { id: string; title_ar: string; title_en: string | null }[], error: null }
         );
         for (const item of topicsRes?.data ?? []) {

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { type Language } from "@/lib/i18n";
@@ -20,10 +20,10 @@ export default async function HistoryPage({
   const isEn = lang === "en";
   const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
 
-  const supabase = await createClient({ bypassDemo: true });
+  const authClient = await createClient({ bypassDemo: true });
   let user: any = null;
   try {
-    const userRes = await supabase.auth.getUser();
+    const userRes = await authClient.auth.getUser();
     user = userRes?.data?.user ?? null;
   } catch {}
 
@@ -35,6 +35,7 @@ export default async function HistoryPage({
   if (!user && !isDemo) redirect("/login");
 
   const effectiveUserId = isDemo ? DEMO_USER_ID : user.id;
+  const db = createAdminClient();
 
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -43,7 +44,7 @@ export default async function HistoryPage({
     data: sessions,
     count,
   } = await Promise.race([
-    supabase
+    db
       .from("sessions")
       .select(
         "id, started_at, duration_minutes, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, topic_id",
@@ -54,13 +55,13 @@ export default async function HistoryPage({
       .order("started_at", { ascending: false })
       .range(from, to),
     new Promise<{ data: any[]; count: number }>((resolve) =>
-      setTimeout(() => resolve({ data: [], count: 0 }), 2500)
+      setTimeout(() => resolve({ data: [], count: 0 }), 10000)
     ),
   ]).catch(() => ({ data: [], count: 0 }));
 
   const topicIds = [...new Set((sessions ?? []).map((s) => s.topic_id).filter(Boolean))] as string[];
   const { data: topics } = topicIds.length
-    ? await supabase.from("lesson_topics").select("id, title_ar, title_en").in("id", topicIds)
+    ? await db.from("lesson_topics").select("id, title_ar, title_en").in("id", topicIds)
     : { data: [] as { id: string; title_ar: string; title_en: string | null }[] };
 
   const mappedSessions = (sessions ?? []).map((s) => {

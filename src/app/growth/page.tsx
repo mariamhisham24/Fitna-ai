@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { type Language } from "@/lib/i18n";
@@ -11,10 +11,10 @@ export default async function GrowthPage() {
   const isEn = lang === "en";
   const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
 
-  const supabase = await createClient({ bypassDemo: true });
+  const authClient = await createClient({ bypassDemo: true });
   let user: any = null;
   try {
-    const userRes = await supabase.auth.getUser();
+    const userRes = await authClient.auth.getUser();
     user = userRes?.data?.user ?? null;
   } catch {}
 
@@ -26,11 +26,12 @@ export default async function GrowthPage() {
   if (!user && !isDemo) redirect("/login");
 
   const effectiveUserId = isDemo ? DEMO_USER_ID : user.id;
+  const db = createAdminClient();
 
   const profileRes = (!isDemo && user)
     ? await Promise.race([
-        supabase.from("users").select("full_name, email").eq("id", user.id).single(),
-        new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 2000))
+        db.from("users").select("full_name, email").eq("id", user.id).single(),
+        new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 10000))
       ]).catch(() => ({ data: null }))
     : { data: null };
 
@@ -40,14 +41,14 @@ export default async function GrowthPage() {
   };
 
   const sessionsRes = await Promise.race([
-    supabase
+    db
       .from("sessions")
       .select("id, started_at, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, topic_id")
       .eq("teacher_id", effectiveUserId)
       .eq("status", "completed")
       .order("started_at", { ascending: true })
       .limit(50),
-    new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 2000))
+    new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 10000))
   ]).catch(() => ({ data: [] }));
 
   const rawSessions = sessionsRes.data ?? [];
@@ -55,8 +56,8 @@ export default async function GrowthPage() {
   const topicIds = [...new Set((rawSessions ?? []).map((s) => s.topic_id).filter(Boolean))] as string[];
   const topicsRes = topicIds.length
     ? await Promise.race([
-        supabase.from("lesson_topics").select("id, title_ar, title_en").in("id", topicIds),
-        new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 2000))
+        db.from("lesson_topics").select("id, title_ar, title_en").in("id", topicIds),
+        new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 10000))
       ]).catch(() => ({ data: [] }))
     : { data: [] as { id: string; title_ar: string; title_en: string | null }[] };
 
@@ -87,12 +88,12 @@ export default async function GrowthPage() {
   });
 
   const badgesRes = await Promise.race([
-    supabase
+    db
       .from("badges")
       .select("badge_key, unlocked_at")
       .eq("user_id", effectiveUserId)
       .order("unlocked_at", { ascending: false }),
-    new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 2000))
+    new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 10000))
   ]).catch(() => ({ data: [] }));
 
   const rawBadges = (badgesRes.data ?? []).map((b: any) => ({
