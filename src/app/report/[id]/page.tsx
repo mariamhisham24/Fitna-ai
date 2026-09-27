@@ -7,14 +7,19 @@ import { type Language } from "@/lib/i18n";
 
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
   const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
+  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
+
+  const supabase = await createClient();
+  let user: any = null;
+  try {
+    const userRes = await supabase.auth.getUser();
+    user = userRes?.data?.user ?? null;
+  } catch {}
+
+  // If not logged in and not in demo mode, redirect to login
+  if (!user && !isDemoCookie) redirect("/login");
 
   const { data: session } = await supabase
     .from("sessions")
@@ -26,11 +31,26 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   if (!session) notFound();
 
-  const { data: profile } = await supabase.from("users").select("role, institution_id").eq("id", user.id).single();
-  const isOwner = session.teacher_id === user.id;
+  let profile: any = null;
+  if (user) {
+    const { data: profileData } = await supabase
+      .from("users")
+      .select("role, institution_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    profile = profileData;
+  }
+
+  const isDemoSession = session.teacher_id === "d3300000-0000-4000-8000-000000000001";
+  const isOwner = user ? session.teacher_id === user.id : isDemoCookie;
+  const isTeacher = profile?.role === "teacher" || isDemoCookie;
   const isSameInstitutionAdmin =
-    profile?.role === "institution_admin" && profile.institution_id === session.institution_id;
-  if (!isOwner && !isSameInstitutionAdmin) redirect("/unauthorized");
+    (profile?.role === "institution_admin" || profile?.role === "super_admin") &&
+    (!session.institution_id || !profile.institution_id || profile.institution_id === session.institution_id);
+
+  if (!isOwner && !isDemoSession && !isTeacher && !isSameInstitutionAdmin) {
+    redirect("/unauthorized");
+  }
 
   if (session.status === "in_progress") redirect(`/session/live/${id}`);
 

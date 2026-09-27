@@ -21,7 +21,27 @@ export default async function UnauthorizedPage() {
           ? "You do not have permission to access this page with your current account role."
           : "مفيش صلاحية عندك تدخل الصفحة دي بحسابك الحالي."}
       </p>
-      <Link href="/" className="text-teal-600 dark:text-teal-400 font-bold text-xs hover:underline mt-2">
+      <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+        <Link
+          href="/dashboard/teacher"
+          className="px-4 py-2 rounded-xl bg-[#12B8C4] hover:bg-[#0ea2ad] text-white font-semibold text-xs shadow-sm transition-all"
+        >
+          {isEn ? "Teacher Dashboard" : "لوحة تحكم المعلم"}
+        </Link>
+        <Link
+          href="/dashboard/institution"
+          className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-[#071B3A] dark:text-white font-semibold text-xs transition-all"
+        >
+          {isEn ? "School / Admin Dashboard" : "لوحة تحكم الإدارة"}
+        </Link>
+        <Link
+          href="/login"
+          className="px-4 py-2 rounded-xl bg-transparent hover:underline text-teal-600 dark:text-teal-400 font-semibold text-xs transition-all"
+        >
+          {isEn ? "Log In as Different User" : "تسجيل الدخول بحساب آخر"}
+        </Link>
+      </div>
+      <Link href="/" className="text-xs text-[#071B3A]/50 dark:text-white/50 hover:underline mt-2">
         {isEn ? "← Return to Home" : "← العودة إلى الصفحة الرئيسية"}
       </Link>
     </div>

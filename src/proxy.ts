@@ -105,12 +105,20 @@ export async function proxy(request: NextRequest) {
 
     if (wantsTeacherArea && role && role !== "teacher") {
       const url = request.nextUrl.clone();
+      if (role === "institution_admin" || role === "super_admin") {
+        url.pathname = "/dashboard/institution";
+        return NextResponse.redirect(url);
+      }
       url.pathname = "/unauthorized";
       return NextResponse.redirect(url);
     }
 
     if (wantsAdminArea && role !== "institution_admin" && role !== "super_admin") {
       const url = request.nextUrl.clone();
+      if (role === "teacher") {
+        url.pathname = "/dashboard/teacher";
+        return NextResponse.redirect(url);
+      }
       url.pathname = "/unauthorized";
       return NextResponse.redirect(url);
     }
