@@ -657,7 +657,7 @@ export async function generateStudentReactions(params: {
           { role: "user", content: userPrompt },
         ],
         temperature: 0.65,
-        max_completion_tokens: 50,
+        max_completion_tokens: 150,
         response_format: { type: "json_object" },
       });
 
@@ -724,9 +724,14 @@ export async function generateStudentReactions(params: {
     const isNumeratorDenominatorQuestion = /(?:فوق|تحت|بسط|مقام|اسمه\s*(?:ايه|إيه))/i.test(
       currentQuestionText
     );
-    const isMatterStateQuestion = /(?:صلب|سائل|غاز|حالات\s*المادة|الكتاب|البالون|البالونة|الهواء|المية|الماء)/i.test(
-      currentQuestionText
+    const isClimateLesson = /(?:مناخ|مناخي|طقس|جو|حرارة|احتباس|دفيئة|climate|greenhouse|غلاف\s*جوي)/i.test(
+      `${currentQuestionText} ${lessonContext || ""}`
     );
+    const isMatterStateQuestion =
+      !isClimateLesson &&
+      /(?:حالات\s*المادة|صلب\s*وسائل|البالون|البالونة|الهواء\s*مادة|المية\s*مادة)/i.test(
+        currentQuestionText
+      );
 
     const hasActiveMisconception = candidate.activeMisconception && !candidate.activeMisconception.isResolved;
     const hasResolvedMisconception = candidate.activeMisconception && candidate.activeMisconception.isResolved;
@@ -1049,7 +1054,7 @@ export function generateFallbackReactions(params: {
         : intentAnalysis.intent === "direct_question"
         ? isCorrective
           ? `مش صح ${cleanTitle}؟ طب إزاي؟`
-          : /(?:صلب|سائل|غاز|حالات\s*المادة|الكتاب|البالون|البالونة|الهواء|المية|الماء)/i.test(teacherUtterance)
+          : (!/(?:مناخ|مناخي|طقس|جو|حرارة|احتباس|دفيئة|climate|greenhouse|غلاف\s*جوي)/i.test(`${teacherUtterance} ${lessonContext || ""}`) && /(?:حالات\s*المادة|صلب\s*وسائل|البالون|البالونة|الهواء\s*مادة|المية\s*مادة)/i.test(teacherUtterance))
           ? (/(?:شكل).*(?:مية|ماء).*(?:هواء|هوا)|(?:فرق).*(?:مية|ماء).*(?:هواء|هوا)/i.test(teacherUtterance)
               ? `المية بتاخد شكل الإناء ${cleanTitle}، بس الهواء ملوش شكل ثابت وبيملا المكان.`
               : /(?:كتاب|صلب)/i.test(teacherUtterance)
