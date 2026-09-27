@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { DEMO_COOKIE_NAME } from "@/lib/auth/demo";
 
-export type ActionState = { error: string | null; info?: string | null };
+export type ActionState = { error: string | null; info?: string | null; redirectTo?: string | null };
 
 function validateEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -16,8 +16,6 @@ export async function signInAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  let targetDashboard: string | null = null;
-
   try {
     const email = String(formData.get("email") || "").trim();
     const password = String(formData.get("password") || "");
@@ -73,20 +71,12 @@ export async function signInAction(
       // Default to teacher if user profile query has any issue
     }
 
-    targetDashboard = role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
+    const targetDashboard = role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
+    return { error: null, redirectTo: targetDashboard };
   } catch (err: any) {
-    if (err?.digest?.startsWith("NEXT_REDIRECT")) {
-      throw err;
-    }
     console.error("signInAction error:", err);
     return { error: err?.message || "حدث خطأ غير متوقع أثناء تسجيل الدخول" };
   }
-
-  if (targetDashboard) {
-    redirect(targetDashboard);
-  }
-
-  return { error: null };
 }
 
 /** Real sign-up against Supabase Auth. */
@@ -94,8 +84,6 @@ export async function signUpAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  let targetDashboard: string | null = null;
-
   try {
     const email = String(formData.get("email") || "").trim();
     const password = String(formData.get("password") || "");
@@ -147,7 +135,8 @@ export async function signUpAction(
 
     // If session was granted immediately (email confirmation disabled in Supabase)
     if (data?.session) {
-      targetDashboard = role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
+      const targetDashboard = role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
+      return { error: null, redirectTo: targetDashboard };
     } else {
       // Email confirmation is required by Supabase project settings
       return {
@@ -156,18 +145,9 @@ export async function signUpAction(
       };
     }
   } catch (err: any) {
-    if (err?.digest?.startsWith("NEXT_REDIRECT")) {
-      throw err;
-    }
     console.error("signUpAction error:", err);
     return { error: err?.message || "حدث خطأ غير متوقع أثناء إنشاء الحساب" };
   }
-
-  if (targetDashboard) {
-    redirect(targetDashboard);
-  }
-
-  return { error: null };
 }
 
 /** Sends a real password-reset email via Supabase Auth */

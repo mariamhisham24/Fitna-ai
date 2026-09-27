@@ -157,6 +157,18 @@ function LoginPageContent() {
   const activeError = (showForgot ? resetState.error : isLogin ? signInState.error : signUpState.error) || (!signInState.error && !signUpState.error && !resetState.error ? queryError : null);
   const resetSent = resetSuccessParam || (!resetState.error && !resetPending && resetState !== initialState);
 
+  useEffect(() => {
+    if (signInState?.redirectTo) {
+      window.location.href = signInState.redirectTo;
+    }
+  }, [signInState?.redirectTo]);
+
+  useEffect(() => {
+    if (signUpState?.redirectTo) {
+      window.location.href = signUpState.redirectTo;
+    }
+  }, [signUpState?.redirectTo]);
+
   return (
     <div className="auth-page" dir={t.dir}>
       {/* Brand Visual Side */}
@@ -291,6 +303,13 @@ function LoginPageContent() {
             </div>
           )}
 
+          {(signInState?.redirectTo || signUpState?.redirectTo) && (
+            <div className="p-3.5 mb-4 bg-emerald-500/15 border border-emerald-500/40 rounded-xl text-xs text-emerald-600 dark:text-emerald-400 font-medium text-center leading-relaxed animate-in fade-in flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+              <span>{lang === "ar" ? "تم بنجاح! جاري تحويلك إلى لوحة التحكم..." : "Success! Redirecting to your dashboard..."}</span>
+            </div>
+          )}
+
           {activeError && (
             <div className="p-3 mb-4 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400 font-medium text-center">
               {activeError}
@@ -357,8 +376,12 @@ function LoginPageContent() {
                 </a>
               </div>
 
-              <button className="auth-submit" type="submit" disabled={signInPending}>
-                {signInPending
+              <button className="auth-submit" type="submit" disabled={signInPending || Boolean(signInState?.redirectTo)}>
+                {signInState?.redirectTo
+                  ? lang === "ar"
+                    ? "جاري التوجيه..."
+                    : "Redirecting..."
+                  : signInPending
                   ? lang === "ar"
                     ? "جارٍ تسجيل الدخول..."
                     : "Logging in..."
@@ -487,8 +510,12 @@ function LoginPageContent() {
                 </span>
               </label>
 
-              <button className="auth-submit" type="submit" disabled={signUpPending}>
-                {signUpPending
+              <button className="auth-submit" type="submit" disabled={signUpPending || Boolean(signUpState?.redirectTo)}>
+                {signUpState?.redirectTo
+                  ? lang === "ar"
+                    ? "جاري التوجيه..."
+                    : "Redirecting..."
+                  : signUpPending
                   ? lang === "ar"
                     ? "جارٍ إنشاء الحساب..."
                     : "Creating account..."

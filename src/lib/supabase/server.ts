@@ -5,6 +5,7 @@
  */
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { DEMO_COOKIE_NAME, DEMO_USER } from "@/lib/auth/demo";
 
@@ -26,9 +27,13 @@ async function createRealServerClient(cookieStore: any) {
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
+            cookiesToSet.forEach(({ name, value, options }) => {
+              try {
+                cookieStore.set(name, value, options);
+              } catch {
+                cookieStore.set({ name, value, ...options });
+              }
+            });
           } catch {
             // Server Component context
           }
@@ -136,8 +141,6 @@ export async function createClient(options?: { bypassDemo?: boolean }) {
  * e.g. sending an invite email, or a super_admin-only maintenance task.
  * Never import this in a Client Component or anything bundled for the browser.
  */
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SERVICE_ROLE;
