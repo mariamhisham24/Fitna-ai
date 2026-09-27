@@ -100,17 +100,21 @@ export default async function GrowthPage() {
   if (sessions.length >= 3 && !badgeMap.has("streak_master")) {
     badgeMap.set("streak_master", sessions[2]?.startedAt || new Date().toISOString());
   }
-  if (sessions.some((s) => (s.socraticQuestionRate ?? 0) > 80) && !badgeMap.has("socrates_incarnate")) {
-    badgeMap.set("socrates_incarnate", new Date().toISOString());
+  const socratesSession = sessions.find((s) => (s.socraticQuestionRate ?? 0) > 80);
+  if (socratesSession && !badgeMap.has("socrates_incarnate")) {
+    badgeMap.set("socrates_incarnate", socratesSession.startedAt);
   }
-  if (sessions.some((s) => (s.teacherTalkRatio ?? 0) >= 25 && (s.teacherTalkRatio ?? 0) <= 50) && !badgeMap.has("master_listener")) {
-    badgeMap.set("master_listener", new Date().toISOString());
+  const listenerSession = sessions.find((s) => (s.teacherTalkRatio ?? 0) >= 25 && (s.teacherTalkRatio ?? 0) <= 50);
+  if (listenerSession && !badgeMap.has("master_listener")) {
+    badgeMap.set("master_listener", listenerSession.startedAt);
   }
-  if (sessions.some((s) => (s.inclusivityIndex ?? 0) === 100) && !badgeMap.has("inclusive_educator")) {
-    badgeMap.set("inclusive_educator", new Date().toISOString());
+  const inclusiveSession = sessions.find((s) => (s.inclusivityIndex ?? 0) === 100);
+  if (inclusiveSession && !badgeMap.has("inclusive_educator")) {
+    badgeMap.set("inclusive_educator", inclusiveSession.startedAt);
   }
-  if (sessions.some((s) => (s.overallScore ?? 0) >= 90) && !badgeMap.has("classroom_captain")) {
-    badgeMap.set("classroom_captain", new Date().toISOString());
+  const captainSession = sessions.find((s) => (s.overallScore ?? 0) >= 90);
+  if (captainSession && !badgeMap.has("classroom_captain")) {
+    badgeMap.set("classroom_captain", captainSession.startedAt);
   }
 
   const badges = Array.from(badgeMap.entries()).map(([key, unlockedAt]) => ({
