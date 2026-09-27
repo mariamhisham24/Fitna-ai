@@ -240,7 +240,13 @@ function _analyzeTeacherIntentInternal(
   }
 
   // 4b. Attention / Presence / Liveness Check ("انتم معايا؟", "ممكن حد يرد عليا", "سامعيني؟", "ردوا عليا", "الباقيين فين؟")
+  // Guard: If teacher asks a substantive question, that takes precedence over casual check-ins like "نركز مع بعض"
+  const hasPedagogicalQuestion =
+    /(?:عايز[ةه]?\s*أ?سأل|سؤال|يعني\s*إيه|يعني\s*ايه|بعمل\s*إيه|بعمل\s*ايه|إيه\s*رأيكم|ايه\s*رايكم|ليه|إزاي|ازاي|إيه|ايه|متى|أين|كيف|كم|هل)\b/i.test(clean) ||
+    clean.includes("؟") || clean.includes("?");
+
   const isAttentionCheck =
+    !hasPedagogicalQuestion &&
     /انتم\s*معايا|انتو\s*معايا|معايا(?:\s*يا\s*(?:شباب|ولاد|أولاد|جماعة|شطار))?|مركزين|سامعيني|صوتي\s*واضح|حد\s*يرد|ردوا\s*عليا|ممكن\s*حد\s*يرد|فينكم|انتو\s*فين|الباقيين\s*فين|الباقي\s*فين|فين\s*الباقيين|فين\s*الباقي|الكل\s*فين|شايفين|سامعين|مش\s*سامع|حد\s*يجاوب|محدش\s*بيجاوب|ما\s*حدش\s*يجاوب|حد\s*يجاوبني|ليه\s*محدش\s*(?:بيجاوب|جاوب|بيرد)|ليه\s*ما\s*حدش\s*(?:بيجاوب|جاوب|بيرد)/i.test(clean);
 
   if (isAttentionCheck) {

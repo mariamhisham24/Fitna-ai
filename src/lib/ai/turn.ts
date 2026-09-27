@@ -657,7 +657,7 @@ export async function generateStudentReactions(params: {
           { role: "user", content: userPrompt },
         ],
         temperature: 0.65,
-        max_completion_tokens: 150,
+        max_completion_tokens: 250,
         response_format: { type: "json_object" },
       });
 
@@ -812,17 +812,23 @@ export async function generateStudentReactions(params: {
             ? `اللي فوق البسط واللي تحت المقام ${cleanTitle}.`
             : /(?:مناخ|مناخي|طقس|جو|حرارة|climate)/i.test(`${currentQuestionText} ${lessonContext || ""}`)
             ? (p.name === "سارة"
-                ? `أنا سمعت عنه قبل كده ${cleanTitle}، وكنت حابة أقول رأيي في النقطة دي!`
+                ? `التغير المناخي بيأثر على درجات الحرارة والبيئة ${cleanTitle}.`
                 : p.name === "عمر"
-                ? `أنا سمعت عنه ومتحمس أقول اللي أعرفه ${cleanTitle}!`
-                : `أنا كنت حابب أشارك رأيي في موضوع التغير المناخي ${cleanTitle}.`)
+                ? `يعني الجو ودرجات الحرارة بتتغير في كل العالم ${cleanTitle}!`
+                : `التغير المناخي بيسبب ظواهر جوية مختلفة ${cleanTitle}.`)
+            : /(?:حالات\s*المادة|صلب\s*وسائل|البالون|البالونة|الهواء\s*مادة|المية\s*مادة|سائل|صلبة|غاز)/i.test(`${currentQuestionText} ${lessonContext || ""}`)
+            ? (p.name === "سارة"
+                ? `المية سائلة بتاخد شكل الإناء، بس الهواء غاز ${cleanTitle}.`
+                : p.name === "عمر"
+                ? `الهواء مادة غازية عشان بيملا المكان كله ${cleanTitle}!`
+                : `المادة الصلبة شكلها وحجمها ثابتين ${cleanTitle}.`)
             : p.name === "سارة"
-            ? `عندي فكرة عن الموضوع ${cleanTitle} وكنت حابة أشاركها مع حضرتك!`
+            ? `المفروض دي صيغة سؤال وبنطلب بيها معلومة ${cleanTitle}.`
             : p.name === "عمر"
-            ? `أنا كنت عايز أجاوب ومتحمس ${cleanTitle}!`
+            ? `يعني بنسأل عن حاجة ومستنيين إجابتها ${cleanTitle}!`
             : p.name === "ياسين"
-            ? `عارف الإجابة وكنت حابب أقولها ${cleanTitle}.`
-            : `كنت عايزة أشارك إجابتي مع حضرتك ${cleanTitle}.`)
+            ? `ده سؤال واستفهام عشان نعرف إجابة ${cleanTitle}.`
+            : `أنا شايفة إنه استفسار وسؤال ${cleanTitle}.`)
         : intentAnalysis.referencedStudentName
         ? (p.name === "سارة" || p.name === "نور"
             ? `أنا متفقة مع كلام ${intentAnalysis.referencedStudentName} ${cleanTitle}!`
@@ -839,13 +845,21 @@ export async function generateStudentReactions(params: {
           : `${cleanTitle} رسمت رسمة جديدة وعايزة أوريها لحضرتك.`
         : isCorrectiveFeedback
         ? `مش صح ${cleanTitle}؟ طب إزاي؟`
+        : /(?:حالات\s*المادة|صلب\s*وسائل|البالون|البالونة|الهواء\s*مادة|المية\s*مادة|سائل|صلبة|غاز)/i.test(`${currentQuestionText} ${lessonContext || ""}`)
+        ? (p.name === "سارة"
+            ? `المية بتاخد شكل الإناء ${cleanTitle}، بس الهواء ملوش شكل ثابت وبيملا المكان.`
+            : p.name === "عمر"
+            ? `الهواء مادة غازية ${cleanTitle} وبيملا المكان.`
+            : `المادة الصلبة شكلها وحجمها ثابت ${cleanTitle}.`)
+        : /(?:فوق|تحت|بسط|مقام)/i.test(`${currentQuestionText} ${lessonContext || ""}`)
+        ? `اللي فوق البسط واللي تحت المقام ${cleanTitle}.`
         : p.name === "عمر"
-        ? `أنا عارف ${cleanTitle}!`
+        ? `يعني بنسأل عن حاجة ومستنيين إجابتها ${cleanTitle}!`
         : p.name === "سارة"
-        ? `ممكن أقول ${cleanTitle}؟`
+        ? `المفروض بنطلب معلومة مش عارفينها ${cleanTitle}.`
         : p.name === "ياسين"
-        ? `أنا متابع ومستعد أجاوب ${cleanTitle}.`
-        : `أيوه ${cleanTitle} معاك.`;
+        ? `ده سؤال واستفهام عشان نعرف إجابة ${cleanTitle}.`
+        : `أنا شايفة إنه استفسار وسؤال ${cleanTitle}.`;
 
     const sanitized = rawText
       ? sanitizeStudentResponse(rawText, p.name, title, {
@@ -1042,15 +1056,21 @@ export function generateFallbackReactions(params: {
         : intentAnalysis.intent === "permission_to_speak"
         ? (/(?:مناخ|مناخي|طقس|جو|حرارة|climate)/i.test(`${teacherUtterance} ${lessonContext || ""}`)
             ? (p.name === "سارة"
-                ? `أنا سمعت عنه قبل كده ${cleanTitle}، وكنت حابة أقول رأيي في النقطة دي!`
-                : `أنا عندي فكرة عن التغير المناخي ومتحمس أقولها ${cleanTitle}!`)
-            : p.name === "عمر"
-            ? `أنا كنت عايز أجاوب ${cleanTitle}!`
+                ? `التغير المناخي بيأثر على درجات الحرارة والبيئة ${cleanTitle}.`
+                : `التغير المناخي بيغير درجات الحرارة والطقس في العالم ${cleanTitle}!`)
+            : /(?:حالات\s*المادة|صلب\s*وسائل|البالون|البالونة|الهواء\s*مادة|المية\s*مادة|سائل|صلبة|غاز)/i.test(`${teacherUtterance} ${lessonContext || ""}`)
+            ? (p.name === "سارة"
+                ? `المية سائلة بتاخد شكل الإناء، بس الهواء غاز ${cleanTitle}.`
+                : p.name === "عمر"
+                ? `الهواء مادة غازية عشان بيملا المكان كله ${cleanTitle}!`
+                : `المادة الصلبة شكلها وحجمها ثابتين ${cleanTitle}.`)
             : p.name === "سارة"
-            ? `عندي فكرة ${cleanTitle}!`
+            ? `المفروض دي صيغة سؤال وبنطلب بيها معلومة ${cleanTitle}.`
+            : p.name === "عمر"
+            ? `يعني بنسأل عن حاجة ومستنيين إجابتها ${cleanTitle}!`
             : p.name === "ياسين"
-            ? `أنا عارف الإجابة ${cleanTitle}!`
-            : `كتبت الملاحظة دي في الكشكول ${cleanTitle}.`)
+            ? `ده سؤال واستفهام عشان نعرف إجابة ${cleanTitle}.`
+            : `أنا شايفة إنه استفسار وسؤال ${cleanTitle}.`)
         : intentAnalysis.intent === "direct_question"
         ? isCorrective
           ? `مش صح ${cleanTitle}؟ طب إزاي؟`
@@ -1065,12 +1085,12 @@ export function generateFallbackReactions(params: {
           : /(?:فوق|تحت|بسط|مقام)/i.test(teacherUtterance)
           ? `اللي فوق البسط واللي تحت المقام ${cleanTitle}.`
           : p.name === "عمر"
-          ? `أنا عارف ${cleanTitle}!`
-          : p.name === "ياسين"
-          ? `أنا جاهز ومتابع ${cleanTitle}.`
+          ? `يعني بنسأل عن حاجة ومستنيين إجابتها ${cleanTitle}!`
           : p.name === "سارة"
-          ? `أنا متابعة مع حضرتك ${cleanTitle}.`
-          : `معاك ${cleanTitle}.`
+          ? `المفروض بنطلب معلومة مش عارفينها ${cleanTitle}.`
+          : p.name === "ياسين"
+          ? `ده سؤال واستفهام عشان نعرف إجابة ${cleanTitle}.`
+          : `أنا شايفة إنه استفسار وسؤال ${cleanTitle}.`
         : intentAnalysis.intent === "roll_call"
         ? `أنا ${p.name}، عندي ${p.age} سنين وبحب ${p.name === "عمر" ? "الكورة" : p.name === "سارة" ? "الرسم" : p.name === "ياسين" ? "الألعاب" : "المذاكرة"} ${cleanTitle}!`
         : intentAnalysis.intent === "open_discussion"
