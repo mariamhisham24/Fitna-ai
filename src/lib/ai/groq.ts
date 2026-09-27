@@ -11,7 +11,7 @@ export const groq = new Groq({
   maxRetries: 1,
 });
 
-export const CHAT_MODEL = "qwen/qwen3.8-27b";
+export const CHAT_MODEL = "llama-3.3-70b-versatile";
 export const WHISPER_MODEL = "whisper-large-v3-turbo";
 
 type NonStreamChatCompletion = Extract<
@@ -67,6 +67,7 @@ export async function callGroqWithFallback(
   const models = [
     CHAT_MODEL,
     "allam-2-7b",
+    "llama-3.1-8b-instant",
   ];
 
   let lastError: unknown = null;
