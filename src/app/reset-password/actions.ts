@@ -1,9 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { DEMO_COOKIE_NAME } from "@/lib/auth/demo";
 import type { ActionState } from "@/app/(auth)/login/actions";
 
 export async function updatePasswordAction(
@@ -20,10 +18,7 @@ export async function updatePasswordAction(
     return { error: "كلمتا المرور مش متطابقتين" };
   }
 
-  const cookieStore = await cookies();
-  cookieStore.delete(DEMO_COOKIE_NAME);
-
-  const supabase = await createClient({ bypassDemo: true });
+  const supabase = await createClient();
 
   // Requires a valid session — established by /auth/confirm verifying
   // the recovery token just before the browser landed here.
@@ -35,5 +30,8 @@ export async function updatePasswordAction(
     return { error: error.message };
   }
 
-  redirect("/dashboard/teacher");
+  const { data: { user } } = await supabase.auth.getUser();
+  const target = user?.user_metadata?.role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
+
+  redirect(target);
 }

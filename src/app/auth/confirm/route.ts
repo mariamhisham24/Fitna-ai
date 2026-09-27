@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get("next") ?? defaultNext;
 
   if (tokenHash && type) {
-    const supabase = await createClient({ bypassDemo: true });
+    const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
     if (!error) {
       const response = NextResponse.redirect(`${origin}${next}`);

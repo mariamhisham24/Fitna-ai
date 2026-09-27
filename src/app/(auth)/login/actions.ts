@@ -3,7 +3,6 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { DEMO_COOKIE_NAME } from "@/lib/auth/demo";
 
 export type ActionState = { error: string | null; info?: string | null; redirectTo?: string | null };
 
@@ -24,10 +23,8 @@ export async function signInAction(
     if (password.length < 6) return { error: "كلمة المرور لازم تكون 6 أحرف على الأقل" };
 
     const cookieStore = await cookies();
-    // Wipe demo cookie so caller uses authentic session
-    cookieStore.delete(DEMO_COOKIE_NAME);
 
-    const supabase = await createClient({ bypassDemo: true });
+    const supabase = await createClient();
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
@@ -52,9 +49,10 @@ export async function signInAction(
     }
 
     // Safe profile lookup
-    let role = "teacher";
+    let role = user.user_metadata?.role || "teacher";
     try {
-      const { data: profile } = await supabase
+      const db = createAdminClient();
+      const { data: profile } = await db
         .from("users")
         .select("role, preferred_theme")
         .eq("id", user.id)
@@ -97,10 +95,7 @@ export async function signUpAction(
       return { error: "من فضلك اختر كيف ستستخدم فِطنة" };
     }
 
-    const cookieStore = await cookies();
-    cookieStore.delete(DEMO_COOKIE_NAME);
-
-    const supabase = await createClient({ bypassDemo: true });
+    const supabase = await createClient();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fitna-ai.vercel.app";
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -159,10 +154,7 @@ export async function requestPasswordResetAction(
     const email = String(formData.get("email") || "").trim();
     if (!validateEmail(email)) return { error: "البريد الإلكتروني غير صالح" };
 
-    const cookieStore = await cookies();
-    cookieStore.delete(DEMO_COOKIE_NAME);
-
-    const supabase = await createClient({ bypassDemo: true });
+    const supabase = await createClient();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fitna-ai.vercel.app";
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${appUrl}/auth/confirm?type=recovery&next=/reset-password`,
@@ -177,9 +169,7 @@ export async function requestPasswordResetAction(
 
 export async function signOutAction() {
   try {
-    const cookieStore = await cookies();
-    cookieStore.delete(DEMO_COOKIE_NAME);
-    const supabase = await createClient({ bypassDemo: true });
+    const supabase = await createClient();
     await supabase.auth.signOut();
   } catch {}
   redirect("/login");

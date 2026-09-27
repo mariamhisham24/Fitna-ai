@@ -4,8 +4,6 @@ import { redirect } from "next/navigation";
 import { type Language } from "@/lib/i18n";
 import { TeacherDashboardClient } from "./TeacherDashboardClient";
 
-import { DEMO_USER_ID } from "@/lib/auth/demo";
-
 async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([
     Promise.resolve(promise),
@@ -16,115 +14,92 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
 export default async function TeacherDashboardPage() {
   const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
-  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
 
-  const finalProfile = {
-    full_name: "معلم تجريبي (Demo Teacher)",
-    email: "demo@fitna.ai",
-    teaching_experience: "5-10",
-    teaching_level: "المرحلة الإعدادية",
-    subject: "العلوم واللغة الإنجليزية",
-    preferred_theme: "dark",
-    preferred_language: "ar",
+  const supabase = await createClient();
+  let user: any = null;
+  try {
+    const userRes = await supabase.auth.getUser();
+    user = userRes?.data?.user ?? null;
+  } catch {}
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const db = createAdminClient();
+
+  let userProfile = {
+    full_name: user.user_metadata?.full_name || user.email || "معلم",
+    email: user.email || "",
+    teaching_experience: null,
+    teaching_level: null,
+    subject: null,
+    preferred_theme: "dark" as const,
+    preferred_language: lang,
     role: "teacher" as const,
   };
 
   try {
-    const authClient = await createClient({ bypassDemo: true });
-    let user: any = null;
-    try {
-      const userRes = await authClient.auth.getUser();
-      user = userRes?.data?.user ?? null;
-    } catch {}
-
-    const isDemo = !user && isDemoCookie;
-    if (user && isDemoCookie) {
-      cookieStore.delete("fitna_demo");
+    const profileRes = await withTimeout(
+      db
+        .from("users")
+        .select("full_name, email, teaching_experience, teaching_level, subject, preferred_theme, preferred_language, role")
+        .eq("id", user.id)
+        .single(),
+      10000,
+      { data: null, error: null }
+    );
+    if (profileRes?.data) {
+      userProfile = profileRes.data;
     }
+  } catch {}
 
-    if (!user && !isDemo) {
-      redirect("/login");
-    }
+  let completed: any[] = [];
+  try {
+    const sessionsRes = await withTimeout(
+      db
+        .from("sessions")
+        .select("id, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, started_at, status, topic_id")
+        .eq("teacher_id", user.id)
+        .eq("status", "completed")
+        .order("started_at", { ascending: false })
+        .limit(5),
+      10000,
+      { data: [], error: null }
+    );
+    completed = (sessionsRes?.data ?? []) as any[];
+  } catch {}
 
-    const userId = isDemo ? DEMO_USER_ID : user.id;
-    const db = createAdminClient();
+  const avgScore =
+    completed.length > 0
+      ? Math.round(
+          completed.reduce((sum: number, s: any) => sum + (s.overall_score ?? 0), 0) / completed.length
+        )
+      : null;
 
-    let userProfile = finalProfile;
-    if (!isDemo && user) {
-      try {
-        const profileRes = await withTimeout(
-          db
-            .from("users")
-            .select("full_name, email, teaching_experience, teaching_level, subject, preferred_theme, preferred_language, role")
-            .eq("id", userId)
-            .single(),
-          10000,
-          { data: null, error: null }
-        );
-        if (profileRes?.data) {
-          userProfile = profileRes.data;
-        }
-      } catch {}
-    }
-
-    let completed: any[] = [];
-    try {
-      const sessionsRes = await withTimeout(
-        db
-          .from("sessions")
-          .select("id, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, started_at, status, topic_id")
-          .eq("teacher_id", userId)
-          .eq("status", "completed")
-          .order("started_at", { ascending: false })
-          .limit(5),
+  // Fetch topics for display names
+  const topicTitleObj: Record<string, string> = {};
+  try {
+    const topicIds = [...new Set(completed.map((s: any) => s.topic_id).filter(Boolean))] as string[];
+    if (topicIds.length) {
+      const topicsRes = await withTimeout(
+        db.from("lesson_topics").select("id, title_ar, title_en").in("id", topicIds),
         10000,
-        { data: [], error: null }
+        { data: [] as { id: string; title_ar: string; title_en: string | null }[], error: null }
       );
-      completed = (sessionsRes?.data ?? []) as any[];
-    } catch {}
-
-    const avgScore =
-      completed.length > 0
-        ? Math.round(
-            completed.reduce((sum: number, s: any) => sum + (s.overall_score ?? 0), 0) / completed.length
-          )
-        : null;
-
-    // Fetch topics for display names
-    const topicTitleObj: Record<string, string> = {};
-    try {
-      const topicIds = [...new Set(completed.map((s: any) => s.topic_id).filter(Boolean))] as string[];
-      if (topicIds.length) {
-        const topicsRes = await withTimeout(
-          db.from("lesson_topics").select("id, title_ar, title_en").in("id", topicIds),
-          10000,
-          { data: [] as { id: string; title_ar: string; title_en: string | null }[], error: null }
-        );
-        for (const item of topicsRes?.data ?? []) {
-          topicTitleObj[item.id] = lang === "en" && item.title_en ? item.title_en : item.title_ar;
-        }
+      for (const item of topicsRes?.data ?? []) {
+        topicTitleObj[item.id] = lang === "en" && item.title_en ? item.title_en : item.title_ar;
       }
-    } catch {}
+    }
+  } catch {}
 
-    return (
-      <TeacherDashboardClient
-        profile={userProfile as any}
-        completed={completed}
-        avgScore={avgScore}
-        topicTitleObj={topicTitleObj}
-        lang={lang}
-      />
-    );
-  } catch (err) {
-    console.error("TeacherDashboardPage render error:", err);
-    return (
-      <TeacherDashboardClient
-        profile={finalProfile as any}
-        completed={[]}
-        avgScore={null}
-        topicTitleObj={{}}
-        lang={lang}
-      />
-    );
-  }
+  return (
+    <TeacherDashboardClient
+      profile={userProfile as any}
+      completed={completed}
+      avgScore={avgScore}
+      topicTitleObj={topicTitleObj}
+      lang={lang}
+    />
+  );
 }

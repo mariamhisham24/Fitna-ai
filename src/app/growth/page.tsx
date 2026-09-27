@@ -3,48 +3,38 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { type Language } from "@/lib/i18n";
 import { GrowthClient } from "./GrowthClient";
-import { DEMO_USER_ID } from "@/lib/auth/demo";
 
 export default async function GrowthPage() {
   const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
   const isEn = lang === "en";
-  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
 
-  const authClient = await createClient({ bypassDemo: true });
+  const supabase = await createClient();
   let user: any = null;
   try {
-    const userRes = await authClient.auth.getUser();
+    const userRes = await supabase.auth.getUser();
     user = userRes?.data?.user ?? null;
   } catch {}
 
-  const isDemo = !user && isDemoCookie;
-  if (user && isDemoCookie) {
-    cookieStore.delete("fitna_demo");
-  }
+  if (!user) redirect("/login");
 
-  if (!user && !isDemo) redirect("/login");
-
-  const effectiveUserId = isDemo ? DEMO_USER_ID : user.id;
   const db = createAdminClient();
 
-  const profileRes = (!isDemo && user)
-    ? await Promise.race([
-        db.from("users").select("full_name, email").eq("id", user.id).single(),
-        new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 10000))
-      ]).catch(() => ({ data: null }))
-    : { data: null };
+  const profileRes = await Promise.race([
+    db.from("users").select("full_name, email").eq("id", user.id).single(),
+    new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 10000))
+  ]).catch(() => ({ data: null }));
 
   const profile = profileRes?.data ?? {
-    full_name: "معلم تجريبي (Demo Teacher)",
-    email: "demo@fitna.ai",
+    full_name: user.user_metadata?.full_name || user.email || "معلم",
+    email: user.email || "",
   };
 
   const sessionsRes = await Promise.race([
     db
       .from("sessions")
       .select("id, started_at, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, topic_id")
-      .eq("teacher_id", effectiveUserId)
+      .eq("teacher_id", user.id)
       .eq("status", "completed")
       .order("started_at", { ascending: true })
       .limit(50),
@@ -91,7 +81,7 @@ export default async function GrowthPage() {
     db
       .from("badges")
       .select("badge_key, unlocked_at")
-      .eq("user_id", effectiveUserId)
+      .eq("user_id", user.id)
       .order("unlocked_at", { ascending: false }),
     new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 10000))
   ]).catch(() => ({ data: [] }));

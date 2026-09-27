@@ -247,10 +247,6 @@ function LoginPageContent() {
               {/* Instant 1-Click Demo Account */}
               <Link
                 href="/demo"
-                onClick={() => {
-                  document.cookie = "fitna_demo=true; path=/; max-age=31536000; SameSite=Lax";
-                  document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
-                }}
                 className="demo-pop-btn w-full mb-3 py-2.5 px-4 rounded-xl flex flex-col items-center justify-center gap-0.5 bg-amber-500/[0.07] hover:bg-amber-500/[0.12] dark:bg-amber-400/10 dark:hover:bg-amber-400/15 border border-amber-400/40 hover:border-amber-400/80 group no-underline text-center cursor-pointer"
               >
                 <div className="flex items-center gap-2 font-bold text-sm text-[#071b3a] dark:text-[#ffb52e]">
@@ -320,9 +316,6 @@ function LoginPageContent() {
           {!showForgot && isLogin && (
             <form
               action={signInFormAction}
-              onSubmit={() => {
-                document.cookie = "fitna_demo=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-              }}
             >
               <label>
                 {t.email}
@@ -400,9 +393,6 @@ function LoginPageContent() {
           {!showForgot && !isLogin && (
             <form
               action={signUpFormAction}
-              onSubmit={() => {
-                document.cookie = "fitna_demo=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-              }}
             >
               {/* Role Selection inside Sign Up */}
               <div style={{ marginBottom: "14px" }}>
@@ -539,9 +529,6 @@ function LoginPageContent() {
           {showForgot && (
             <form
               action={resetFormAction}
-              onSubmit={() => {
-                document.cookie = "fitna_demo=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-              }}
             >
               <label>
                 {t.email}

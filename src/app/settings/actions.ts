@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
-import { DEMO_COOKIE_NAME } from "@/lib/auth/demo";
 import type { ActionState } from "@/app/(auth)/login/actions";
 
 /**
@@ -23,10 +22,7 @@ export async function updateProfileAction(
   if (!fullName) return { error: "الاسم مطلوب" };
   if (fullName.length > 100) return { error: "الاسم طويل جدًا" };
 
-  const cookieStore = await cookies();
-  cookieStore.delete(DEMO_COOKIE_NAME);
-
-  const supabase = await createClient({ bypassDemo: true });
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -62,10 +58,7 @@ export async function updateEmailAction(
     return { error: "البريد الإلكتروني غير صالح" };
   }
 
-  const cookieStore = await cookies();
-  cookieStore.delete(DEMO_COOKIE_NAME);
-
-  const supabase = await createClient({ bypassDemo: true });
+  const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ email });
   if (error) return { error: error.message };
 
@@ -84,10 +77,7 @@ export async function updatePasswordAction(
   if (password.length < 6) return { error: "كلمة المرور لازم تكون 6 أحرف على الأقل" };
   if (password !== confirmPassword) return { error: "كلمتا المرور مش متطابقتين" };
 
-  const cookieStore = await cookies();
-  cookieStore.delete(DEMO_COOKIE_NAME);
-
-  const supabase = await createClient({ bypassDemo: true });
+  const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: error.message };
 
@@ -113,9 +103,8 @@ export async function updatePreferencesAction(
   if (language !== "ar" && language !== "en") return { error: "قيمة غير صالحة" };
 
   const cookieStore = await cookies();
-  cookieStore.delete(DEMO_COOKIE_NAME);
 
-  const supabase = await createClient({ bypassDemo: true });
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

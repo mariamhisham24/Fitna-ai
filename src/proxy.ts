@@ -27,7 +27,6 @@ const DEFAULT_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz
 export async function proxy(request: NextRequest) {
   try {
     const { pathname } = request.nextUrl;
-    const isDemo = request.cookies.get("fitna_demo")?.value === "true";
 
     let response = NextResponse.next({ request });
 
@@ -65,29 +64,31 @@ export async function proxy(request: NextRequest) {
     try {
       const authRes = await Promise.race([
         supabase.auth.getUser(),
-        new Promise<any>((resolve) => setTimeout(() => resolve({ data: { user: null } }), 4000)),
+        new Promise<any>((resolve) => setTimeout(() => resolve({ data: { user: null } }), 8000)),
       ]);
       user = authRes?.data?.user ?? null;
     } catch {
       // Supabase auth network timeout fallback
     }
 
+    if (request.cookies.has("fitna_demo")) {
+      response.cookies.delete("fitna_demo");
+    }
+
     // 1. If visitor is logged in with a real account: they are an authentic user
     if (user) {
-      if (request.cookies.has("fitna_demo")) {
-        response.cookies.delete("fitna_demo");
+      // Look up caller's role: fast check via user_metadata first, fallback to DB
+      let role = (user.user_metadata?.role as string) || null;
+      if (!role) {
+        try {
+          const { data: profile } = await supabase
+            .from("users")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+          role = profile?.role;
+        } catch {}
       }
-
-      // Look up the caller's real role.
-      let role = null;
-      try {
-        const { data: profile } = await supabase
-          .from("users")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        role = profile?.role;
-      } catch {}
 
       const wantsTeacherArea = TEACHER_ONLY_PREFIXES.some((p) => pathname.startsWith(p));
       const wantsAdminArea = ADMIN_ONLY_PREFIXES.some((p) => pathname.startsWith(p));
@@ -115,21 +116,14 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
-    // 2. If visitor is NOT logged in: check if they are in Demo Mode
-    if (isDemo) {
-      const wantsAdminArea = ADMIN_ONLY_PREFIXES.some((p) => pathname.startsWith(p));
-      if (wantsAdminArea) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/unauthorized";
-        return NextResponse.redirect(url);
-      }
-      return response;
-    }
-
-    // 3. Visitor is NOT logged in and not demo: redirect to login
+    // 2. Visitor is NOT logged in: redirect to login
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    const redirectRes = NextResponse.redirect(url);
+    if (request.cookies.has("fitna_demo")) {
+      redirectRes.cookies.delete("fitna_demo");
+    }
+    return redirectRes;
   } catch (err) {
     console.error("Proxy middleware error:", err);
     return NextResponse.next({ request });

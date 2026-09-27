@@ -1,7 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { DEMO_USER_ID } from "@/lib/auth/demo";
 import { SessionSetupForm } from "./SessionSetupForm";
 
 const FALLBACK_TOPICS = [
@@ -26,56 +24,41 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
 }
 
 export default async function SessionSetupPage() {
-  const cookieStore = await cookies();
-  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
-
-  const supabase = await createClient({ bypassDemo: true });
+  const supabase = await createClient();
   let user: any = null;
   try {
     const userRes = await supabase.auth.getUser();
     user = userRes?.data?.user ?? null;
   } catch {}
 
-  const isDemo = !user && isDemoCookie;
-  if (user && isDemoCookie) {
-    cookieStore.delete("fitna_demo");
-  }
+  if (!user) redirect("/login");
 
-  if (!user && !isDemo) redirect("/login");
-
-  let role = isDemo ? "teacher" : null;
-  if (user) {
-    const profileRes = await withTimeout(
-      supabase.from("users").select("role").eq("id", user.id).single(),
-      2000,
-      { data: null, error: null }
-    );
-    role = profileRes.data?.role ?? null;
-  }
-
-  // Defense in depth: the middleware already blocks non-teachers from
-  // /session/*, but this page also refuses to render for them directly.
+  const db = createAdminClient();
+  const profileRes = await withTimeout(
+    db.from("users").select("role").eq("id", user.id).single(),
+    10000,
+    { data: null, error: null }
+  );
+  const role = profileRes.data?.role ?? "teacher";
   if (role !== "teacher") redirect("/unauthorized");
 
   const topicsRes = await withTimeout(
-    supabase.from("lesson_topics").select("id, title_ar, title_en").order("title_ar"),
-    2000,
+    db.from("lesson_topics").select("id, title_ar, title_en").order("created_at", { ascending: true }),
+    10000,
     { data: null, error: null }
   );
+  const topics = topicsRes.data && topicsRes.data.length > 0 ? topicsRes.data : FALLBACK_TOPICS;
 
   const personasRes = await withTimeout(
-    supabase.from("student_personas").select("id, name, age, base_attention, strengths, weaknesses").order("name"),
-    2000,
+    db
+      .from("student_personas")
+      .select("id, name, age, base_attention, strengths, weaknesses")
+      .eq("is_active", true)
+      .order("created_at", { ascending: true }),
+    10000,
     { data: null, error: null }
   );
-
-  const topics = topicsRes.data && topicsRes.data.length > 0 ? topicsRes.data : FALLBACK_TOPICS;
   const personas = personasRes.data && personasRes.data.length > 0 ? personasRes.data : FALLBACK_PERSONAS;
 
-  return (
-    <SessionSetupForm
-      topics={topics}
-      personas={personas}
-    />
-  );
+  return <SessionSetupForm topics={topics} personas={personas} />;
 }

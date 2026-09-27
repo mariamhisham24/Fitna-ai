@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
@@ -6,19 +6,18 @@ import { SettingsForm } from "./SettingsForm";
 import { getDictionary, type Language } from "@/lib/i18n";
 
 export default async function SettingsPage() {
-  const cookieStore = await cookies();
-  cookieStore.delete("fitna_demo");
-
-  const supabase = await createClient({ bypassDemo: true });
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
   const t = getDictionary(lang);
 
-  const { data: profile } = await supabase
+  const db = createAdminClient();
+  const { data: profile } = await db
     .from("users")
     .select(
       "full_name, email, teaching_experience, teaching_level, subject, preferred_theme, preferred_language, role"

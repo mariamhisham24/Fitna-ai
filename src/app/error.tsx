@@ -16,9 +16,7 @@ export default function RootError({
   }, [error]);
 
   const handleDemoAccess = () => {
-    document.cookie = "fitna_demo=true; path=/; max-age=31536000; SameSite=Lax";
-    document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
-    window.location.href = "/dashboard/teacher";
+    window.location.href = "/demo";
   };
 
   return (

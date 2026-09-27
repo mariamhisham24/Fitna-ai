@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect, notFound } from "next/navigation";
 import { ReportClient } from "./ReportClient";
@@ -9,7 +9,6 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
-  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
 
   const supabase = await createClient();
   let user: any = null;
@@ -18,10 +17,11 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     user = userRes?.data?.user ?? null;
   } catch {}
 
-  // If not logged in and not in demo mode, redirect to login
-  if (!user && !isDemoCookie) redirect("/login");
+  if (!user) redirect("/login");
 
-  const { data: session } = await supabase
+  const db = createAdminClient();
+
+  const { data: session } = await db
     .from("sessions")
     .select(
       "id, teacher_id, institution_id, duration_minutes, status, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, started_at, ended_at"
@@ -31,42 +31,38 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   if (!session) notFound();
 
-  let profile: any = null;
-  if (user) {
-    const { data: profileData } = await supabase
-      .from("users")
-      .select("role, institution_id")
-      .eq("id", user.id)
-      .maybeSingle();
-    profile = profileData;
-  }
+  const { data: profile } = await db
+    .from("users")
+    .select("role, institution_id")
+    .eq("id", user.id)
+    .maybeSingle();
 
   const isDemoSession = session.teacher_id === "d3300000-0000-4000-8000-000000000001";
-  const isOwner = user ? session.teacher_id === user.id : isDemoCookie;
-  const isTeacher = profile?.role === "teacher" || isDemoCookie;
+  const isOwner = session.teacher_id === user.id;
+  const isTeacher = profile?.role === "teacher";
   const isSameInstitutionAdmin =
     (profile?.role === "institution_admin" || profile?.role === "super_admin") &&
     (!session.institution_id || !profile.institution_id || profile.institution_id === session.institution_id);
 
-  if (!isOwner && !isDemoSession && !isTeacher && !isSameInstitutionAdmin) {
+  if (!isOwner && !isDemoSession && !isSameInstitutionAdmin) {
     redirect("/unauthorized");
   }
 
   if (session.status === "in_progress") redirect(`/session/live/${id}`);
 
-  const { data: report } = await supabase
+  const { data: report } = await db
     .from("reports")
     .select("summary_ar, session_signal_ar, strengths, weaknesses, recommendations, evidence_moments, framework_scores, share_token")
     .eq("session_id", id)
     .single();
 
-  const { data: events } = await supabase
+  const { data: events } = await db
     .from("session_events")
     .select("id, event_type, actor, content, occurred_at_ms, audio_url, created_at")
     .eq("session_id", id)
     .order("created_at", { ascending: true });
 
-  const { data: personaRows } = await supabase.from("student_personas").select("id, name");
+  const { data: personaRows } = await db.from("student_personas").select("id, name");
   const personaNameById = new Map((personaRows ?? []).map((p) => [p.id, p.name]));
 
   const sortedEvents = [...(events ?? [])].sort((a, b) => {

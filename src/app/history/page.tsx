@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { type Language } from "@/lib/i18n";
 import { HistoryClient } from "./HistoryClient";
-import { DEMO_USER_ID } from "@/lib/auth/demo";
 
 const PAGE_SIZE = 10;
 
@@ -18,23 +17,16 @@ export default async function HistoryPage({
   const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
   const isEn = lang === "en";
-  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
 
-  const authClient = await createClient({ bypassDemo: true });
+  const supabase = await createClient();
   let user: any = null;
   try {
-    const userRes = await authClient.auth.getUser();
+    const userRes = await supabase.auth.getUser();
     user = userRes?.data?.user ?? null;
   } catch {}
 
-  const isDemo = !user && isDemoCookie;
-  if (user && isDemoCookie) {
-    cookieStore.delete("fitna_demo");
-  }
+  if (!user) redirect("/login");
 
-  if (!user && !isDemo) redirect("/login");
-
-  const effectiveUserId = isDemo ? DEMO_USER_ID : user.id;
   const db = createAdminClient();
 
   const from = (page - 1) * PAGE_SIZE;
@@ -50,7 +42,7 @@ export default async function HistoryPage({
         "id, started_at, duration_minutes, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, topic_id",
         { count: "exact" }
       )
-      .eq("teacher_id", effectiveUserId)
+      .eq("teacher_id", user.id)
       .eq("status", "completed")
       .order("started_at", { ascending: false })
       .range(from, to),
@@ -65,42 +57,24 @@ export default async function HistoryPage({
     : { data: [] as { id: string; title_ar: string; title_en: string | null }[] };
 
   const mappedSessions = (sessions ?? []).map((s) => {
-    const d = new Date(s.started_at);
-    const dateStr = d.toLocaleDateString(isEn ? "en-US" : "ar-EG", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    const timeStr = d.toLocaleTimeString(isEn ? "en-US" : "ar-EG", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const topicObj = topics?.find((t) => t.id === s.topic_id);
-    const topicTitle =
-      (topicObj && (isEn && topicObj.title_en ? topicObj.title_en : topicObj.title_ar)) ||
-      (isEn ? "Classroom Simulation" : "محاكاة تفاعل الفصل");
-    const topicSubtitle = isEn ? "Pedagogical • Interactive Session" : "تربوي • تدريب تفاعلي";
-
+    const topic = topics?.find((t) => t.id === s.topic_id);
+    const title = topic
+      ? lang === "en" && topic.title_en
+        ? topic.title_en
+        : topic.title_ar
+      : null;
     return {
-      id: s.id,
-      started_at: s.started_at,
-      dateStr,
-      timeStr,
-      topicTitle,
-      topicSubtitle,
-      overall_score: s.overall_score,
-      classroom_pattern: s.classroom_pattern,
+      ...s,
+      topic_title: title,
     };
   });
-
-  const totalPages = count ? Math.ceil(count / PAGE_SIZE) : 1;
 
   return (
     <HistoryClient
       sessions={mappedSessions}
       totalCount={count ?? 0}
-      currentPage={page}
-      totalPages={totalPages}
+      page={page}
+      pageSize={PAGE_SIZE}
       lang={lang}
     />
   );

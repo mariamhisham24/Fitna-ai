@@ -20,37 +20,27 @@ export async function POST(request: NextRequest) {
 import { cookies } from "next/headers";
 
 async function handleCreate(request: NextRequest) {
-  const cookieStore = await cookies();
-  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
-
-  const supabase = await createClient({ bypassDemo: true });
+  const supabase = await createClient();
   let user: any = null;
   try {
     const userRes = await supabase.auth.getUser();
     user = userRes?.data?.user ?? null;
   } catch {}
 
-  const isDemo = !user && isDemoCookie;
-  if (user && isDemoCookie) {
-    cookieStore.delete("fitna_demo");
-  }
-
-  const effectiveUserId = isDemo ? DEMO_USER_ID : user?.id;
-  if (!effectiveUserId) {
+  if (!user) {
     return NextResponse.json({ error: "غير مصرّح" }, { status: 401 });
   }
 
-  let isTeacher = isDemo;
-  let institutionId: string | null = null;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role, institution_id")
-      .eq("id", user.id)
-      .maybeSingle();
-    isTeacher = profile?.role === "teacher";
-    institutionId = profile?.institution_id ?? null;
-  }
+  const db = createAdminClient();
+  const { data: profile } = await db
+    .from("users")
+    .select("role, institution_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const isTeacher = profile?.role === "teacher";
+  const institutionId = profile?.institution_id ?? null;
+  const effectiveUserId = user.id;
 
   // Spec §2.1: institution_admin must not be able to start a simulation
   // from their admin account — enforced server-side, not just hidden UI.
