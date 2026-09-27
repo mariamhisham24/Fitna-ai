@@ -245,6 +245,33 @@ function LoginPageContent() {
 
           {!showForgot && (
             <>
+              {/* Dedicated Demo Account Access */}
+              <Link
+                href="/demo"
+                className="demo-pop-btn w-full mb-3 py-3 px-4 rounded-xl flex items-center justify-between bg-amber-500/[0.08] hover:bg-amber-500/[0.14] dark:bg-amber-400/10 dark:hover:bg-amber-400/15 border border-amber-400/40 hover:border-amber-400/80 group no-underline text-start cursor-pointer shadow-sm hover:shadow transition-all"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-amber-400/20 text-amber-500 dark:text-[#ffb52e] flex items-center justify-center shrink-0">
+                    <Sparkles size={16} className="transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-xs sm:text-sm text-[#071b3a] dark:text-[#ffb52e]">
+                      {t.demoBtn}
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                      {t.demoSub}
+                    </div>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 group-hover:translate-x-[-2px] rtl:group-hover:translate-x-[-2px] ltr:group-hover:translate-x-[2px] transition-transform">
+                  {lang === "ar" ? "دخول ←" : "Enter →"}
+                </span>
+              </Link>
+
+              <div className="or-divider">
+                <span>{lang === "ar" ? "أو الدخول بحسابك الخاص" : "Or sign in to your personal account"}</span>
+              </div>
+
               <button
                 className={`google-button relative overflow-hidden transition-all duration-300 ${
                   googleComingSoon ? "!border-amber-400/60 !bg-amber-400/10 shadow-[0_0_15px_rgba(255,181,46,0.15)]" : ""
@@ -561,28 +588,6 @@ function LoginPageContent() {
                   {isLogin ? t.switchLoginLink : t.switchSignupLink}
                 </button>
               </p>
-
-              <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.08)", textAlign: "center" }}>
-                <Link
-                  href="/demo"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: "var(--amber)",
-                    textDecoration: "none",
-                    opacity: 0.85,
-                    transition: "opacity 0.2s",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.85"; }}
-                >
-                  <Sparkles size={13} />
-                  <span>{t.demoBtn}</span>
-                </Link>
-              </div>
             </>
           )}
         </div>
