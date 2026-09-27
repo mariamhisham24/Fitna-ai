@@ -991,6 +991,55 @@ export function LiveRoom({
     }
   }, [handleRecordingComplete, isRtl]);
 
+  const forceInstantCommit = useCallback(() => {
+    if (
+      !isLiveOpenMicRef.current ||
+      isTeacherMutedRef.current ||
+      isProcessingRef.current ||
+      speakingPersonaIdRef.current !== null
+    ) {
+      return;
+    }
+
+    const hasAccumulated = nativeTranscriptAccumulatorRef.current.trim().length >= 1;
+    const isRecording = isUtteranceRecordingRef.current;
+    const isRecorderActive = Boolean(
+      openMicRecorderRef.current && openMicRecorderRef.current.state === "recording"
+    );
+    const speechActive = speechDetectedRef.current || isTeacherSpeaking;
+
+    if (hasAccumulated || isRecording || isRecorderActive || speechActive) {
+      speechDetectedRef.current = false;
+      setIsTeacherSpeaking(false);
+      commitOpenMicTurn();
+    }
+  }, [commitOpenMicTurn, isTeacherSpeaking]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput =
+        activeEl instanceof HTMLInputElement ||
+        activeEl instanceof HTMLTextAreaElement ||
+        activeEl?.getAttribute("contenteditable") === "true";
+
+      if (e.code === "Space" && !isInput) {
+        if (
+          isLiveOpenMicRef.current &&
+          !isTeacherMutedRef.current &&
+          !isProcessingRef.current &&
+          speakingPersonaIdRef.current === null
+        ) {
+          e.preventDefault();
+          forceInstantCommit();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [forceInstantCommit]);
+
   const setupVad = useCallback((stream: MediaStream) => {
     try {
       const AudioCtx =
@@ -1113,10 +1162,17 @@ export function LiveRoom({
               setIsTeacherSpeaking(false);
             }
 
-            // Natural human pause before committing turn (2.2s for natural teacher thinking/breath pauses)
+            // Adaptive natural pause:
+            // If the teacher asked a question or called on a student, respond much faster (1.2s).
+            // If explaining or thinking, allow 2.4s so the teacher is never cut off.
             const hasAccumulatedText = nativeTranscriptAccumulatorRef.current.trim().length >= 2;
-            const effectiveSilenceMs = hasAccumulatedText ? 2200 : 2500;
-            const minSpeechMs = hasAccumulatedText ? 300 : 600;
+            const currentAccText = nativeTranscriptAccumulatorRef.current.trim();
+            const isQuestionOrCall =
+              /(?:[؟?]|ليه|إيه|ايه|إزاي|ازاي|مين|هل|متى|أين|اين|كام|كم|فين|يا\s*(?:سارة|عمر|ياسين|نور|ولاد|شباب|جماعة|شطار)|جاوب|قول|شاركونا|شاركينا|تفضلي|اتفضلي|اتفضل|تفضل)\b/i.test(
+                currentAccText
+              );
+            const effectiveSilenceMs = isQuestionOrCall ? 1200 : hasAccumulatedText ? 2200 : 2500;
+            const minSpeechMs = hasAccumulatedText ? 250 : 500;
 
             // Guard: If browser SpeechRecognition delivered interim text in the last 1500ms, teacher is STILL actively speaking!
             const timeSinceInterim = now - (lastInterimResultTimeRef.current || 0);
@@ -1803,8 +1859,23 @@ export function LiveRoom({
                         </div>
                       </div>
 
-                      {/* Privacy Mute / Unmute Button */}
+                      {/* Privacy Mute / Unmute Button + Instant Send Button */}
                       <div className="flex items-center gap-2">
+                        {!isTeacherMuted && speakingPersonaId === null && (
+                          <button
+                            type="button"
+                            onClick={forceInstantCommit}
+                            disabled={processing || isTranscriptProcessing}
+                            className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 shadow-md shadow-amber-500/25 active:scale-95 transition-all cursor-pointer"
+                            title={isRtl ? "إرسال كلامك فوراً للطلاب (أو اضغط مسطرة المسافة Space)" : "Send speech instantly to students (or press Spacebar)"}
+                          >
+                            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                            </svg>
+                            <span>{isRtl ? "إرسال (Space)" : "Send (Space)"}</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={toggleTeacherMute}
@@ -1845,8 +1916,8 @@ export function LiveRoom({
                           ? "استمع للطالب... المايك سيلتقط كلامك فور انتهائه مباشرة"
                           : "Listening to student... mic will capture your speech right after"
                         : isRtl
-                        ? "اشرح بحرية وتوقف لثانية حين تريد من الطلاب الإجابة أو الاستفسار"
-                        : "Speak freely and pause for a second when you want students to respond"}
+                        ? "تحدث بحرية — عند انتهاء سؤالك اضغط 'إرسال (Space)' أو مسطرة الكيبورد للرد الفوري دون انتظار"
+                        : "Speak freely — click 'Send (Space)' or press Spacebar when done for instant response"}
                     </span>
                   </div>
                 )}
