@@ -674,12 +674,12 @@ async function synthesizeKieGeminiTTS(
         continue;
       }
 
-      // Poll for task completion (up to ~18 seconds)
-      for (let i = 0; i < 12; i++) {
-        await new Promise((r) => setTimeout(r, 1500));
+      // Poll for task completion (fast polling: max 5 attempts ~3.5s total)
+      for (let i = 0; i < 5; i++) {
+        await new Promise((r) => setTimeout(r, 800));
         const pollRes = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
           headers: { Authorization: `Bearer ${apiKey}` },
-          signal: AbortSignal.timeout(8000),
+          signal: AbortSignal.timeout(4000),
         });
         if (!pollRes.ok) continue;
 
@@ -693,7 +693,7 @@ async function synthesizeKieGeminiTTS(
 
           const audioRes = await fetch(audioUrl, {
             headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
-            signal: AbortSignal.timeout(10000),
+            signal: AbortSignal.timeout(5000),
           });
           if (!audioRes.ok) break;
 
@@ -738,7 +738,7 @@ export async function synthesizeStudentSpeech(
 
   let resultAudio: { buffer: Buffer; contentType: string } | null = null;
 
-  // 1. Priority 1: Google AI Studio Gemini Direct TTS (Puck, Kore, Zephyr, Aoede - Authentic expressive Egyptian youth voices)
+  // 1. Priority 1: Google AI Studio Gemini Direct TTS (Puck, Kore, Zephyr, Aoede)
   if (!resultAudio && !voiceOverride && (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GEMINI_BACKUP_KEYS)) {
     try {
       resultAudio = await synthesizeGeminiTTS(normalizedText, personaName);
@@ -747,7 +747,16 @@ export async function synthesizeStudentSpeech(
     }
   }
 
-  // 2. Priority 2: ElevenLabs Fast Turbo v2.5 (~500ms realistic youth voices)
+  // 2. Priority 2: Kie.ai Gemini Flash TTS (Pool of keys ~238 credits fallback)
+  if (!resultAudio && !voiceOverride && (process.env.KIE_AI_API_KEY || process.env.KIE_AI_BACKUP_KEYS)) {
+    try {
+      resultAudio = await synthesizeKieGeminiTTS(normalizedText, personaName);
+    } catch (e) {
+      console.warn("Kie.ai Gemini TTS synthesis error:", e);
+    }
+  }
+
+  // 3. Priority 3: ElevenLabs Fast Turbo v2.5 (~500ms realistic youth voices)
   if (!resultAudio && !voiceOverride && (process.env.ELEVENLABS_API_KEY || process.env.ELEVENLABS_BACKUP_KEYS)) {
     try {
       const elevenBuf = await synthesizeElevenLabs(normalizedText, personaName);
@@ -759,7 +768,7 @@ export async function synthesizeStudentSpeech(
     }
   }
 
-  // 3. Priority 3: Microsoft Edge Neural TTS (ar-EG-ShakirNeural / ar-EG-SalmaNeural) (Fast reliable backup)
+  // 4. Priority 4: Microsoft Edge Neural TTS (ar-EG-ShakirNeural / ar-EG-SalmaNeural) (Fast reliable backup)
   if (!resultAudio) {
     try {
       const tts = new MsEdgeTTS();
