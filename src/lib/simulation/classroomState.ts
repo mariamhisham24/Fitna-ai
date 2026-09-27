@@ -138,9 +138,9 @@ export function initializeStudentBrain(
     defaultAction: "attentive" as StudentPhysicalAction,
   };
 
-  const isFractionLesson = !lessonContext || /(?:كسر|كسور|fraction|بسط|مقام)/i.test(lessonContext);
-  const isWaterCycleLesson = !!lessonContext && /(?:دورة\s*(?:الماء|المية)|تبخر|تكاثف|هطول|سحاب|مطر|water\s*cycle)/i.test(lessonContext);
-  const isMatterStateLesson = !!lessonContext && /(?:حالات\s*المادة|صلب|سائل|غاز|شكل\s*ثابت|حجم\s*ثابت|بالونة|هواء|states\s*of\s*matter)/i.test(lessonContext);
+  const isFractionLesson = Boolean(lessonContext && /(?:كسر|كسور|fraction|بسط|مقام)/i.test(lessonContext));
+  const isWaterCycleLesson = Boolean(lessonContext && /(?:دورة\s*(?:الماء|المية)|تبخر|تكاثف|هطول|سحاب|مطر|water\s*cycle)/i.test(lessonContext));
+  const isMatterStateLesson = Boolean(lessonContext && /(?:حالات\s*المادة|صلب|سائل|غاز|شكل\s*ثابت|حجم\s*ثابت|بالونة|هواء|states\s*of\s*matter)/i.test(lessonContext));
 
   let initialMisconception: StudentMisconception | null = null;
   if (name === "نور" && isMatterStateLesson) {

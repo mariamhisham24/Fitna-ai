@@ -330,8 +330,8 @@ export function sanitizeStudentResponse(
     }
   }
 
-  // 5. Why question reasoning check:
-  if (context?.isWhyQuestion) {
+  // 5. Why question reasoning check (fractions only):
+  if (context?.isWhyQuestion && context?.currentFractions && context.currentFractions.length >= 2) {
     if (
       /(?:عشان|لأن|لان)\s*([0-9٠-٩]+(?:\s*[/على]\s*[0-9٠-٩]+)?)\s*(?:أكبر|اكبر)\s*من\s*\1/i.test(text) ||
       /(?:عشان|لأن|لان)\s*الأربعة\s*فوق\s*والواحد\s*تحت/i.test(text)
@@ -346,35 +346,6 @@ export function sanitizeStudentResponse(
     if (/(?:مقام\s*مشترك|المقام\s*المشترك|توحيد\s*المقامات|المضاعف\s*المشترك)/i.test(text)) {
       const isFemale = studentName === "سارة" || studentName === "نور";
       text = `مش عارف${isFemale ? "ة" : ""} ${cleanTitle} عشان المقامات مختلفة ومش زي بعض.. إزاي نقارنهم؟`;
-    }
-  }
-
-  // 5c. Active Misconception Enforcement:
-  if (context?.activeMisconception) {
-    if (context.activeMisconception.conceptKey === "air_cannot_be_contained") {
-      if (!context.activeMisconception.isResolved) {
-        text = `المية بتاخد شكل الإناء ${cleanTitle}، بس الهواء مبيتحطش في حاجة خالص عشان مش بنشوفه ولا نمسكه.`;
-      } else {
-        text = `الهواء مادة غازية ملوش شكل ثابت وبيملا البالونة ${cleanTitle}.`;
-      }
-    } else if (context.activeMisconception.conceptKey === "air_is_liquid_because_takes_shape") {
-      if (!context.activeMisconception.isResolved) {
-        text = `الهواء سائل ${cleanTitle} عشان بياخد شكل البالونة زي المية؟`;
-      } else {
-        text = `الهواء مادة غازية ${cleanTitle} وبيملا البالونة كلها.`;
-      }
-    } else if (context.activeMisconception.conceptKey === "water_cycle_skip_condensation") {
-      if (!context.activeMisconception.isResolved) {
-        text = `المية بتسخن وتبقى بخار، وبعدين تمطر على طول ${cleanTitle}.`;
-      } else {
-        text = `المية بتتبخر وتعمل سحاب وبعدين تمطر ${cleanTitle}.`;
-      }
-    } else if (!context.activeMisconception.isResolved) {
-      if (context.isWhyQuestion) {
-        text = `عشان الـ 2 بتيجي الأول ${cleanTitle}، فـ 2 على 6 أكبر.`;
-      } else {
-        text = `الـ 2 على 6 أكبر ${cleanTitle}.`;
-      }
     }
   }
 
@@ -639,12 +610,15 @@ export async function generateStudentReactions(params: {
       reasonToSpeak: candidate.reasonToSpeak,
       lessonContext: isGreeting ? null : lessonContext,
       teacherUtterance,
-      recentHistory: recentHistory.slice(-1000),
+      recentHistory: recentHistory.slice(-3500),
       currentQuestionText,
       targetConceptAspect: qContext.targetConceptAspect,
       teacherTitle: cleanTitle,
       isTargetStudent: true,
       activeMisconception: candidate.activeMisconception,
+      teacherExplanations,
+      studentContributions,
+      fullLessonHistory,
     });
 
     const userPrompt = `${studentPrompt}\n\nرد بصيغة JSON فقط بهذا الشكل تماماً:\n{\n  "text": "كلام الطالب المنطوق هنا فقط"\n}`;
