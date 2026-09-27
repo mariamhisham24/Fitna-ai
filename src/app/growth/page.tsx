@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { type Language } from "@/lib/i18n";
 import { GrowthClient } from "./GrowthClient";
+import { DEMO_USER_ID } from "@/lib/auth/demo";
 
 export default async function GrowthPage() {
   const supabase = await createClient();
@@ -15,7 +16,7 @@ export default async function GrowthPage() {
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
   const isEn = lang === "en";
 
-  const isDemo = user.id === "e948bbf0-0a93-46dd-9b01-b85f229477dd";
+  const isDemo = user.id === DEMO_USER_ID;
 
   const profileRes = isDemo
     ? { data: null }

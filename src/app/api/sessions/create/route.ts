@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_USER_ID } from "@/lib/auth/demo";
 
 /**
  * Creates a real `sessions` row (spec Stage 5: "بدء محاكاة الفصل").
@@ -31,7 +32,7 @@ async function handleCreate(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  const isTeacher = profile?.role === "teacher" || user.id === "e948bbf0-0a93-46dd-9b01-b85f229477dd";
+  const isTeacher = profile?.role === "teacher" || user.id === DEMO_USER_ID;
 
   // Spec §2.1: institution_admin must not be able to start a simulation
   // from their admin account — enforced server-side, not just hidden UI.
