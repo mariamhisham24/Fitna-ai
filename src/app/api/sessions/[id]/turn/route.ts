@@ -59,6 +59,13 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
     return NextResponse.json({ error: "الجلسة دي مخلّصة بالفعل" }, { status: 400 });
   }
 
+  const { data: teacherProfile } = await supabase
+    .from("users")
+    .select("full_name")
+    .eq("id", user.id)
+    .single();
+  const teacherFullName = teacherProfile?.full_name || user.user_metadata?.full_name || user.email || "";
+
   const body = await request.json();
   const { teacherText: inputTeacherText, elapsedMs, speechDurationMs, audioBase64, voiceGender } = body as {
     teacherText: string;
@@ -232,8 +239,14 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
     /(?:أنا|انا)\s*(?:مش|غير)\s*(?:ميس|مس|ابلة|أبلة)|(?:أنا|انا)\s*(?:مستر|استاذ|أستاذ|معلم)/i.test(
       teacherText
     );
+  const isFemaleName = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(
+    teacherFullName
+  );
+  const isFemaleGrammar = /(?:عايزة|عاوزة|شايفة|سامعة|معلمتكم|مدرستكم|أبلتكم|انا\s*ميس|أنا\s*ميس|أنا\s*معلمة|انا\s*معلمة)/i.test(
+    teacherText
+  );
 
-  if (isFemaleSelf) {
+  if (isFemaleSelf || isFemaleName || isFemaleGrammar) {
     lockedTeacherTitle = "يا ميس";
   } else if (isMaleSelf) {
     lockedTeacherTitle = "يا مستر";
@@ -285,6 +298,7 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
         voiceGender: effectiveVoiceGender,
         lockedTeacherTitle,
         resolvedUnknownNames,
+        teacherFullName,
       }).catch((err) => {
         console.error("generateStudentReactions failed, using safe fallback:", err);
         return generateFallbackReactions({
@@ -305,6 +319,7 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
           resolvedUnknownNames,
           lessonContext: session.lesson_context,
           fullLessonHistory,
+          teacherFullName,
         });
       })
     : Promise.resolve([]);

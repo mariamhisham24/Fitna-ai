@@ -7,7 +7,7 @@ import Groq from "groq-sdk";
  */
 export const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
-  timeout: 8000,
+  timeout: 10000,
   maxRetries: 1,
 });
 
@@ -66,8 +66,6 @@ export async function callGroqWithFallback(
 ): Promise<NonStreamChatCompletion> {
   const models = [
     CHAT_MODEL,
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b",
     "allam-2-7b",
   ];
 

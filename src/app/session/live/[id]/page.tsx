@@ -23,6 +23,13 @@ export default async function LiveSessionPage({
   if (!session) notFound();
   if (session.teacher_id !== user.id) redirect("/unauthorized");
 
+  const { data: teacherProfile } = await supabase
+    .from("users")
+    .select("full_name")
+    .eq("id", user.id)
+    .single();
+  const teacherName = teacherProfile?.full_name || user.user_metadata?.full_name || user.email || "";
+
   if (session.status !== "in_progress") {
     redirect(`/report/${id}`);
   }
@@ -56,6 +63,7 @@ export default async function LiveSessionPage({
       lessonContext={session.lesson_context ?? ""}
       startedAt={session.started_at}
       initialStudents={students}
+      teacherName={teacherName}
     />
   );
 }

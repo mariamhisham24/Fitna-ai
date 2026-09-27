@@ -65,6 +65,7 @@ export function LiveRoom({
   lessonContext,
   startedAt,
   initialStudents,
+  teacherName,
 }: {
   sessionId: string;
   durationMinutes: number;
@@ -73,6 +74,7 @@ export function LiveRoom({
   lessonContext?: string | null;
   startedAt: string;
   initialStudents: { personaId: string; name: string; age: number; attention: number }[];
+  teacherName?: string;
 }) {
   const router = useRouter();
   const { t, lang } = useTranslation();
@@ -174,7 +176,10 @@ export function LiveRoom({
   const isSpeechRecognitionActiveRef = useRef<boolean>(false);
   const isRecognitionRunningRef = useRef<boolean>(false);
   const restartSpeechRecognitionRef = useRef<(() => void) | null>(null);
-  const detectedTeacherGenderRef = useRef<"male" | "female" | null>(null);
+  const isTeacherFemaleName = /(?:مريم|مرام|سارة|نور|فاطمة|منى|هدى|رنا|ياسمين|روان|آية|ندى|سلمى|إيمان|مي|هبة|شهد|جيجي|mariam|mary|sara|nour|fatma)/i.test(teacherName || "");
+  const isTeacherMaleName = /(?:أحمد|احمد|محمد|محمود|علي|عمرو|خالد|يوسف|طارق|مصطفى|عمر|ابراهيم|إبراهيم|حسام|ahmed|mohamed|mahmoud|ali|omar|tarek)/i.test(teacherName || "");
+  const detectedTeacherGenderRef = useRef<"male" | "female" | null>(isTeacherFemaleName ? "female" : isTeacherMaleName ? "male" : null);
+  const lastInterimResultTimeRef = useRef<number>(0);
   const lastSubmittedTeacherTextRef = useRef<string>("");
   const lastSubmittedTimeRef = useRef<number>(0);
 
@@ -457,7 +462,7 @@ export function LiveRoom({
 
       // Diagnose teacher voice pitch and gender if audio blob is available
       if (blob && blob.size >= 500) {
-        if (!detectedTeacherGenderRef.current) {
+        if (!detectedTeacherGenderRef.current && !isTeacherFemaleName && !isTeacherMaleName) {
           try {
             const detected = await detectVoiceGenderFromBlob(blob, audioContextRef.current);
             if (detected) {
@@ -795,7 +800,9 @@ export function LiveRoom({
           setLiveTranscriptPreview(normalized);
           setIsTranscriptProcessing(false);
           speechDetectedRef.current = true;
-          lastSpeechTimeRef.current = Date.now();
+          const now = Date.now();
+          lastSpeechTimeRef.current = now;
+          lastInterimResultTimeRef.current = now;
           if (!isUtteranceRecordingRef.current) {
             startUtteranceRecording();
           }
@@ -1106,12 +1113,16 @@ export function LiveRoom({
               setIsTeacherSpeaking(false);
             }
 
-            // Natural human pause before committing turn (1.2s when text accumulated, 1.5s for audio)
+            // Natural human pause before committing turn (2.2s for natural teacher thinking/breath pauses)
             const hasAccumulatedText = nativeTranscriptAccumulatorRef.current.trim().length >= 2;
-            const effectiveSilenceMs = hasAccumulatedText ? 1200 : 1500;
+            const effectiveSilenceMs = hasAccumulatedText ? 2200 : 2500;
             const minSpeechMs = hasAccumulatedText ? 300 : 600;
 
-            if (silenceDuration > effectiveSilenceMs) {
+            // Guard: If browser SpeechRecognition delivered interim text in the last 1500ms, teacher is STILL actively speaking!
+            const timeSinceInterim = now - (lastInterimResultTimeRef.current || 0);
+            const isBrowserSpeechActive = timeSinceInterim < 1500;
+
+            if (silenceDuration > effectiveSilenceMs && !isBrowserSpeechActive) {
               speechDetectedRef.current = false;
               setIsTeacherSpeaking(false);
               if (speechDuration >= minSpeechMs || hasAccumulatedText) {

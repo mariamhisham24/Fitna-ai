@@ -70,14 +70,18 @@ export async function classifyTeacherUtterance(text: string): Promise<QuestionTy
     .replace(/^(?:ممتاز|برافو|أحسنت|احسنت|شاطر|شاطرة|كويس\s*قوي|عظيم)[\s!،,.-]*/i, "")
     .trim();
 
-  const completion = await callGroqWithFallback({
-    model: CHAT_MODEL,
-    messages: [{ role: "user", content: buildQuestionClassifierPrompt(textWithoutPraise || text) }],
-    max_completion_tokens: 15,
-  });
-  const raw = (completion.choices[0]?.message?.content ?? "").trim().toLowerCase();
-  if (raw.includes("open")) return "open";
-  if (raw.includes("closed")) return "closed";
+  try {
+    const completion = await callGroqWithFallback({
+      model: "allam-2-7b",
+      messages: [{ role: "user", content: buildQuestionClassifierPrompt(textWithoutPraise || text) }],
+      max_completion_tokens: 10,
+    });
+    const raw = (completion.choices[0]?.message?.content ?? "").trim().toLowerCase();
+    if (raw.includes("open")) return "open";
+    if (raw.includes("closed")) return "closed";
+  } catch (err) {
+    console.warn("Classify question with allam-2-7b error:", err);
+  }
   if (/[؟?]/.test(text) || /\b(what|why|how|which)\b/i.test(text)) {
     return isReasoningOrSocratic ? "open" : "closed";
   }
@@ -88,7 +92,8 @@ export function extractTeacherTitleAndGender(
   teacherUtterance: string,
   recentHistory: string = "",
   voiceGender?: "male" | "female" | null,
-  lockedTeacherTitle?: string | null
+  lockedTeacherTitle?: string | null,
+  teacherFullName?: string
 ): { title: string; isFemale: boolean } {
   const combined = `${recentHistory}\n${teacherUtterance}`;
 
@@ -108,23 +113,35 @@ export function extractTeacherTitleAndGender(
     return { title: "يا مستر", isFemale: false };
   }
 
-  // 2. Session-wide locked title if already fixed and no override given
+  // 2. Profile full name & feminine grammar markers (e.g. Maryam / مريم, عايزة)
+  const isFemaleName = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(
+    teacherFullName || ""
+  );
+  const isFemaleGrammar = /(?:عايزة|عاوزة|شايفة|سامعة|معلمتكم|مدرستكم|أبلتكم|انا\s*ميس|أنا\s*ميس|أنا\s*معلمة|انا\s*معلمة)/i.test(
+    teacherUtterance
+  );
+
+  if (isFemaleName || isFemaleGrammar) {
+    return { title: "يا ميس", isFemale: true };
+  }
+
+  // 3. Session-wide locked title if already fixed and no override given
   if (lockedTeacherTitle) {
     return { title: lockedTeacherTitle, isFemale: lockedTeacherTitle.includes("ميس") };
   }
 
-  // 3. Explicit mention of titles in transcript
+  // 4. Explicit mention of titles in transcript
   const hasMaleTitle = /(?<=^|[\s.,?!،؛:])(مستر|استاذ|أستاذ)(?=[\s.,?!،؛:]|$)/i.test(combined);
   const hasFemaleTitle = /(?<=^|[\s.,?!،؛:])(ميس|مس|ابلة|أبلة)(?=[\s.,?!،؛:]|$)/i.test(combined);
 
-  if (hasMaleTitle && !hasFemaleTitle) {
-    return { title: "يا مستر", isFemale: false };
-  }
   if (hasFemaleTitle && !hasMaleTitle) {
     return { title: "يا ميس", isFemale: true };
   }
+  if (hasMaleTitle && !hasFemaleTitle) {
+    return { title: "يا مستر", isFemale: false };
+  }
 
-  // 4. Voice Pitch & Tone Analysis (Diagnosed from teacher's voice pitch)
+  // 5. Voice Pitch & Tone Analysis (Diagnosed from teacher's voice pitch)
   if (voiceGender === "female") {
     return { title: "يا ميس", isFemale: true };
   }
@@ -132,7 +149,7 @@ export function extractTeacherTitleAndGender(
     return { title: "يا مستر", isFemale: false };
   }
 
-  // 5. Default if totally indeterminate
+  // 6. Default if totally indeterminate
   return { title: "يا مستر", isFemale: false };
 }
 
@@ -373,8 +390,10 @@ export function sanitizeStudentResponse(
 
   // 5f. Teacher Title Consistency
   if (cleanTitle.includes("ميس")) {
+    text = text.replace(/مستر\s+مريم/gi, "ميس مريم");
+    text = text.replace(/يا\s+مستر\s+مريم/gi, "يا ميس مريم");
     text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:مستر|استاذ|أستاذ)(?:\s+[^\s.,?!،؛:]+)?(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
-    if (!text.includes(cleanTitle)) {
+    if (!text.includes(cleanTitle) && !text.includes("ميس مريم")) {
       text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:ميس|مس|ابلة|أبلة)(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
     }
   } else if (cleanTitle.includes("مستر")) {
@@ -383,6 +402,9 @@ export function sanitizeStudentResponse(
       text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:مستر|استاذ|أستاذ)(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
     }
   }
+
+  // 5f-2. Deduplicate vocative "يا يا" -> "يا"
+  text = text.replace(/(?:\bيا\s*){2,}/g, "يا ");
 
   // 5g. Intercept accidental lesson hallucinations during greetings or social check-ins
   const teacherSpeech = context?.teacherUtterance || "";
@@ -449,6 +471,7 @@ export async function generateStudentReactions(params: {
   voiceGender?: "male" | "female" | null;
   lockedTeacherTitle?: string | null;
   resolvedUnknownNames?: string[];
+  teacherFullName?: string;
 }): Promise<StudentTurnResult[]> {
   const {
     personas,
@@ -471,6 +494,7 @@ export async function generateStudentReactions(params: {
     voiceGender = null,
     lockedTeacherTitle = null,
     resolvedUnknownNames = [],
+    teacherFullName,
   } = params;
 
   // 1. Convert DB personas to rich StudentBrainState
@@ -528,7 +552,7 @@ export async function generateStudentReactions(params: {
   }
 
   // 4. Single-Speaker Pipeline (Spec: Turn manager selects 0 or 1 speaker; only active candidate calls LLM, other 3 students silent in code)
-  const teacherInfo = extractTeacherTitleAndGender(teacherUtterance, recentHistory, voiceGender, lockedTeacherTitle);
+  const teacherInfo = extractTeacherTitleAndGender(teacherUtterance, recentHistory, voiceGender, lockedTeacherTitle, teacherFullName);
   const title = teacherInfo.title;
   const cleanTitle = title.startsWith("يا ") ? title : `يا ${title}`;
 
@@ -633,7 +657,7 @@ export async function generateStudentReactions(params: {
           { role: "user", content: userPrompt },
         ],
         temperature: 0.65,
-        max_completion_tokens: 150,
+        max_completion_tokens: 50,
         response_format: { type: "json_object" },
       });
 
@@ -751,13 +775,19 @@ export async function generateStudentReactions(params: {
         : /(?:مناخ|مناخي|طقس|جو|حرارة|climate)/i.test(`${currentQuestionText} ${lessonContext || ""}`)
         ? (/(?:سمع|عارف|رأي|مفهوم|يعني|حد)/i.test(currentQuestionText)
             ? (p.name === "سارة"
-                ? `أنا سمعت عنه يا ${cleanTitle}، إن درجات الحرارة بتزيد والطقس بيتغير!`
+                ? `أنا سمعت عنه ${cleanTitle}، إن درجات الحرارة بتزيد والطقس بيتغير!`
                 : p.name === "عمر"
-                ? `عارف يا ${cleanTitle}، الجو بيبقى حر أوي والجليد بيدوب!`
+                ? `عارف ${cleanTitle}، الجو بيبقى حر أوي والجليد بيدوب!`
                 : p.name === "ياسين"
                 ? `أنا سمعت إن التلوث ودخان المصانع بيغير درجات الحرارة ${cleanTitle}.`
-                : `هو يعني درجات الحرارة في كوكب الأرض بتعلى يا ${cleanTitle}؟`)
-            : `التغير المناخي بيأثر على درجات الحرارة والبيئة في كوكبنا ${cleanTitle}.`)
+                : `هو يعني درجات الحرارة في كوكب الأرض بتعلى ${cleanTitle}؟`)
+            : (p.name === "عمر"
+                ? `عارف ${cleanTitle}، الجو بيبقى حر أوي والجليد في القطبين بيدوب!`
+                : p.name === "سارة"
+                ? `التغير المناخي بيأثر على درجات الحرارة والطقس في كوكبنا ${cleanTitle}.`
+                : p.name === "ياسين"
+                ? `أنا سمعت إن دخان المصانع والعربيات هو اللي بيسخن الجو ${cleanTitle}.`
+                : `بيخلي الفصول والجو يتغيروا ومش عارفين نحافظ على البيئة ${cleanTitle}.`))
         : isNumeratorDenominatorQuestion
         ? `اللي فوق البسط واللي تحت المقام ${cleanTitle}.`
         : qContext.isWhyQuestion && qContext.fractions.length >= 2
@@ -860,6 +890,7 @@ export function generateFallbackReactions(params: {
   resolvedUnknownNames?: string[];
   lessonContext?: string | null;
   fullLessonHistory?: string;
+  teacherFullName?: string;
 }): StudentTurnResult[] {
   const {
     personas,
@@ -879,6 +910,7 @@ export function generateFallbackReactions(params: {
     resolvedUnknownNames = [],
     lessonContext = null,
     fullLessonHistory = "",
+    teacherFullName,
   } = params;
 
   const studentBrains: StudentBrainState[] = personas.map((p) => {
@@ -908,7 +940,7 @@ export function generateFallbackReactions(params: {
     lastSpeakingPersonaId,
     recentSpeakerPersonaIds
   );
-  const teacherInfo = extractTeacherTitleAndGender(teacherUtterance, recentHistory, voiceGender, lockedTeacherTitle);
+  const teacherInfo = extractTeacherTitleAndGender(teacherUtterance, recentHistory, voiceGender, lockedTeacherTitle, teacherFullName);
   const title = teacherInfo.title;
 
   const candidateSpeakerMap = new Map(decision.candidateSpeakers.map((c) => [c.name, c]));
@@ -984,12 +1016,12 @@ export function generateFallbackReactions(params: {
         ? `أيوة ${cleanTitle}، سامعينك ومتابعين!`
         : /(?:مناخ|مناخي|طقس|جو|حرارة|climate)/i.test(`${teacherUtterance} ${lessonContext || ""}`)
         ? (p.name === "سارة"
-            ? `أنا سمعت عنه يا ${cleanTitle}، إن درجات الحرارة بتزيد والطقس بيتغير!`
+            ? `أنا سمعت عنه ${cleanTitle}، إن درجات الحرارة بتزيد والطقس بيتغير!`
             : p.name === "عمر"
-            ? `عارف يا ${cleanTitle}، الجو بيبقى حر أوي والجليد بيدوب!`
+            ? `عارف ${cleanTitle}، الجو بيبقى حر أوي والجليد بيدوب!`
             : p.name === "ياسين"
             ? `أنا سمعت إن التلوث ودخان المصانع بيغير درجات الحرارة ${cleanTitle}.`
-            : `هو يعني درجات الحرارة في كوكب الأرض بتعلى يا ${cleanTitle}؟`)
+            : `هو يعني درجات الحرارة في كوكب الأرض بتعلى ${cleanTitle}؟`)
         : isWhyQuestion && qContext.fractions.length >= 2
         ? `عشان المقامات متساوية ${cleanTitle}، فبنبص على البسط والـ 4 أكبر من الـ 1.`
         : isWhyQuestion
