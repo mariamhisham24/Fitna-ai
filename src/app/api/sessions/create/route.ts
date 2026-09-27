@@ -21,29 +21,25 @@ import { cookies } from "next/headers";
 
 async function handleCreate(request: NextRequest) {
   const cookieStore = await cookies();
-  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
+  const isDemo = cookieStore.get("fitna_demo")?.value === "true";
 
   const supabase = await createClient();
   let user: any = null;
-  try {
-    const userRes = await supabase.auth.getUser();
-    user = userRes?.data?.user ?? null;
-  } catch {}
-
-  // Strict Separation: Logged-in user is NEVER demo.
-  const isDemo = !user && isDemoCookie;
-  if (user && isDemoCookie) {
-    cookieStore.delete("fitna_demo");
+  if (!isDemo) {
+    try {
+      const userRes = await supabase.auth.getUser();
+      user = userRes?.data?.user ?? null;
+    } catch {}
   }
 
-  const effectiveUserId = user ? user.id : (isDemo ? DEMO_USER_ID : null);
+  const effectiveUserId = isDemo ? DEMO_USER_ID : user?.id;
   if (!effectiveUserId) {
     return NextResponse.json({ error: "غير مصرّح" }, { status: 401 });
   }
 
   let isTeacher = isDemo;
   let institutionId: string | null = null;
-  if (user) {
+  if (!isDemo && user) {
     const { data: profile } = await supabase
       .from("users")
       .select("role, institution_id")

@@ -31,27 +31,23 @@ export default async function TeacherDashboardPage() {
 
   try {
     const supabase = await createClient();
+    const isDemo = isDemoCookie;
     let user: any = null;
-    try {
-      const userRes = await supabase.auth.getUser();
-      user = userRes?.data?.user ?? null;
-    } catch {}
-
-    // Strict Separation: A logged-in user is ALWAYS their own authentic account.
-    // Demo mode is ONLY active when the visitor is NOT authenticated.
-    const isDemo = !user && isDemoCookie;
-    if (user && isDemoCookie) {
-      cookieStore.delete("fitna_demo");
+    if (!isDemo) {
+      try {
+        const userRes = await supabase.auth.getUser();
+        user = userRes?.data?.user ?? null;
+      } catch {}
     }
 
-    if (!user && !isDemo) {
+    if (!isDemo && !user) {
       redirect("/login");
     }
 
-    const userId = user ? user.id : DEMO_USER_ID;
+    const userId = isDemo ? DEMO_USER_ID : user.id;
 
     let userProfile = finalProfile;
-    if (user) {
+    if (!isDemo && user) {
       try {
         const profileRes = await withTimeout(
           supabase

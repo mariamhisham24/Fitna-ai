@@ -27,25 +27,21 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
 
 export default async function SessionSetupPage() {
   const cookieStore = await cookies();
-  const isDemoCookie = cookieStore.get("fitna_demo")?.value === "true";
+  const isDemo = cookieStore.get("fitna_demo")?.value === "true";
 
   const supabase = await createClient();
   let user: any = null;
-  try {
-    const userRes = await supabase.auth.getUser();
-    user = userRes?.data?.user ?? null;
-  } catch {}
-
-  // Strict Separation: Logged in user is NEVER demo.
-  const isDemo = !user && isDemoCookie;
-  if (user && isDemoCookie) {
-    cookieStore.delete("fitna_demo");
+  if (!isDemo) {
+    try {
+      const userRes = await supabase.auth.getUser();
+      user = userRes?.data?.user ?? null;
+    } catch {}
   }
 
   if (!user && !isDemo) redirect("/login");
 
   let role = isDemo ? "teacher" : null;
-  if (user) {
+  if (!isDemo && user) {
     const profileRes = await withTimeout(
       supabase.from("users").select("role").eq("id", user.id).single(),
       2000,

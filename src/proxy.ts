@@ -72,30 +72,25 @@ export async function proxy(request: NextRequest) {
       // Supabase auth network timeout fallback
     }
 
-    // 2. If visitor is NOT logged in: check if they are in Demo Mode
-    if (!user) {
-      const isDemo = request.cookies.get("fitna_demo")?.value === "true" || pathname.startsWith("/demo");
-      if (isDemo) {
-        const wantsAdminArea = ADMIN_ONLY_PREFIXES.some((p) => pathname.startsWith(p));
-        if (wantsAdminArea) {
-          const url = request.nextUrl.clone();
-          url.pathname = "/unauthorized";
-          return NextResponse.redirect(url);
-        }
-        return response;
+    // 1. If in Demo Mode: Demo Account is an open account for teacher simulation
+    if (isDemo) {
+      const wantsAdminArea = ADMIN_ONLY_PREFIXES.some((p) => pathname.startsWith(p));
+      if (wantsAdminArea) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/unauthorized";
+        return NextResponse.redirect(url);
       }
+      return response;
+    }
 
+    // 2. If visitor is NOT logged in and not in demo mode: redirect to login
+    if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
     }
 
-    // 3. User is AUTHENTICATED: wipe any leftover demo cookie to prevent account mixing
-    if (request.cookies.has("fitna_demo")) {
-      response.cookies.delete("fitna_demo");
-    }
-
-    // Look up the caller's real role.
+    // 3. Authentic Account: Look up the caller's real role.
     let role = null;
     try {
       const { data: profile } = await supabase
