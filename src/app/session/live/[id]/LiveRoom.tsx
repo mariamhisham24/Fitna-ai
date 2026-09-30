@@ -1020,7 +1020,7 @@ export function LiveRoom({
       const hasDirect = Boolean(directTranscript && directTranscript.trim().length >= 2);
       // Voice detection fallback: if browser SpeechRecognition produced text OR real voice audio was captured (> 1500 bytes and > 500ms),
       // we ALWAYS process the turn (falling back to server Whisper STT if needed) so teacher's speech is NEVER lost!
-      const canFallbackToAudio = Boolean(blob && blob.size >= 1500 && durationMs >= 500);
+      const canFallbackToAudio = Boolean(blob && blob.size >= 400 && durationMs >= 300);
 
       if (hasDirect || canFallbackToAudio) {
         const preview = directTranscript
@@ -1032,6 +1032,9 @@ export function LiveRoom({
       } else {
         setLiveTranscriptPreview("");
         setIsTranscriptProcessing(false);
+        if (isLiveOpenMicRef.current && !isTeacherMutedRef.current && speakingPersonaIdRef.current === null) {
+          startUtteranceRecording();
+        }
       }
     };
 
@@ -1052,19 +1055,10 @@ export function LiveRoom({
       return;
     }
 
-    const hasAccumulated = nativeTranscriptAccumulatorRef.current.trim().length >= 1;
-    const isRecording = isUtteranceRecordingRef.current;
-    const isRecorderActive = Boolean(
-      openMicRecorderRef.current && openMicRecorderRef.current.state === "recording"
-    );
-    const speechActive = speechDetectedRef.current || isTeacherSpeaking;
-
-    if (hasAccumulated || isRecording || isRecorderActive || speechActive) {
-      speechDetectedRef.current = false;
-      setIsTeacherSpeaking(false);
-      commitOpenMicTurn();
-    }
-  }, [commitOpenMicTurn, isTeacherSpeaking]);
+    speechDetectedRef.current = false;
+    setIsTeacherSpeaking(false);
+    commitOpenMicTurn();
+  }, [commitOpenMicTurn]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1096,7 +1090,7 @@ export function LiveRoom({
       const AudioCtx =
         window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const ctx = new AudioCtx();
+      const ctx = audioContextRef.current || new AudioCtx();
       audioContextRef.current = ctx;
 
       // Ensure AudioContext is active and not suspended by browser autoplay policy
@@ -1119,7 +1113,7 @@ export function LiveRoom({
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
 
-      let ambientNoiseFloor = 14;
+      let ambientNoiseFloor = 8;
       const MAX_CONTINUOUS_SPEECH_MS = 25000;
 
       if (vadIntervalRef.current) clearInterval(vadIntervalRef.current);
@@ -1147,6 +1141,11 @@ export function LiveRoom({
           return;
         }
 
+        // Auto-prime recording whenever teacher is free to speak
+        if (!isUtteranceRecordingRef.current) {
+          startUtteranceRecording();
+        }
+
         // Keep-alive watchdog: ensure SpeechRecognition is freshly restarted if it stopped unexpectedly
         if (
           !isRecognitionRunningRef.current &&
@@ -1172,14 +1171,13 @@ export function LiveRoom({
           ambientNoiseFloor = ambientNoiseFloor * 0.92 + speechAverage * 0.08;
         }
 
-        // Adaptive thresholds with hysteresis:
-        // Must surpass startThreshold to trigger speech; must stay above continueThreshold to maintain speech
-        const startThreshold = Math.max(18, Math.min(38, ambientNoiseFloor + 6));
-        const continueThreshold = Math.max(11, Math.min(26, ambientNoiseFloor + 2));
+        // Adaptive thresholds with hysteresis (tuned for mobile):
+        const startThreshold = Math.max(9, Math.min(30, ambientNoiseFloor + 4));
+        const continueThreshold = Math.max(5, Math.min(20, ambientNoiseFloor + 2));
 
         // Visualizer level 0-100 based on voice activity relative to ambient floor
         const dynamicLevel = Math.max(0, speechAverage - ambientNoiseFloor);
-        const level = Math.min(100, Math.round((dynamicLevel / 38) * 100));
+        const level = Math.min(100, Math.round((dynamicLevel / 28) * 100));
         setAudioLevel(level);
 
         const now = Date.now();
@@ -1214,18 +1212,15 @@ export function LiveRoom({
             }
 
             // Adaptive natural pause:
-            // If the teacher asked a question or called on a student, respond much faster (1.2s).
-            // If explaining or thinking, allow 2.4s so the teacher is never cut off.
             const hasAccumulatedText = nativeTranscriptAccumulatorRef.current.trim().length >= 2;
             const currentAccText = nativeTranscriptAccumulatorRef.current.trim();
             const isQuestionOrCall =
               /(?:[؟?]|ليه|إيه|ايه|إزاي|ازاي|مين|هل|متى|أين|اين|كام|كم|فين|يا\s*(?:سارة|عمر|ياسين|نور|ولاد|شباب|جماعة|شطار)|جاوب|قول|شاركونا|شاركينا|تفضلي|اتفضلي|اتفضل|تفضل)\b/i.test(
                 currentAccText
               );
-            const effectiveSilenceMs = isQuestionOrCall ? 1200 : hasAccumulatedText ? 2200 : 2500;
-            const minSpeechMs = hasAccumulatedText ? 250 : 500;
+            const effectiveSilenceMs = isQuestionOrCall ? 1200 : hasAccumulatedText ? 2000 : 2200;
+            const minSpeechMs = hasAccumulatedText ? 200 : 350;
 
-            // Guard: If browser SpeechRecognition delivered interim text in the last 1500ms, teacher is STILL actively speaking!
             const timeSinceInterim = now - (lastInterimResultTimeRef.current || 0);
             const isBrowserSpeechActive = timeSinceInterim < 1500;
 
@@ -1235,14 +1230,6 @@ export function LiveRoom({
               if (speechDuration >= minSpeechMs || hasAccumulatedText) {
                 commitOpenMicTurn();
               } else {
-                // Short click/breath, discard without sending to STT
-                isUtteranceRecordingRef.current = false;
-                if (openMicRecorderRef.current && openMicRecorderRef.current.state === "recording") {
-                  openMicRecorderRef.current.onstop = null;
-                  try {
-                    openMicRecorderRef.current.stop();
-                  } catch {}
-                }
                 openMicChunksRef.current = [];
               }
             }
@@ -1250,7 +1237,7 @@ export function LiveRoom({
             setIsTeacherSpeaking(false);
           }
         }
-      }, 100);
+      }, 70);
     } catch (err) {
       console.error("VAD setup error:", err);
     }
@@ -1297,6 +1284,21 @@ export function LiveRoom({
     if (processing) return;
     setMicError(null);
 
+    // CRITICAL: Unlock AudioContext synchronously during user gesture for iOS Safari & Android
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (AudioCtx) {
+        if (!audioContextRef.current) {
+          audioContextRef.current = new AudioCtx();
+        }
+        if (audioContextRef.current.state === "suspended") {
+          audioContextRef.current.resume().catch(() => {});
+        }
+      }
+    } catch {}
+
     if (typeof window !== "undefined" && !window.isSecureContext && !navigator?.mediaDevices) {
       setMicError(
         lang === "en"
@@ -1338,6 +1340,7 @@ export function LiveRoom({
       restartSpeechRecognitionRef.current?.();
 
       setupVad(stream);
+      startUtteranceRecording();
     } catch (err: unknown) {
       const errorObj = err as { name?: string };
       const isPermissionDenied = errorObj?.name === "NotAllowedError" || errorObj?.name === "PermissionDeniedError";
@@ -1347,7 +1350,7 @@ export function LiveRoom({
           : (lang === "en" ? "Microphone access denied. Please grant permission." : "تعذر الوصول للمايكروفون. يرجى التأكد من منح الإذن في المتصفح.")
       );
     }
-  }, [processing, lang, setupVad]);
+  }, [processing, lang, setupVad, startUtteranceRecording]);
 
   const toggleTeacherMute = useCallback(() => {
     setIsTeacherMuted((prev) => {
