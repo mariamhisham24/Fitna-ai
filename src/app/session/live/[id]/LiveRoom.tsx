@@ -153,6 +153,7 @@ export function LiveRoom({
   const recordStartRef = useRef<number>(0);
   const isHoldingSpaceRef = useRef<boolean>(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const activeAudioMimeTypeRef = useRef<string>("audio/webm");
 
   // Open Mic & Speech Recognition Refs
   const isLiveOpenMicRef = useRef(false);
@@ -329,31 +330,77 @@ export function LiveRoom({
     setHasUnseenDiscourse(true);
   }, []);
 
+  const createSafeMediaRecorder = useCallback((stream: MediaStream) => {
+    let mimeType = "";
+    if (typeof MediaRecorder !== "undefined" && typeof MediaRecorder.isTypeSupported === "function") {
+      const candidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/aac",
+      ];
+      for (const c of candidates) {
+        if (MediaRecorder.isTypeSupported(c)) {
+          mimeType = c;
+          break;
+        }
+      }
+    }
+
+    const isMp4 = mimeType.includes("mp4") || mimeType.includes("aac");
+    let recorder: MediaRecorder;
+    try {
+      if (mimeType && !isMp4) {
+        recorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128000 });
+      } else if (mimeType && isMp4) {
+        // On iOS Safari, audioBitsPerSecond can throw NotSupportedError
+        recorder = new MediaRecorder(stream, { mimeType });
+      } else {
+        recorder = new MediaRecorder(stream);
+      }
+    } catch {
+      recorder = new MediaRecorder(stream);
+    }
+    activeAudioMimeTypeRef.current = recorder.mimeType || mimeType || (isMp4 ? "audio/mp4" : "audio/webm");
+    return recorder;
+  }, []);
+
   const startRecording = useCallback(async () => {
     if (recording || processing) return;
     setMicError(null);
+
+    if (typeof window !== "undefined" && !window.isSecureContext && !navigator?.mediaDevices) {
+      setMicError(
+        lang === "en"
+          ? "Microphone access requires a secure HTTPS connection on mobile devices."
+          : "يتطلب تشغيل المايكروفون اتصالاً آمناً (HTTPS) على الهواتف. يرجى فتح الموقع عبر رابط HTTPS."
+      );
+      return;
+    }
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      setMicError(
+        lang === "en"
+          ? "Microphone is not supported in this browser. Please use Chrome or Safari."
+          : "المتصفح الحالي لا يدعم التقاط الصوت. يرجى استخدام متصفح Safari أو Chrome مع منح الإذن."
+      );
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-        },
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
 
-      // Select optimal audio codec supported by the browser
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : MediaRecorder.isTypeSupported("audio/mp4")
-        ? "audio/mp4"
-        : "";
-
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128000 })
-        : new MediaRecorder(stream);
+      const recorder = createSafeMediaRecorder(stream);
 
       chunksRef.current = [];
       recorder.ondataavailable = (e) => {
@@ -361,7 +408,8 @@ export function LiveRoom({
       };
       recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
-        const pushBlob = chunksRef.current.length > 0 ? new Blob(chunksRef.current, { type: "audio/webm" }) : null;
+        const mime = activeAudioMimeTypeRef.current || (MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4");
+        const pushBlob = chunksRef.current.length > 0 ? new Blob(chunksRef.current, { type: mime }) : null;
         chunksRef.current = [];
         const directTranscript = nativeTranscriptAccumulatorRef.current.trim();
         nativeTranscriptAccumulatorRef.current = "";
@@ -373,7 +421,12 @@ export function LiveRoom({
         void handleRecordingComplete(pushBlob || undefined, undefined, directTranscript || undefined);
       };
       recordStartRef.current = Date.now();
-      recorder.start(100);
+      const isMp4 = (recorder.mimeType || activeAudioMimeTypeRef.current).includes("mp4");
+      if (isMp4) {
+        recorder.start();
+      } else {
+        recorder.start(100);
+      }
       mediaRecorderRef.current = recorder;
       setRecording(true);
 
@@ -479,7 +532,9 @@ export function LiveRoom({
         if (!teacherText) {
           try {
             const sttForm = new FormData();
-            sttForm.append("audio", blob, "utterance.webm");
+            const isMp4 = blob.type.includes("mp4") || blob.type.includes("aac");
+            const audioFilename = isMp4 ? "utterance.mp4" : "utterance.webm";
+            sttForm.append("audio", blob, audioFilename);
             if (lessonContext) {
               sttForm.append("lessonContext", lessonContext);
             }
@@ -726,17 +781,7 @@ export function LiveRoom({
     if (isUtteranceRecordingRef.current) return;
 
     try {
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : MediaRecorder.isTypeSupported("audio/mp4")
-        ? "audio/mp4"
-        : "";
-
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128000 })
-        : new MediaRecorder(stream);
+      const recorder = createSafeMediaRecorder(stream);
 
       openMicChunksRef.current = [];
       openMicSliceStartRef.current = Date.now();
@@ -747,13 +792,18 @@ export function LiveRoom({
         }
       };
 
-      recorder.start(100);
+      const isMp4 = (recorder.mimeType || activeAudioMimeTypeRef.current).includes("mp4");
+      if (isMp4) {
+        recorder.start();
+      } else {
+        recorder.start(100);
+      }
       openMicRecorderRef.current = recorder;
       isUtteranceRecordingRef.current = true;
     } catch (err) {
       console.error("Failed to start utterance recording:", err);
     }
-  }, []);
+  }, [createSafeMediaRecorder]);
 
   const initSpeechRecognition = useCallback(() => {
     if (typeof window === "undefined") return null;
@@ -963,7 +1013,8 @@ export function LiveRoom({
     const durationMs = Date.now() - openMicSliceStartRef.current;
 
     recorder.onstop = async () => {
-      const blob = new Blob(openMicChunksRef.current, { type: "audio/webm" });
+      const mime = activeAudioMimeTypeRef.current || (MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4");
+      const blob = new Blob(openMicChunksRef.current, { type: mime });
       openMicChunksRef.current = [];
 
       const hasDirect = Boolean(directTranscript && directTranscript.trim().length >= 2);
@@ -1245,15 +1296,37 @@ export function LiveRoom({
   const startOpenMic = useCallback(async () => {
     if (processing) return;
     setMicError(null);
+
+    if (typeof window !== "undefined" && !window.isSecureContext && !navigator?.mediaDevices) {
+      setMicError(
+        lang === "en"
+          ? "Microphone access requires a secure HTTPS connection on mobile devices."
+          : "يتطلب تشغيل المايكروفون اتصالاً آمناً (HTTPS) على الهواتف. يرجى فتح الموقع عبر رابط HTTPS."
+      );
+      return;
+    }
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      setMicError(
+        lang === "en"
+          ? "Microphone is not supported in this browser. Please use Chrome or Safari."
+          : "المتصفح الحالي لا يدعم التقاط الصوت. يرجى استخدام متصفح Safari أو Chrome مع منح الإذن."
+      );
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-        },
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
 
       openMicStreamRef.current = stream;
       setIsLiveOpenMic(true);
@@ -1265,11 +1338,13 @@ export function LiveRoom({
       restartSpeechRecognitionRef.current?.();
 
       setupVad(stream);
-    } catch {
+    } catch (err: unknown) {
+      const errorObj = err as { name?: string };
+      const isPermissionDenied = errorObj?.name === "NotAllowedError" || errorObj?.name === "PermissionDeniedError";
       setMicError(
-        lang === "en"
-          ? "Microphone access denied. Please grant permission."
-          : "تعذر الوصول للمايكروفون. يرجى التأكد من منح الإذن في المتصفح."
+        isPermissionDenied
+          ? (lang === "en" ? "Microphone permission denied. Please allow microphone in site settings." : "تم رفض إذن المايكروفون. يرجى السماح بالوصول للمايكروفون من إعدادات المتصفح.")
+          : (lang === "en" ? "Microphone access denied. Please grant permission." : "تعذر الوصول للمايكروفون. يرجى التأكد من منح الإذن في المتصفح.")
       );
     }
   }, [processing, lang, setupVad]);

@@ -32,7 +32,25 @@ export async function POST(request: NextRequest) {
 
   try {
     const arrayBuffer = await audio.arrayBuffer();
-    const file = await toFile(Buffer.from(arrayBuffer), "utterance.webm");
+    const buf = Buffer.from(arrayBuffer);
+
+    // Detect actual container format from magic bytes or MIME type for mobile (iOS/Safari = mp4/aac, Android/Chrome = webm)
+    let filename = "utterance.webm";
+    if (buf.length >= 8 && buf.toString("ascii", 4, 8) === "ftyp") {
+      filename = "utterance.mp4";
+    } else if (buf.length >= 4 && buf.toString("ascii", 0, 4) === "RIFF") {
+      filename = "utterance.wav";
+    } else if (buf.length >= 4 && buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3) {
+      filename = "utterance.webm";
+    } else if (audio.name?.endsWith(".mp4") || audio.name?.endsWith(".m4a") || audio.type?.includes("mp4") || audio.type?.includes("aac")) {
+      filename = "utterance.mp4";
+    } else if (audio.name?.endsWith(".wav") || audio.type?.includes("wav")) {
+      filename = "utterance.wav";
+    } else if (audio.name?.endsWith(".ogg") || audio.type?.includes("ogg")) {
+      filename = "utterance.ogg";
+    }
+
+    const file = await toFile(buf, filename);
     const lessonContext = formData.get("lessonContext");
     const lessonSnippet = typeof lessonContext === "string" && lessonContext.trim()
       ? ` موضوع الدرس: ${lessonContext.trim().slice(0, 150)}.`
