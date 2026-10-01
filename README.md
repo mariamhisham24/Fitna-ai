@@ -1,7 +1,11 @@
 # Fitna AI (فِطنة) — AI-Powered Pedagogical Flight Simulator
 
 <p align="center">
-  <img src="public/logo-fitna.svg" alt="Fitna AI Logo" width="220" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/logo/logo-light.png">
+    <source media="(prefers-color-scheme: light)" srcset="public/logo/logo-dark.png">
+    <img alt="Fitna AI Logo" src="public/logo/logo-dark.png" width="320">
+  </picture>
 </p>
 
 <p align="center">
