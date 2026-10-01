@@ -242,7 +242,7 @@ Fitna AI features a purpose-built audio layer engineered to comply with strict m
 Developed with passion to empower the next generation of educators in Egypt and across the Arab world.
 
 * **Mariam Hisham** — Lead Engineering & AI Architecture ([@mariamhisham24](https://github.com/mariamhisham24))
-* **Hassan Yehia** — Co-Founder & Product Engineering
+* **Hassan Yehia** — AI Engineer & Co-Founder
 
 ---
 
