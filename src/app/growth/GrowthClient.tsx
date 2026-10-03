@@ -157,6 +157,11 @@ export function GrowthClient({
       ? latestSession.overallScore - prevSession.overallScore
       : null;
 
+  const inclusivityDiff =
+    latestSession && prevSession && latestSession.inclusivityIndex !== null && prevSession.inclusivityIndex !== null
+      ? latestSession.inclusivityIndex - prevSession.inclusivityIndex
+      : null;
+
   // SVG Chart calculation
   const svgWidth = 800;
   const svgHeight = 240;
@@ -584,8 +589,8 @@ export function GrowthClient({
           <div>
             <div className="w-full bg-[#F6F0E4] dark:bg-white/10 rounded-full h-2 overflow-hidden mb-2">
               <div
-                className="bg-[#12B8C4] h-2 rounded-full"
-                style={{ width: `${Math.min(100, (avgTTT ?? 0) * 2.5)}%` }}
+                className="bg-[#12B8C4] h-2 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(0, avgTTT ?? 0))}%` }}
               />
             </div>
             <span className="text-[11px] text-[#071B3A]/45 dark:text-white/45">
@@ -623,8 +628,8 @@ export function GrowthClient({
           <div>
             <div className="w-full bg-[#F6F0E4] dark:bg-white/10 rounded-full h-2 overflow-hidden mb-2">
               <div
-                className="bg-[#FFB52E] h-2 rounded-full"
-                style={{ width: `${Math.min(100, (avgSocratic ?? 0) * 2)}%` }}
+                className="bg-[#FFB52E] h-2 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(0, avgSocratic ?? 0))}%` }}
               />
             </div>
             <span className="text-[11px] text-[#071B3A]/45 dark:text-white/45">
@@ -643,19 +648,29 @@ export function GrowthClient({
               <span className="text-4xl font-black text-[#071B3A] dark:text-white tracking-tight">
                 {avgInclusivity !== null ? `${avgInclusivity}%` : "—"}
               </span>
-              <span className="text-xs font-bold text-[#12B8C4]">
-                {avgInclusivity === null
-                  ? "—"
-                  : avgInclusivity >= 60
-                  ? (isRtl ? "▲ 4% تقدم" : "▲ 4% Progress")
-                  : (isRtl ? "تفاعل جزئي" : "Partial")}
-              </span>
+              {inclusivityDiff !== null ? (
+                <span className={`text-xs font-bold ${inclusivityDiff < 0 ? "text-[#D96B58]" : "text-[#12B8C4]"}`}>
+                  {inclusivityDiff < 0
+                    ? `▼ ${Math.abs(inclusivityDiff)}%`
+                    : inclusivityDiff > 0
+                    ? `▲ ${inclusivityDiff}% ${isRtl ? "تقدم" : "Progress"}`
+                    : (isRtl ? "مستقر" : "Stable")}
+                </span>
+              ) : (
+                <span className="text-xs font-bold text-[#12B8C4]">
+                  {avgInclusivity === null
+                    ? "—"
+                    : avgInclusivity >= 60
+                    ? (isRtl ? "تفاعل متكافئ" : "Balanced")
+                    : (isRtl ? "تفاعل جزئي" : "Partial")}
+                </span>
+              )}
             </div>
             <div>
               <div className="w-full bg-[#F6F0E4] dark:bg-white/10 rounded-full h-2 overflow-hidden mb-2">
                 <div
-                  className="bg-[#12B8C4] h-2 rounded-full"
-                  style={{ width: `${Math.min(100, avgInclusivity ?? 0)}%` }}
+                  className="bg-[#12B8C4] h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, Math.max(0, avgInclusivity ?? 0))}%` }}
                 />
               </div>
               <span className="text-[11px] text-[#071B3A]/45 dark:text-white/45">

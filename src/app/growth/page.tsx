@@ -43,7 +43,7 @@ export default async function GrowthPage() {
 
   const rawSessions = sessionsRes.data ?? [];
 
-  const topicIds = [...new Set((rawSessions ?? []).map((s) => s.topic_id).filter(Boolean))] as string[];
+  const topicIds = [...new Set((rawSessions ?? []).map((s: any) => s.topic_id).filter(Boolean))] as string[];
   const topicsRes = topicIds.length
     ? await Promise.race([
         db.from("lesson_topics").select("id, title_ar, title_en").in("id", topicIds),
@@ -58,7 +58,7 @@ export default async function GrowthPage() {
     topicTitleObj[item.id] = isEn && item.title_en ? item.title_en : item.title_ar;
   }
 
-  const sessions = (rawSessions ?? []).map((s) => {
+  const sessions = (rawSessions ?? []).map((s: any) => {
     const d = new Date(s.started_at);
     const dateStr = d.toLocaleDateString(isEn ? "en-US" : "ar-EG", { month: "short", day: "numeric", year: "numeric" });
     const fullDateStr = d.toISOString().split("T")[0];
@@ -100,19 +100,19 @@ export default async function GrowthPage() {
   if (sessions.length >= 3 && !badgeMap.has("streak_master")) {
     badgeMap.set("streak_master", sessions[2]?.startedAt || new Date().toISOString());
   }
-  const socratesSession = sessions.find((s) => (s.socraticQuestionRate ?? 0) > 80);
+  const socratesSession = sessions.find((s: any) => (s.socraticQuestionRate ?? 0) > 80);
   if (socratesSession && !badgeMap.has("socrates_incarnate")) {
     badgeMap.set("socrates_incarnate", socratesSession.startedAt);
   }
-  const listenerSession = sessions.find((s) => (s.teacherTalkRatio ?? 0) >= 25 && (s.teacherTalkRatio ?? 0) <= 50);
+  const listenerSession = sessions.find((s: any) => (s.teacherTalkRatio ?? 0) >= 25 && (s.teacherTalkRatio ?? 0) <= 50);
   if (listenerSession && !badgeMap.has("master_listener")) {
     badgeMap.set("master_listener", listenerSession.startedAt);
   }
-  const inclusiveSession = sessions.find((s) => (s.inclusivityIndex ?? 0) === 100);
+  const inclusiveSession = sessions.find((s: any) => (s.inclusivityIndex ?? 0) === 100);
   if (inclusiveSession && !badgeMap.has("inclusive_educator")) {
     badgeMap.set("inclusive_educator", inclusiveSession.startedAt);
   }
-  const captainSession = sessions.find((s) => (s.overallScore ?? 0) >= 90);
+  const captainSession = sessions.find((s: any) => (s.overallScore ?? 0) >= 90);
   if (captainSession && !badgeMap.has("classroom_captain")) {
     badgeMap.set("classroom_captain", captainSession.startedAt);
   }
