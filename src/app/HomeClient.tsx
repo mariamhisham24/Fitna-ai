@@ -1,8 +1,10 @@
 "use client";
 // Design philosophy: Nile Intelligence — asymmetric editorial edtech, deep navy field, teal telemetry, amber signals, calm Arabic-first hierarchy.
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, ArrowUpLeft, ArrowUpRight, Check, CirclePlay, Languages, ShieldCheck, Sparkles, Users, Waves, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpLeft, ArrowUpRight, Check, CirclePlay, Languages, ShieldCheck, Sparkles, Users, Waves, Zap, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { type Market } from "@/lib/i18n/types";
+import { MarketSelectorModal } from "@/components/MarketSelectorModal";
 
 const getTrainingEntryPath = () => "/login";
 
@@ -11,7 +13,7 @@ const texture = "/manus-storage/fitna-nile-signal-texture_6eb544b1.png";
 const deviceImage = "/manus-storage/fitna-live-simulation-screen_f1b6fe69.png";
 
 const copy = {
-  ar: {
+  eg: {
     dir: "rtl",
     nav: ["كيف تعمل", "المميزات", "الأسعار"],
     login: "تسجيل الدخول",
@@ -34,6 +36,14 @@ const copy = {
       "لوحة نمو شخصية",
       "تحليل الصوت لحظياً"
     ],
+    featureDescs: [
+      "طلاب افتراضيون بشخصيات وحالات انتباه تتغير لحظياً.",
+      "تدرّب باللهجة التي ستسمعها فعلاً في فصلك.",
+      "تقييم واضح يرتبط بـ Danielson و CLASS.",
+      "ارجع للحظة، اسمعها، وشاهدها من جديد.",
+      "مسار بصري يوضح أين تنمو وأين تحتاج تركيزاً.",
+      "حلّل نبرتك، سرعتك، وتوقيت تدخلاتك."
+    ],
     howTitle: "من القرار إلى ردة الفعل",
     howIntro: "جلسة واحدة. أربع لحظات تصنع فرقاً في حضورك داخل الفصل.",
     ctaTitle: "الفصل القادم يبدأ هنا",
@@ -41,7 +51,51 @@ const copy = {
     cta: "ابدأ رحلتك التدريبية الآن",
     language: "EN",
     dark: "الوضع الداكن",
-    light: "الوضع الفاتح"
+    light: "الوضع الفاتح",
+    individualFeatures: ["جلسات محاكاة غير محدودة", "تقرير تشخيصي بعد كل جلسة", "لهجة مصرية عامية", "مسار نمو شخصي"],
+    institutionFeatures: ["لوحات متابعة للفرق", "معايير تقييم مخصصة", "تدريب وإعداد للمشرفين", "دعم مؤسسي وأولوية", "تحليلات على مستوى البرنامج"]
+  },
+  sa: {
+    dir: "rtl",
+    nav: ["طريقة العمل", "المميزات", "الباقات والأسعار"],
+    login: "تسجيل الدخول",
+    start: "ابدأ التدريب الآن",
+    eyebrow: "محاكي الفصول الذكي لتمكين المعلمين",
+    title: "أتقن إدارة الصف الدراسي قبل دخوله",
+    desc: "تدرّب بصوتك الطبيعي داخل صف افتراضي تفاعلي حي، وتعلّم كيفية التعامل مع التشتت والفروق الفردية والمفاهيم الخاطئة قبل خوض الحصة الأولى.",
+    primary: "ابدأ المحاكاة الآن",
+    secondary: "شاهد طريقة العمل",
+    mainSlogan: "قبل أن تدخل الصف... كن فِطِناً.",
+    secondarySlogan: "Where Pedagogical Mastery Meets Agentic Intelligence.",
+    trust: ["+500 معلم ومعلمة", "محاكاة واقعية للفصول السعودية", "أطر Danielson & CLASS العالمية"],
+    problemTitle: "الممارسة الميدانية وحدها لا تكفي",
+    problemIntro: "الواقع الصفي لا يمنحك زر إيقاف مؤقت. امنح نفسك مساحة تدريبية آمنة للتجربة وصقل المهارة قبل خوض الحصة الأولى.",
+    features: [
+      "سرب الوكلاء الذكي",
+      "محاكاة الفصول السعودية",
+      "تقييم بأطر عالمية معتمدة",
+      "إعادة تشغيل الحصة بالصوت",
+      "لوحة تطور مهني شخصية",
+      "تحليل فوري للنبرة والحديث"
+    ],
+    featureDescs: [
+      "طلاب افتراضيون باستجابات سلوكية ومستويات انتباه ديناميكية.",
+      "تدرّب بلهجة وسياق يحاكي ما تسمعه فعلاً في الصف الدراسي السعودي.",
+      "تقييم احترافي مرتبط بمعايير Danielson و CLASS المعتمدة.",
+      "إعادة الاستماع للحظات التفاعل وتحليل ردود أفعالك.",
+      "مسار بصري لمتابعة نمو كفاءتك التدريسية ومكامن التحسين.",
+      "تحليل دقيق لسرعة الحديث، ونسبة مشاركة الطلاب، والأسئلة السقراطية."
+    ],
+    howTitle: "من القرار التربوي إلى الاستجابة اللحظية",
+    howIntro: "جلسة واحدة. أربع لحظات تصنع فرقاً ملموساً في حضورك الصفي.",
+    ctaTitle: "صفك الدراسي القادم يبدأ هنا",
+    ctaText: "حوّل التردد إلى ممارسة، والممارسة إلى حضور قيادي واثق.",
+    cta: "ابدأ رحلتك التدريبية الآن",
+    language: "EN",
+    dark: "الوضع الداكن",
+    light: "الوضع الفاتح",
+    individualFeatures: ["جلسات محاكاة غير محدودة", "تقرير تشخيصي فوري بعد كل جلسة", "محاكاة تفاعلية للفصول السعودية", "مسار تطور مهني شخصي"],
+    institutionFeatures: ["لوحات متابعة للفرق التعليمية", "معايير تقييم مخصصة", "تدريب المشرفين التربويين", "دعم فني ومؤسسي بأولوية", "تحليلات تراكمية للبرنامج"]
   },
   en: {
     dir: "ltr",
@@ -55,16 +109,24 @@ const copy = {
     secondary: "See how it works",
     mainSlogan: "Before you enter the classroom... be thoughtful.",
     secondarySlogan: "Where Pedagogical Mastery Meets Agentic Intelligence.",
-    trust: ["500+ teachers", "Egyptian Arabic dialect", "Danielson & CLASS frameworks"],
+    trust: ["500+ teachers", "Egyptian / Saudi localized dialects", "Danielson & CLASS frameworks"],
     problemTitle: "Field practice alone is not enough",
     problemIntro: "Reality has no pause button. Give yourself a safe room to rehearse before the first class.",
     features: [
       "Agentic student swarm",
-      "Egyptian Arabic dialect",
+      "Localized dialect engine",
       "Global framework scoring",
       "Audio + video playback",
       "Personal growth telemetry",
       "Real-time voice analysis"
+    ],
+    featureDescs: [
+      "Virtual students with shifting personalities and attention states.",
+      "Practice in the dialect you will actually hear in the room.",
+      "Clear scoring mapped to Danielson and CLASS.",
+      "Return to the moment. Hear it. See it again.",
+      "A visual path showing where you grow and focus.",
+      "Read tone, pace, and timing as they happen."
     ],
     howTitle: "From Decision to Reaction",
     howIntro: "One session. Four moments that change how you show up in the room.",
@@ -73,7 +135,9 @@ const copy = {
     cta: "Start your training journey",
     language: "عربي",
     dark: "Dark mode",
-    light: "Light mode"
+    light: "Light mode",
+    individualFeatures: ["Unlimited simulations", "Post-session diagnostic report", "Localized classroom dialect", "Personal growth path"],
+    institutionFeatures: ["Team progress dashboards", "Custom assessment criteria", "Supervisor onboarding", "Priority institutional support", "Program-level analytics"]
   }
 };
 
@@ -81,26 +145,62 @@ const problemIcons = [Zap, Waves, Sparkles];
 const stepsAr = ["اختر السيناريو", "تحدث بصوتك الطبيعي", "احصل على تقرير فوري", "تابع نموك عبر الجلسات"];
 const stepsEn = ["Choose a scenario", "Speak naturally", "Get instant feedback", "Track your growth"];
 
-export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }) {
+export function HomeClient({
+  initialLang = "ar",
+  initialMarket = null,
+}: {
+  initialLang?: "ar" | "en";
+  initialMarket?: Market | null;
+}) {
   const [lang, setLang] = useState<"ar" | "en">(initialLang);
+  const [market, setMarket] = useState<Market>(initialMarket || "eg");
+  const [showMarketModal, setShowMarketModal] = useState<boolean>(initialMarket === null);
   const [menu, setMenu] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
 
-  // Sync with cookie on mount
+  // Sync with cookies and localStorage on mount
   useEffect(() => {
-    const match = document.cookie.match(/(?:^|;\s*)language=(ar|en)(?:;|$)/);
-    if (match && (match[1] === "ar" || match[1] === "en")) {
-      setLang(match[1]);
-      document.documentElement.lang = match[1];
-      document.documentElement.dir = match[1] === "en" ? "ltr" : "rtl";
+    // 1. Language cookie
+    const langMatch = document.cookie.match(/(?:^|;\s*)language=(ar|en)(?:;|$)/);
+    if (langMatch && (langMatch[1] === "ar" || langMatch[1] === "en")) {
+      setLang(langMatch[1]);
+      document.documentElement.lang = langMatch[1];
+      document.documentElement.dir = langMatch[1] === "en" ? "ltr" : "rtl";
     }
-  }, []);
 
-  const t = copy[lang];
+    // 2. Market cookie & localStorage check
+    const marketMatch = document.cookie.match(/(?:^|;\s*)fitna_market=(eg|sa)(?:;|$)/);
+    if (marketMatch && (marketMatch[1] === "eg" || marketMatch[1] === "sa")) {
+      setMarket(marketMatch[1]);
+      setShowMarketModal(false);
+    } else {
+      const localMarket = localStorage.getItem("fitna_market") as Market | null;
+      if (localMarket === "eg" || localMarket === "sa") {
+        setMarket(localMarket);
+        setShowMarketModal(false);
+        document.cookie = `fitna_market=${localMarket}; path=/; max-age=31536000; SameSite=Lax`;
+      } else if (initialMarket === null) {
+        setShowMarketModal(true);
+      }
+    }
+  }, [initialMarket]);
+
+  const handleSelectMarket = (m: Market) => {
+    setMarket(m);
+    setShowMarketModal(false);
+    document.cookie = `fitna_market=${m}; path=/; max-age=31536000; SameSite=Lax`;
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("fitna_market", m);
+    }
+  };
+
+  const currentCopy = lang === "en" ? copy.en : market === "sa" ? copy.sa : copy.eg;
+  const t = currentCopy;
   const steps = lang === "ar" ? stepsAr : stepsEn;
 
   useEffect(() => {
     const items = document.querySelectorAll<HTMLElement>(".reveal-on-scroll");
+    if (!items.length) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -110,11 +210,11 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
           }
         });
       },
-      { threshold: 0.14, rootMargin: "0px 0px -8% 0px" }
+      { threshold: 0.05, rootMargin: "0px 0px -4% 0px" }
     );
     items.forEach((item) => observer.observe(item));
     return () => observer.disconnect();
-  }, []);
+  }, [market, lang]);
 
   const flipLanguage = () => {
     const nextLang = lang === "ar" ? "en" : "ar";
@@ -134,6 +234,9 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
 
   return (
     <div dir={t.dir} className="fitna-site">
+      {/* First-time Market Selector Modal */}
+      <MarketSelectorModal isOpen={showMarketModal} onSelect={handleSelectMarket} />
+
       <header className="site-header">
         <div className="header-inner">
           <a className="brand" href="#top" aria-label="Fitna AI home">
@@ -148,6 +251,34 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
             <button onClick={() => { scrollTo("pricing"); setMenu(false); }}>{t.nav[2]}</button>
           </nav>
           <div className="header-actions">
+            {/* Quick Market Switcher Pill in Navbar */}
+            <button
+              type="button"
+              onClick={() => handleSelectMarket(market === "sa" ? "eg" : "sa")}
+              className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-2 cursor-pointer shadow-sm border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 dark:border-amber-400/40 hover:border-amber-500"
+              title={lang === "ar" ? "انقر للتبديل بين مصر والسعودية" : "Toggle Region"}
+            >
+              {market === "sa" ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <svg className="w-4 h-3 rounded-xs shadow-xs shrink-0 overflow-hidden" viewBox="0 0 640 480">
+                    <path fill="#006c35" d="M0 0h640v480H0z"/>
+                    <path fill="#fff" d="M120 280h400v20H120zM220 180h200v40H220z"/>
+                  </svg>
+                  <span>السعودية</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <svg className="w-4 h-3 rounded-xs shadow-xs shrink-0 overflow-hidden" viewBox="0 0 640 480">
+                    <path fill="#ce1126" d="M0 0h640v160H0z"/>
+                    <path fill="#fff" d="M0 160h640v160H0z"/>
+                    <path fill="#000" d="M0 320h640v160H0z"/>
+                    <circle cx="320" cy="240" r="26" fill="#c09300"/>
+                  </svg>
+                  <span>مصر</span>
+                </span>
+              )}
+            </button>
+
             <ThemeToggle />
             <button className="language-button" onClick={flipLanguage} title={lang === "ar" ? "Switch to English" : "التحويل إلى العربية"}>
               {t.language}
@@ -211,7 +342,9 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
                       {lang === "ar" ? "تسجيل مباشر" : "LIVE RECORDING"}
                     </div>
                     <span className="text-sm font-semibold text-[#E2E8F0]">
-                      {lang === "ar" ? "الفصل 8ب • الرياضيات والكسور" : "Class 8B • Fractions"}
+                      {lang === "ar" 
+                        ? (market === "sa" ? "الصف 8ب • الرياضيات والكسور" : "الفصل 8ب • الرياضيات والكسور") 
+                        : "Class 8B • Fractions"}
                     </span>
                   </div>
                   <div className="text-xs text-[#E2E8F0] font-mono tracking-widest bg-white/[0.08] px-3 py-1 rounded-md border border-white/10" dir="ltr">
@@ -234,7 +367,9 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
                       </div>
                       <p className="text-[15px] text-[#E2E8F0] leading-relaxed font-normal">
                         {lang === "ar"
-                          ? "دعونا ننظر إلى المثال الأول على السبورة. من يخبرني ماذا يحدث عندما يكبر المقام؟"
+                          ? (market === "sa"
+                              ? "دعونا ننظر إلى المثال الأول على السبورة. من يخبرني ماذا يحدث عندما يكبر المقام؟"
+                              : "خلونا نبص على أول مثال على السبورة. مين يقول لي إيه اللي بيحصل لما المقام يكبر؟")
                           : "Let's look at the first example. Who can tell me what happens when the denominator gets larger?"}
                       </p>
                     </div>
@@ -245,12 +380,14 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
                     <div className="flex items-center gap-2 mb-1.5">
                       <Sparkles size={16} className="text-amber-300 shrink-0" />
                       <span className="text-xs font-black text-amber-300 tracking-wide uppercase">
-                        {lang === "ar" ? "فترة صمت (3.4 ثانية)" : "Wait Time Detected (3.4s)"}
+                        {lang === "ar" ? "فترة صمت وتفكير (3.4 ثانية)" : "Wait Time Detected (3.4s)"}
                       </span>
                     </div>
                     <p className="text-[13px] text-[#FEF3C7] font-medium leading-relaxed">
                       {lang === "ar"
-                        ? "وقفة تدريسية ممتازة. منحت الطلاب 3.4 ثانية لمعالجة السؤال والتفكير قبل استقبال الإجابة."
+                        ? (market === "sa"
+                            ? "وقفة تدريسية ممتازة. منحت الطلاب 3.4 ثانية لمعالجة السؤال والتفكير قبل استقبال الإجابة."
+                            : "وقفة تدريسية ممتازة. إديت الطلاب 3.4 ثانية للتفكير واستيعاب السؤال قبل استقبال الإجابة.")
                         : "Excellent pedagogical pause. You gave students 3.4s to process before calling on someone."}
                     </p>
                   </div>
@@ -266,7 +403,9 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
                       </div>
                       <p className="text-[15px] text-[#F1F5F9] leading-relaxed font-normal">
                         {lang === "ar"
-                          ? "القطع تصبح أصغر... يعني قيمة الكسر الإجمالية تكون أصغر؟"
+                          ? (market === "sa"
+                              ? "يا أستاذة، يعني كل ما كبر المقام تصغر قيمة الكسر؟"
+                              : "يا ميس، يعني كل ما المقام يكبر قيمة الكسر بتصغر؟")
                           : "The pieces get smaller... so the overall fraction is smaller?"}
                       </p>
                     </div>
@@ -283,7 +422,9 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
                       </div>
                       <p className="text-[15px] text-white leading-relaxed font-semibold">
                         {lang === "ar"
-                          ? "أحسنتِ تماماً يا سارة! إذن لو قارنا بين رُبع وثُمن، أيهما "
+                          ? (market === "sa"
+                              ? "أحسنتِ تماماً يا سارة! إذن لو قارنا بين رُبع وثُمن، أيهما "
+                              : "ممتازة جداً يا سارة! طب لو قارنّا بين رُبع وتُمن، مين فيهم ")
                           : "Exactly right, Sara. So if we compare one fourth to one eighth, which one "}
                         <span className="inline-block bg-teal-400/30 text-teal-200 px-2 py-0.5 rounded font-mono animate-pulse">...</span>
                       </p>
@@ -307,7 +448,9 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
                           {lang === "ar" ? "الميكروفون نشط" : "Active Microphone"}
                         </div>
                         <div className="text-xs text-[#E2E8F0] font-medium">
-                          {lang === "ar" ? "تحدث بنبرتك الطبيعية..." : "Speak in your natural voice..."}
+                          {lang === "ar" 
+                            ? (market === "sa" ? "تحدث بنبرتك الطبيعية..." : "اتكلم بنبرتك الطبيعية...") 
+                            : "Speak in your natural voice..."}
                         </div>
                       </div>
                     </div>
@@ -340,7 +483,7 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
             </div>
           </div>
 
-          {/* Trust Row - Ultra Spacious & Elevated */}
+          {/* Trust Row */}
           <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 mt-6 sm:mt-10 mb-0">
             <div className="flex flex-wrap items-center justify-center gap-10 sm:gap-14 lg:gap-20">
               {t.trust.map((item, idx) => (
@@ -475,23 +618,7 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
                 <div className="feature-top"><Sparkles size={19} /></div>
                 <h3>{feature}</h3>
                 <p>
-                  {lang === "ar"
-                    ? [
-                        "طلاب افتراضيون بشخصيات وحالات انتباه تتغير لحظياً.",
-                        "تدرّب باللهجة التي ستسمعها فعلاً في فصلك.",
-                        "تقييم واضح يرتبط بـ Danielson و CLASS.",
-                        "ارجع للحظة، اسمعها، وشاهدها من جديد.",
-                        "مسار بصري يوضح أين تنمو وأين تحتاج تركيزاً.",
-                        "حلّل نبرتك، سرعتك، وتوقيت تدخلاتك."
-                      ][i]
-                    : [
-                        "Virtual students with shifting personalities and attention states.",
-                        "Practice in the dialect you will actually hear in the room.",
-                        "Clear scoring mapped to Danielson and CLASS.",
-                        "Return to the moment. Hear it. See it again.",
-                        "A visual path showing where you grow and focus.",
-                        "Read tone, pace, and timing as they happen."
-                      ][i]}
+                  {lang === "ar" ? (t as any).featureDescs?.[i] || feature : (copy.en.featureDescs[i] || feature)}
                 </p>
                 <NextArrow className="feature-arrow" size={17} />
               </article>
@@ -552,10 +679,7 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
                 <span>{lang === "ar" ? "/ شهرياً" : "/ month"}</span>
               </div>
               <ul>
-                {(lang === "ar"
-                  ? ["جلسات محاكاة غير محدودة", "تقرير تشخيصي بعد كل جلسة", "لهجة مصرية عامية", "مسار نمو شخصي"]
-                  : ["Unlimited simulations", "Post-session diagnostic report", "Egyptian Arabic dialect", "Personal growth path"]
-                ).map((x) => (
+                {((t as any).individualFeatures || copy.eg.individualFeatures).map((x: string) => (
                   <li key={x}><Check size={15} />{x}</li>
                 ))}
               </ul>
@@ -571,10 +695,7 @@ export function HomeClient({ initialLang = "ar" }: { initialLang?: "ar" | "en" }
                 <strong>{lang === "ar" ? "مخصص" : "Custom"}</strong>
               </div>
               <ul>
-                {(lang === "ar"
-                  ? ["لوحات متابعة للفرق", "معايير تقييم مخصصة", "تدريب وإعداد للمشرفين", "دعم مؤسسي وأولوية", "تحليلات على مستوى البرنامج"]
-                  : ["Team progress dashboards", "Custom assessment criteria", "Supervisor onboarding", "Priority institutional support", "Program-level analytics"]
-                ).map((x) => (
+                {((t as any).institutionFeatures || copy.eg.institutionFeatures).map((x: string) => (
                   <li key={x}><Check size={15} />{x}</li>
                 ))}
               </ul>

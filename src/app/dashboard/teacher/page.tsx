@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { type Language } from "@/lib/i18n";
 import { TeacherDashboardClient } from "./TeacherDashboardClient";
 
-async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T): Promise<T> {
+async function withTimeout<T>(promise: PromiseLike<any>, ms: number, fallback: any): Promise<any> {
   return Promise.race([
     Promise.resolve(promise),
     new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
@@ -28,7 +28,7 @@ export default async function TeacherDashboardPage() {
 
   const db = createAdminClient();
 
-  let userProfile = {
+  let userProfile: any = {
     full_name: user.user_metadata?.full_name || user.email || "معلم",
     email: user.email || "",
     teaching_experience: null,
@@ -54,20 +54,26 @@ export default async function TeacherDashboardPage() {
     }
   } catch {}
 
+  const market = (cookieStore.get("fitna_market")?.value === "sa" ? "sa" : "eg");
+  const isDemoUser = user.id === "d3300000-0000-4000-8000-000000000001" || user.email === "demo@fitna.ai";
+
   let completed: any[] = [];
   try {
-    const sessionsRes = await withTimeout(
-      db
-        .from("sessions")
-        .select("id, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, started_at, status, topic_id")
-        .eq("teacher_id", user.id)
-        .eq("status", "completed")
-        .order("started_at", { ascending: false })
-        .limit(5),
-      10000,
-      { data: [], error: null }
-    );
-    completed = (sessionsRes?.data ?? []) as any[];
+    // For Saudi demo experience, the dashboard starts completely fresh and empty
+    if (!(isDemoUser && market === "sa")) {
+      const sessionsRes = await withTimeout(
+        db
+          .from("sessions")
+          .select("id, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, started_at, status, topic_id")
+          .eq("teacher_id", user.id)
+          .eq("status", "completed")
+          .order("started_at", { ascending: false })
+          .limit(5),
+        10000,
+        { data: [], error: null }
+      );
+      completed = (sessionsRes?.data ?? []) as any[];
+    }
   } catch {}
 
   const avgScore =

@@ -9,7 +9,7 @@ export const runtime = "nodejs";
  * Uses admin client for guaranteed persistence and gracefully handles
  * databases where the optional framework_scores column is not yet migrated.
  */
-export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: sessionId } = await params;
     const supabase = await createClient();
@@ -42,8 +42,26 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     const { data: personaRows } = await supabase.from("student_personas").select("id, name");
     const personaNameById = new Map((personaRows ?? []).map((p) => [p.id, p.name]));
 
+    const sessionEvents = events ?? [];
+    let sessionMarket: "eg" | "sa" = "eg";
+    for (const e of sessionEvents) {
+      if (e.event_type === "session_config" && e.metadata) {
+        const meta = e.metadata as { market?: "eg" | "sa" };
+        if (meta.market === "sa" || meta.market === "eg") {
+          sessionMarket = meta.market;
+          break;
+        }
+      }
+    }
+    if (sessionMarket === "eg") {
+      const cookieMarket = request.cookies.get("fitna_market")?.value;
+      if (cookieMarket === "sa") {
+        sessionMarket = "sa";
+      }
+    }
+
     const report = await generateSessionReport({
-      events: events ?? [],
+      events: sessionEvents,
       personaNameById,
       metrics: {
         overallScore: session.overall_score ?? 0,
@@ -53,6 +71,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
         classroomPattern: session.classroom_pattern ?? "balanced",
       },
       lessonContext: session.lesson_context,
+      market: sessionMarket,
     });
 
     const adminClient = createAdminClient();

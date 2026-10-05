@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/app/(auth)/login/actions";
 
 /**
@@ -28,6 +29,7 @@ export async function updateProfileAction(
   } = await supabase.auth.getUser();
   if (!user) return { error: "غير مصرّح" };
 
+  // Update in public.users table
   const { error } = await supabase
     .from("users")
     .update({
@@ -42,6 +44,16 @@ export async function updateProfileAction(
     console.error("Profile update failed:", error);
     return { error: "حصل خطأ أثناء حفظ البيانات" };
   }
+
+  // Also sync full_name into auth user_metadata so it is instantly reflected everywhere
+  try {
+    await supabase.auth.updateUser({
+      data: { full_name: fullName }
+    });
+  } catch {}
+
+  revalidatePath("/dashboard/teacher");
+  revalidatePath("/settings");
 
   return { error: null };
 }

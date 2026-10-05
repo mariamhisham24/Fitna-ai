@@ -32,7 +32,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
   const [selectedTheme, setSelectedTheme] = useState<"light" | "dark">(profile.preferred_theme || "light");
   const [selectedLang, setSelectedLang] = useState<"ar" | "en">(profile.preferred_language || "ar");
 
-  const [profileState, profileFormAction, profilePending] = useActionState(
+  const [profileState, profileFormActionRaw, profilePending] = useActionState(
     updateProfileAction,
     initialState
   );
@@ -45,6 +45,11 @@ export function SettingsForm({ profile }: { profile: Profile }) {
     updatePreferencesAction,
     initialState
   );
+
+  async function profileFormAction(formData: FormData) {
+    await profileFormActionRaw(formData);
+    router.refresh();
+  }
 
   async function prefFormAction(formData: FormData) {
     const langValue = formData.get("language") as "ar" | "en";

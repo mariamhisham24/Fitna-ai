@@ -77,7 +77,8 @@ export function LiveRoom({
   teacherName?: string;
 }) {
   const router = useRouter();
-  const { t, lang } = useTranslation();
+  const { t, lang, market } = useTranslation();
+  const isSa = market === "sa";
   const isRtl = lang === "ar";
 
   const [students, setStudents] = useState<StudentUI[]>(
@@ -133,8 +134,11 @@ export function LiveRoom({
 
   const initialBcp47 = useMemo(() => {
     const found = SUBJECT_LANGUAGES.find((l) => l.id === detectedSubjectLang);
-    return found?.bcp47 ?? "ar-EG";
-  }, [detectedSubjectLang]);
+    if (!found || found.id === "auto" || found.id === "ar") {
+      return isSa ? "ar-SA" : "ar-EG";
+    }
+    return found.bcp47;
+  }, [detectedSubjectLang, isSa]);
 
   const [micLanguage, setMicLanguage] = useState<string>(initialBcp47);
   const micLanguageRef = useRef<string>(initialBcp47);
@@ -944,8 +948,11 @@ export function LiveRoom({
 
   const getBcp47ForSubject = useCallback((langId: string) => {
     const found = SUBJECT_LANGUAGES.find((l) => l.id === langId);
-    return found?.bcp47 ?? "ar-EG";
-  }, []);
+    if (!found || found.id === "auto" || found.id === "ar") {
+      return isSa ? "ar-SA" : "ar-EG";
+    }
+    return found.bcp47;
+  }, [isSa]);
 
   const changeSubjectLanguage = useCallback((newLangId: string) => {
     setSelectedSubjectLang(newLangId);
@@ -1215,7 +1222,7 @@ export function LiveRoom({
             const hasAccumulatedText = nativeTranscriptAccumulatorRef.current.trim().length >= 2;
             const currentAccText = nativeTranscriptAccumulatorRef.current.trim();
             const isQuestionOrCall =
-              /(?:[؟?]|ليه|إيه|ايه|إزاي|ازاي|مين|هل|متى|أين|اين|كام|كم|فين|يا\s*(?:سارة|عمر|ياسين|نور|ولاد|شباب|جماعة|شطار)|جاوب|قول|شاركونا|شاركينا|تفضلي|اتفضلي|اتفضل|تفضل)\b/i.test(
+              /(?:[؟?]|ليه|إيه|ايه|إزاي|ازاي|مين|هل|متى|أين|اين|كام|كم|فين|ليش|وش|شو|كيف|ايش|يا\s*(?:سارة|عمر|ياسين|نور|ولاد|شباب|جماعة|شطار|عيال|بنات)|جاوب|قول|جاوبي|قولي|شاركونا|شاركينا|تفضلي|اتفضلي|اتفضل|تفضل|تفضلوا)\b/i.test(
                 currentAccText
               );
             const effectiveSilenceMs = isQuestionOrCall ? 1200 : hasAccumulatedText ? 2000 : 2200;
@@ -1787,7 +1794,11 @@ export function LiveRoom({
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span>
-                    {SUBJECT_LANGUAGES.find((l) => l.id === selectedSubjectLang)?.[isRtl ? "nameAr" : "nameEn"] ?? (isRtl ? "تلقائي" : "Auto")}
+                    {selectedSubjectLang === "ar"
+                      ? isSa
+                        ? isRtl ? "عربي (السعودية)" : "Arabic (Saudi)"
+                        : isRtl ? "عربي (العامية المصرية)" : "Arabic (Egyptian)"
+                      : SUBJECT_LANGUAGES.find((l) => l.id === selectedSubjectLang)?.[isRtl ? "nameAr" : "nameEn"] ?? (isRtl ? "تلقائي" : "Auto")}
                   </span>
                   <svg
                     className={`w-3.5 h-3.5 text-[#12B8C4] transition-transform duration-200 ${isLangDropdownOpen ? "rotate-180" : ""}`}
@@ -1822,7 +1833,19 @@ export function LiveRoom({
                         >
                           <span className="flex items-center gap-2">
                             <span className="text-sm">{langItem.flag}</span>
-                            <span>{isRtl ? langItem.nameAr : langItem.nameEn}</span>
+                            <span>
+                              {isRtl
+                                ? langItem.id === "ar"
+                                  ? isSa
+                                    ? "عربي (السعودية)"
+                                    : "عربي (العامية المصرية)"
+                                  : langItem.nameAr
+                                : langItem.id === "ar"
+                                ? isSa
+                                  ? "Arabic (Saudi)"
+                                  : "Arabic (Egyptian)"
+                                : langItem.nameEn}
+                            </span>
                           </span>
                           {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#12B8C4]" />}
                         </button>

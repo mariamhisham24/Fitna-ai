@@ -30,16 +30,21 @@ export default async function GrowthPage() {
     email: user.email || "",
   };
 
-  const sessionsRes = await Promise.race([
-    db
-      .from("sessions")
-      .select("id, started_at, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, topic_id")
-      .eq("teacher_id", user.id)
-      .eq("status", "completed")
-      .order("started_at", { ascending: true })
-      .limit(50),
-    new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 10000))
-  ]).catch(() => ({ data: [] }));
+  const market = (cookieStore.get("fitna_market")?.value === "sa" ? "sa" : "eg");
+  const isDemoUser = user.id === "d3300000-0000-4000-8000-000000000001" || user.email === "demo@fitna.ai";
+
+  const sessionsRes = (isDemoUser && market === "sa")
+    ? { data: [] }
+    : await Promise.race([
+        db
+          .from("sessions")
+          .select("id, started_at, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, topic_id")
+          .eq("teacher_id", user.id)
+          .eq("status", "completed")
+          .order("started_at", { ascending: true })
+          .limit(50),
+        new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 10000))
+      ]).catch(() => ({ data: [] }));
 
   const rawSessions = sessionsRes.data ?? [];
 
@@ -77,14 +82,16 @@ export default async function GrowthPage() {
     };
   });
 
-  const badgesRes = await Promise.race([
-    db
-      .from("badges")
-      .select("badge_key, unlocked_at")
-      .eq("user_id", user.id)
-      .order("unlocked_at", { ascending: false }),
-    new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 10000))
-  ]).catch(() => ({ data: [] }));
+  const badgesRes = (isDemoUser && market === "sa")
+    ? { data: [] }
+    : await Promise.race([
+        db
+          .from("badges")
+          .select("badge_key, unlocked_at")
+          .eq("user_id", user.id)
+          .order("unlocked_at", { ascending: false }),
+        new Promise<any>((resolve) => setTimeout(() => resolve({ data: [] }), 10000))
+      ]).catch(() => ({ data: [] }));
 
   const rawBadges = (badgesRes.data ?? []).map((b: any) => ({
     key: b.badge_key,

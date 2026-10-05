@@ -162,12 +162,30 @@ async function handleEnd(request: NextRequest, params: Promise<{ id: string }>) 
   const { data: personaRows } = await supabase.from("student_personas").select("id, name");
   const personaNameById = new Map((personaRows ?? []).map((p) => [p.id, p.name]));
 
+  let sessionMarket: "eg" | "sa" = "eg";
+  for (const e of allEvents) {
+    if (e.event_type === "session_config" && e.metadata) {
+      const meta = e.metadata as { market?: "eg" | "sa" };
+      if (meta.market === "sa" || meta.market === "eg") {
+        sessionMarket = meta.market;
+        break;
+      }
+    }
+  }
+  if (sessionMarket === "eg") {
+    const cookieMarket = request.cookies.get("fitna_market")?.value;
+    if (cookieMarket === "sa") {
+      sessionMarket = "sa";
+    }
+  }
+
   try {
     const report = await generateSessionReport({
       events: allEvents,
       personaNameById,
       metrics: { overallScore, teacherTalkRatio, socraticQuestionRate, inclusivityIndex, classroomPattern },
       lessonContext: session.lesson_context,
+      market: sessionMarket,
     });
 
     // Save report using existing adminClient

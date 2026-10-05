@@ -7,11 +7,13 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, UserRound, U
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { signInAction, signUpAction, requestPasswordResetAction, loginAsDemoAction, type ActionState } from "./actions";
 
+import { type Market } from "@/lib/i18n/types";
+
 const logo = "/manus-storage/fitna-logo-lockup-transparent_3e70d851.png";
 
 type Lang = "ar" | "en";
 const words = {
-  ar: {
+  eg: {
     dir: "rtl",
     login: "تسجيل الدخول",
     signup: "إنشاء حساب",
@@ -52,6 +54,50 @@ const words = {
     roleTeacherDesc: "تدريب فردي ومحاكاة لمواقف الفصل",
     roleAdminTitle: "مشرف تربوي / مؤسسة",
     roleAdminDesc: "إدارة وتدريب فريق المعلمين ومتابعة نموهم",
+    demoBtn: "تجربة المنصة فوراً بحساب تجريبي (بدون تسجيل)",
+    demoSub: "وصول كامل ومجاني للمعلم والمحاكاة بنقرة واحدة"
+  },
+  sa: {
+    dir: "rtl",
+    login: "تسجيل الدخول",
+    signup: "إنشاء حساب جديد",
+    welcomeLogin: "مرحبًا بك في فِطنة",
+    welcomeSignup: "كن فِطِناً من خطوتك الأولى",
+    subLogin: "ادخل إلى بيئة التدريب التي تحوّل مواقف الصف الدراسي إلى ممارسة واثقة.",
+    subSignup: "أنشئ حسابك وابدأ في تدريب استجاباتك الصفية قبل خوض الحصة الأولى.",
+    google: "المتابعة بحساب Google",
+    googleComingSoon: "المتابعة بحساب Google ستتوفر قريباً! يرجى استخدام البريد الإلكتروني حالياً.",
+    comingSoonBadge: "قريباً",
+    or: "أو",
+    email: "البريد الإلكتروني",
+    emailPlaceholder: "example@email.com",
+    password: "كلمة المرور",
+    passwordPlaceholder: "أدخل كلمة المرور",
+    name: "الاسم الكامل",
+    namePlaceholder: "اكتب اسمك كاملاً",
+    forgot: "نسيت كلمة المرور؟",
+    submitLogin: "تسجيل الدخول",
+    submitSignup: "إنشاء الحساب",
+    switchLogin: "ليس لديك حساب؟",
+    switchSignup: "لديك حساب بالفعل؟",
+    switchLoginLink: "أنشئ حساباً الآن",
+    switchSignupLink: "تسجيل الدخول",
+    back: "العودة إلى الصفحة الرئيسية",
+    sideSlogan: "Master the Classroom Before Entering It.",
+    sideArabic: "قبل أن تدخل الصف... كن فِطِناً.",
+    sideNote: "Practice the moment before it becomes a problem.",
+    language: "EN",
+    secure: "بياناتك محمية ومشفّرة بالكامل",
+    forgotTitle: "استعادة كلمة المرور",
+    forgotSub: "أدخل بريدك الإلكتروني وسنرسل لك رابطاً لاستعادة كلمة المرور.",
+    forgotSubmit: "إرسال رابط الاستعادة",
+    forgotBack: "العودة لتسجيل الدخول",
+    resetLinkSent: "تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني.",
+    roleQuestion: "كيف ستستخدم فِطنة؟",
+    roleTeacherTitle: "معلم / معلمة (تدريب فردي)",
+    roleTeacherDesc: "تدريب شخصي ومحاكاة لمواقف الصف الدراسي",
+    roleAdminTitle: "مشرف تربوي / مؤسسة تعليمية",
+    roleAdminDesc: "إدارة وتدريب فريق المعلمين ومتابعة كفاءتهم المهنية",
     demoBtn: "تجربة المنصة فوراً بحساب تجريبي (بدون تسجيل)",
     demoSub: "وصول كامل ومجاني للمعلم والمحاكاة بنقرة واحدة"
   },
@@ -113,6 +159,7 @@ export default function LoginPage() {
 
 function LoginPageContent() {
   const [lang, setLang] = useState<Lang>("ar");
+  const [market, setMarket] = useState<Market>("eg");
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [showForgot, setShowForgot] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -134,6 +181,16 @@ function LoginPageContent() {
       document.documentElement.lang = match[1];
       document.documentElement.dir = match[1] === "en" ? "ltr" : "rtl";
     }
+
+    const matchMarket = document.cookie.match(/(?:^|;\s*)fitna_market=(eg|sa)(?:;|$)/);
+    if (matchMarket && (matchMarket[1] === "eg" || matchMarket[1] === "sa")) {
+      setMarket(matchMarket[1]);
+    } else {
+      const local = localStorage.getItem("fitna_market") as Market | null;
+      if (local === "eg" || local === "sa") {
+        setMarket(local);
+      }
+    }
   }, []);
 
   const flipLang = () => {
@@ -144,6 +201,15 @@ function LoginPageContent() {
     document.documentElement.dir = nextLang === "en" ? "ltr" : "rtl";
   };
 
+  const toggleMarket = () => {
+    const nextMarket = market === "sa" ? "eg" : "sa";
+    setMarket(nextMarket);
+    document.cookie = `fitna_market=${nextMarket}; path=/; max-age=31536000; SameSite=Lax`;
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("fitna_market", nextMarket);
+    }
+  };
+
   const searchParams = useSearchParams();
   const resetSuccessParam = searchParams.get("reset") === "success";
 
@@ -151,7 +217,7 @@ function LoginPageContent() {
   const [signUpState, signUpFormAction, signUpPending] = useActionState(signUpAction, initialState);
   const [resetState, resetFormAction, resetPending] = useActionState(requestPasswordResetAction, initialState);
 
-  const t = words[lang];
+  const t = lang === "en" ? words.en : market === "sa" ? words.sa : words.eg;
   const isLogin = mode === "login";
 
   const queryError = searchParams.get("error");
@@ -182,9 +248,19 @@ function LoginPageContent() {
             {lang === "ar" ? <ArrowRight size={16} /> : <ArrowLeft size={16} />}
             {t.back}
           </Link>
-          <button className="auth-lang" onClick={flipLang}>
-            {t.language}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleMarket}
+              className="px-2.5 py-1 rounded-full text-xs font-semibold border transition-all duration-150 flex items-center gap-1 cursor-pointer border-amber-400/40 text-amber-300 hover:bg-amber-400/10 hover:border-amber-400"
+              title={lang === "ar" ? "انقر للتبديل بين مصر والسعودية" : "Toggle Region"}
+            >
+              <span>{market === "sa" ? "🇸🇦 السعودية" : "🇪🇬 مصر"}</span>
+            </button>
+            <button className="auth-lang" onClick={flipLang}>
+              {t.language}
+            </button>
+          </div>
         </div>
         <div className="auth-brand-center">
           <img src={logo} alt={lang === "ar" ? "Fitna AI فِطْنَة" : "Fitna AI"} />
@@ -416,6 +492,7 @@ function LoginPageContent() {
                   {t.roleQuestion}
                 </label>
                 <input type="hidden" name="role" value={role} />
+                <input type="hidden" name="market" value={market} />
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "10px" }}>
                   <button
                     type="button"

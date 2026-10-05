@@ -40,7 +40,7 @@ export async function signInAction(
     }
 
     // Safely retrieve user
-    let user = authData?.user;
+    let user: any = authData?.user;
     if (!user) {
       const userRes = await supabase.auth.getUser();
       user = userRes.data?.user;
@@ -52,6 +52,7 @@ export async function signInAction(
 
     // Safe profile lookup
     let role = user.user_metadata?.role || "teacher";
+    let userMarket = user.user_metadata?.market || null;
     try {
       const db = createAdminClient();
       const { data: profile } = await db
@@ -69,6 +70,10 @@ export async function signInAction(
       }
     } catch {
       // Default to teacher if user profile query has any issue
+    }
+
+    if (userMarket === "sa" || userMarket === "eg") {
+      cookieStore.set("fitna_market", userMarket, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
     }
 
     const targetDashboard = role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
@@ -89,6 +94,7 @@ export async function signUpAction(
     const password = String(formData.get("password") || "");
     const fullName = String(formData.get("full_name") || "").trim();
     const role = String(formData.get("role") || "teacher");
+    const market = String(formData.get("market") || "eg") === "sa" ? "sa" : "eg";
 
     if (!validateEmail(email)) return { error: "البريد الإلكتروني غير صالح" };
     if (password.length < 6) return { error: "كلمة المرور لازم تكون 6 أحرف على الأقل" };
@@ -97,13 +103,16 @@ export async function signUpAction(
       return { error: "من فضلك اختر كيف ستستخدم فِطنة" };
     }
 
+    const cookieStore = await cookies();
+    cookieStore.set("fitna_market", market, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+
     const supabase = await createClient();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fitna-ai.vercel.app";
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName, role },
+        data: { full_name: fullName, role, market },
         emailRedirectTo: `${appUrl}/auth/confirm?next=${role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher"}`,
       },
     });

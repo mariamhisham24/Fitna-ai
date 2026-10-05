@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { MarketSwitcher } from "@/components/MarketSwitcher";
 import { signOutAction } from "@/app/(auth)/login/actions";
-import { getDictionary, type Language } from "@/lib/i18n";
+import { useTranslation } from "@/lib/i18n/context";
+import { type Language, type Dictionary } from "@/lib/i18n";
 import { SettingsModal } from "./SettingsModal";
 import { Sparkles } from "lucide-react";
 
@@ -47,8 +49,10 @@ export function TeacherDashboardClient({
   lang: Language;
 }) {
   const [showSettings, setShowSettings] = useState(false);
-  const t = getDictionary(lang);
-  const isRtl = lang === "ar";
+  const { t, lang: ctxLang, market } = useTranslation();
+  const activeLang = ctxLang || lang;
+  const isRtl = activeLang === "ar";
+  const isSa = market === "sa";
 
   // Radius 38, Circumference = 238.76
   const radius = 38;
@@ -58,7 +62,7 @@ export function TeacherDashboardClient({
       ? circumference - (circumference * Math.min(100, Math.max(0, avgScore))) / 100
       : circumference;
 
-  const displayName = profile?.full_name || profile?.email?.split("@")[0] || (lang === "ar" ? "المعلم" : "Teacher");
+  const displayName = profile?.full_name || profile?.email?.split("@")[0] || (activeLang === "ar" ? "المعلم" : "Teacher");
 
   const latestSession = completed[0] || null;
   const latestTtt = latestSession?.teacher_talk_ratio ?? null;
@@ -79,12 +83,13 @@ export function TeacherDashboardClient({
             <div className="hidden md:flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#12B8C4] animate-pulse" />
               <span className="text-xs text-[#12B8C4] font-medium tracking-wide">
-                {lang === "ar" ? "نظام محاكاة الفصول الذكي" : "Classroom Simulation System"}
+                {activeLang === "ar" ? "نظام محاكاة الفصول الذكي" : "Classroom Simulation System"}
               </span>
             </div>
           </Link>
 
           <div className="flex items-center gap-2.5 text-xs">
+            <MarketSwitcher />
             <LanguageSwitcher className="hover:scale-105 active:scale-95 transition-transform duration-150" />
             <div className="hover:scale-105 active:scale-95 transition-transform duration-150">
               <ThemeToggle />
@@ -124,16 +129,16 @@ export function TeacherDashboardClient({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="!text-sm sm:!text-base !font-bold text-[#071B3A] dark:text-white !leading-normal !m-0">
-                  {lang === "ar" ? "أهلاً بك، " : "Hello, "}
+                  {activeLang === "ar" ? (isSa ? "مرحبًا بك، " : "أهلاً بك، ") : "Hello, "}
                   <span className="text-[#12B8C4] !text-sm sm:!text-base !font-bold">{displayName}</span>
                 </h2>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#12B8C4]/15 text-[#12B8C4]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#12B8C4] animate-pulse" />
-                  {lang === "ar" ? "متصل" : "Online"}
+                  {activeLang === "ar" ? "متصل" : "Online"}
                 </span>
               </div>
               <p className="text-[11px] text-[#071B3A]/45 dark:text-white/45 mt-0.5">
-                {new Date().toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                {new Date().toLocaleDateString(activeLang === "ar" ? (isSa ? "ar-SA" : "ar-EG") : "en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>
           </div>
@@ -409,7 +414,7 @@ export function TeacherDashboardClient({
   );
 }
 
-function patternLabel(p: string | null, t: ReturnType<typeof getDictionary>) {
+function patternLabel(p: string | null, t: Dictionary) {
   if (p === "balanced") return t.common.balanced;
   if (p === "disruptive") return t.common.disruptive;
   if (p === "disengaged") return t.common.disengaged;

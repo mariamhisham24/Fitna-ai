@@ -45,8 +45,9 @@ export async function generateSessionReport(params: {
     classroomPattern: string;
   };
   lessonContext: string | null;
+  market?: "eg" | "sa";
 }): Promise<GeneratedReport> {
-  const { events, personaNameById, metrics, lessonContext } = params;
+  const { events, personaNameById, metrics, lessonContext, market = "eg" } = params;
 
   const sortedEvents = [...events].sort((a, b) => {
     const timeA = new Date(a.created_at || 0).getTime();
@@ -69,6 +70,17 @@ export async function generateSessionReport(params: {
     .join("\n");
 
   if (!transcriptLines) {
+    if (market === "sa") {
+      return {
+        summaryAr: "انتهت هذه الجلسة دون تسجيل أي حوار بين المعلم والطلاب.",
+        sessionSignalAr: "يُرجى التحدث مع الطلاب عبر الميكروفون ليتمكن النظام من تحليل أدائك التدريسي.",
+        strengths: [],
+        weaknesses: [],
+        recommendations: ["ابدأ جلسة جديدة واستخدم الميكروفون للتفاعل الصوتي المباشر مع الطلاب."],
+        evidenceMoments: [],
+        frameworkScores: null,
+      };
+    }
     return {
       summaryAr: "الجلسة دي انتهت من غير أي حوار مسجّل بين المعلم والطلاب.",
       sessionSignalAr: "لسه محتاج تتكلم فعليًا مع الطلاب عشان نقدر نحلل أداءك.",
@@ -80,17 +92,51 @@ export async function generateSessionReport(params: {
     };
   }
 
-  const prompt = `انت خبير تدريب معلمين ومقيم تربوي معتمد بتحلل أداء معلم في محاكاة فصل دراسي مصري وفقًا لأطر التقييم التربوي العالمية (Danielson Framework & CLASS Framework). اقرا النص الكامل للجلسة اللي حصلت فعليًا وحلله.
+  const isSa = market === "sa";
 
-${lessonContext ? `محتوى الدرس: "${lessonContext.slice(0, 500)}"\n` : ""}
-الأرقام المحسوبة فعليًا من الجلسة دي:
+  const systemIntro = isSa
+    ? `أنت خبير تدريب معلمين ومُقيّم تربوي معتمد تحلل أداء معلم في محاكاة فصل دراسي في المملكة العربية السعودية وفقًا لأطر التقييم التربوي العالمية (Danielson Framework & CLASS Framework). اقرأ النص الكامل للجلسة التي تمت فعليًا وحلله تحليلاً بيداغوجياً دقيقاً باللغة العربية الفصحى المهنية الرصينة.`
+    : `انت خبير تدريب معلمين ومقيم تربوي معتمد بتحلل أداء معلم في محاكاة فصل دراسي مصري وفقًا لأطر التقييم التربوي العالمية (Danielson Framework & CLASS Framework). اقرا النص الكامل للجلسة اللي حصلت فعليًا وحلله.`;
+
+  const calculatedNumbersIntro = isSa
+    ? `البيانات والمؤشرات المحسوبة فعليًا لهذه الجلسة:
 - الدرجة الكلية: ${metrics.overallScore}/100
 - نسبة حديث المعلم (TTT): ${metrics.teacherTalkRatio}% (المعيار المستهدف: 20-35%، وأقصى حد مقبول 50%)
 - نسبة الأسئلة السقراطية المفتوحة: ${metrics.socraticQuestionRate}%
 - مؤشر الشمولية وعدالة المشاركة: ${metrics.inclusivityIndex}%
-- نمط الفصل: ${metrics.classroomPattern}
+- نمط الفصل: ${metrics.classroomPattern}`
+    : `الأرقام المحسوبة فعليًا من الجلسة دي:
+- الدرجة الكلية: ${metrics.overallScore}/100
+- نسبة حديث المعلم (TTT): ${metrics.teacherTalkRatio}% (المعيار المستهدف: 20-35%، وأقصى حد مقبول 50%)
+- نسبة الأسئلة السقراطية المفتوحة: ${metrics.socraticQuestionRate}%
+- مؤشر الشمولية وعدالة المشاركة: ${metrics.inclusivityIndex}%
+- نمط الفصل: ${metrics.classroomPattern}`;
 
-قواعد الاتساق البيداغوجي الإلزامية (Strict Metric Consistency):
+  const rulesConsistencyIntro = isSa
+    ? `قواعد الاتساق البيداغوجي الإلزامية (Strict Metric Consistency):
+1. وقت حديث المعلم (${metrics.teacherTalkRatio}%):
+${
+  metrics.teacherTalkRatio > 50
+    ? `   [تحذير حرج]: نسبة حديث المعلم مرتفعة (${metrics.teacherTalkRatio}%). المعلم تجاوز الحد المقبول (20-35%، حد أقصى 50%) وقلل فرص استنتاج وتعبير الطلاب!
+   - يُمنع منعاً باتاً الثناء غير المبرر أو استخدام كلمات مثل "ممتاز" أو "أداء استثنائي" في summary_ar أو session_signal_ar دون نقد صريح لاستحواذه على وقت الحصة.
+   - إلزامي في summary_ar و session_signal_ar: التأكيد على أن وقت حديث المعلم مرتفع (${metrics.teacherTalkRatio}%) ويحتاج لتقليص لمنح الطلاب وقتاً كافياً للإجابة والمناقشة.
+   - إلزامي في weaknesses: ذكر ارتفاع نسبة حديث المعلم (${metrics.teacherTalkRatio}%) وهيمنته على الحصة وغياب فترات التفكير.
+   - إلزامي في recommendations: التوصية بمنح الطلاب وقفة تفكير (Wait Time) لمدة 3-5 ثوانٍ بعد طرح السؤال.`
+    : `   - نسبة حديث المعلم متوازنة (${metrics.teacherTalkRatio}%).`
+}
+2. الأسئلة السقراطية (${metrics.socraticQuestionRate}%):
+${
+  metrics.socraticQuestionRate < 50
+    ? `   - نسبة الأسئلة السقراطية منخفضة (${metrics.socraticQuestionRate}%). نبّه المعلم إلى كثرة الأسئلة المباشرة المغلقة، واقترح أسئلة تحفيزية تبدأ بـ "لماذا" و"ماذا لو".`
+    : `   - نسبة الأسئلة السقراطية جيدة (${metrics.socraticQuestionRate}%). يجب التأكيد على منح الطلاب وقتاً لشرح استنتاجاتهم.`
+}
+3. الشمولية (${metrics.inclusivityIndex}%):
+${
+  metrics.inclusivityIndex < 70
+    ? `   - مؤشر الشمولية منخفض (${metrics.inclusivityIndex}%). أشر إلى اقتصار المشاركة على طالب أو اثنين وتجاهل باقي الفصل.`
+    : `   - مؤشر الشمولية جيد (${metrics.inclusivityIndex}%).`
+}`
+    : `قواعد الاتساق البيداغوجي الإلزامية (Strict Metric Consistency):
 1. وقت حديث المعلم (${metrics.teacherTalkRatio}%):
 ${
   metrics.teacherTalkRatio > 50
@@ -112,14 +158,44 @@ ${
   metrics.inclusivityIndex < 70
     ? `   - مؤشر الشمولية منخفض (${metrics.inclusivityIndex}%). أشر إلى اقتصار المشاركة على طالب أو اثنين وتجاهل باقي الفصل.`
     : `   - مؤشر الشمولية جيد (${metrics.inclusivityIndex}%).`
+}`;
+
+  const jsonInstructions = isSa
+    ? `اكتب تحليلاً حقيقياً ومبنياً على هذا النص تحديداً والأرقام أعلاه بدقة تامة باللغة العربية الفصحى الرصينة (دون أي عامية)، ورجّع JSON بالشكل التالي تحديداً:
+{
+  "summary_ar": "ملخص أداء المعلم في هذه الجلسة في 2-4 جمل فصحى رصينة، مبني على الأرقام الحقيقية وما جرى فعلياً في النص",
+  "session_signal_ar": "جملة واحدة قصيرة وقوية بالفصحى تلخص أهم نقطة تحتاج تحسيناً أو ميزة رئيسية في هذه الجلسة متسقة مع الأرقام",
+  "strengths": ["نقطة قوة 1 محددة بأمثلة من النص بالفصحى", "نقطة قوة 2 بالفصحى"],
+  "weaknesses": ["نقطة تحتاج تحسيناً 1 محددة بأمثلة من النص بالفصحى", "نقطة تحتاج تحسيناً 2 بالفصحى"],
+  "recommendations": ["توصية 1 محددة وقابلة للتطبيق في الجلسة القادمة بالفصحى", "توصية 2", "توصية 3"],
+  "evidence_moments": [
+    {"event_id": "استخدم event_id بالظبط من النص أعلاه", "label": "وصف قصير بالفصحى لأهمية هذه اللحظة"}
+  ],
+  "framework_scores": {
+    "danielson": {
+      "questioning_discussion": {"score": 3, "label": "كفء", "feedback": "ملاحظة محددة بالفصحى حول تقنيات طرح الأسئلة والنقاش"},
+      "student_engagement": {"score": 3, "label": "كفء", "feedback": "ملاحظة بالفصحى حول إشراك الطلاب وتحفيزهم"},
+      "managing_behavior": {"score": 3, "label": "كفء", "feedback": "ملاحظة بالفصحى حول إدارة الفصل وإعادة التوجيه"}
+    },
+    "class_framework": {
+      "instructional_support": {"score": 5, "label": "متوسط-مرتفع", "feedback": "ملاحظة بالفصحى حول جودة الدعم التعليمي وتطوير المفاهيم"},
+      "classroom_organization": {"score": 5, "label": "متوسط-مرتفع", "feedback": "ملاحظة بالفصحى حول تنظيم الوقت وإدارة الفصل"},
+      "emotional_support": {"score": 6, "label": "مرتفع", "feedback": "ملاحظة بالفصحى حول المناخ الإيجابي والتشجيع"}
+    }
+  }
 }
 
-نص الجلسة الكامل (كل سطر معاه [event_id] بالظبط):
-"""
-${transcriptLines}
-"""
-
-اكتب تحليل حقيقي ومبني على النص ده بالتحديد والأرقام أعلاه بدقة (مش نصائح عامة)، ورجّع JSON بالشكل ده بالظبط:
+ملاحظات وقواعد هامة جداً:
+- يجب كتابة كل النصوص باللغة العربية الفصحى المهنية السليمة.
+- ممنوع منعاً باتاً كتابة أو ذكر كلمة "event_id" أو معرّفات UUID نهائياً داخل نصوص "summary_ar" أو "session_signal_ar" أو "strengths" أو "weaknesses" أو "recommendations" أو "feedback".
+- حقل "event_id" مخصص حصرياً كقيمة تقنية داخل مصفوفة "evidence_moments".
+- اذكر الأمثلة بأسلوب لغوي تربوي طبيعي (مثال: "عند شرح قانون الجاذبية" أو "عند سؤال سارة عن...") بدون وضع أي event_id.
+- معيار Danielson يقيم من 1 إلى 4 (1: غير مرضٍ، 2: أساسي، 3: كفء، 4: متميز).
+- معيار CLASS يقيم من 1 إلى 7 (1-2: منخفض، 3-5: متوسط، 6-7: مرتفع).
+- اختار 3 إلى 5 لحظات فعلية من النص (evidence_moments) باستخدام event_id الحقيقي بالظبط.
+- اكتب 2-3 نقاط في strengths و2-3 نقاط في weaknesses، كل نقطة جملة واحدة قصيرة ومحددة.
+رد بـ JSON فقط دون أي نص إضافي.`
+    : `اكتب تحليل حقيقي ومبني على النص ده بالتحديد والأرقام أعلاه بدقة (مش نصائح عامة)، ورجّع JSON بالشكل ده بالظبط:
 {
   "summary_ar": "ملخص أداء المعلم في الجلسة دي في 2-4 جمل، مبني على الأرقام الحقيقية واللي حصل فعليًا في النص",
   "session_signal_ar": "جملة واحدة قصيرة وقوية تلخص أهم نقطة تحتاج تحسين أو ميزة رئيسية في الجلسة دي متسقة مع الأرقام",
@@ -152,6 +228,19 @@ ${transcriptLines}
 - اختار 3 إلى 5 لحظات فعلية من النص (evidence_moments) باستخدام event_id الحقيقي بالظبط.
 - اكتب 2-3 نقاط في strengths و2-3 نقاط في weaknesses، كل نقطة جملة واحدة قصيرة ومحددة.
 رد بـ JSON بس من غير أي نص زيادة.`;
+
+  const prompt = `${systemIntro}
+
+${lessonContext ? `محتوى الدرس: "${lessonContext.slice(0, 500)}"\n` : ""}${calculatedNumbersIntro}
+
+${rulesConsistencyIntro}
+
+نص الجلسة الكامل (كل سطر معاه [event_id] بالظبط):
+"""
+${transcriptLines}
+"""
+
+${jsonInstructions}`;
 
   let raw = "{}";
   try {

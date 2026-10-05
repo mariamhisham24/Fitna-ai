@@ -47,14 +47,63 @@ const DEFAULT_MALE_PROFILE: StudentVoiceProfile = {
   rate: "+6%",
 };
 
+/**
+ * Distinct student acoustic profiles for Saudi classroom personas.
+ * Tuned with Saudi Edge Neural voices (ar-SA-HamedNeural & ar-SA-ZariNeural)
+ * to authentically reflect Saudi school students.
+ */
+const SA_STUDENT_PROFILES: Record<string, StudentVoiceProfile> = {
+  // عمر (Omar - 10 yrs): energetic boy, Saudi boyish pitch & active tempo
+  "عمر": { voice: "ar-SA-HamedNeural", pitch: "+20Hz", rate: "+6%" },
+  "omar": { voice: "ar-SA-HamedNeural", pitch: "+20Hz", rate: "+6%" },
+
+  // سارة (Sara - 11 yrs): diligent, clear schoolgirl, Saudi female voice
+  "سارة": { voice: "ar-SA-ZariNeural", pitch: "+18Hz", rate: "+4%" },
+  "sara": { voice: "ar-SA-ZariNeural", pitch: "+18Hz", rate: "+4%" },
+  "sarah": { voice: "ar-SA-ZariNeural", pitch: "+18Hz", rate: "+4%" },
+
+  // ياسين (Yassin - 9 yrs): playful, spontaneous younger boy tone
+  "ياسين": { voice: "ar-SA-HamedNeural", pitch: "+26Hz", rate: "+10%" },
+  "yassin": { voice: "ar-SA-HamedNeural", pitch: "+26Hz", rate: "+10%" },
+  "yasin": { voice: "ar-SA-HamedNeural", pitch: "+26Hz", rate: "+10%" },
+
+  // نور (Nour - 10 yrs): calm, gentle, thoughtful pacing
+  "نور": { voice: "ar-SA-ZariNeural", pitch: "+20Hz", rate: "-2%" },
+  "nour": { voice: "ar-SA-ZariNeural", pitch: "+20Hz", rate: "-2%" },
+};
+
+const SA_DEFAULT_FEMALE_PROFILE: StudentVoiceProfile = {
+  voice: "ar-SA-ZariNeural",
+  pitch: "+16Hz",
+  rate: "+2%",
+};
+
+const SA_DEFAULT_MALE_PROFILE: StudentVoiceProfile = {
+  voice: "ar-SA-HamedNeural",
+  pitch: "+18Hz",
+  rate: "+4%",
+};
+
 const FEMALE_NAMES = new Set(["سارة", "نور", "فاطمة", "مريم", "سلمى", "sara", "sarah", "nour", "fatima", "maryam"]);
 
-function resolveVoiceProfile(personaName?: string, voiceOverride?: string): StudentVoiceProfile {
+function resolveVoiceProfile(
+  personaName?: string,
+  voiceOverride?: string,
+  market: "eg" | "sa" = "eg"
+): StudentVoiceProfile {
   if (voiceOverride) {
     return { voice: voiceOverride, pitch: "+0Hz", rate: "+0%" };
   }
 
   const normalizedName = (personaName ?? "").trim().toLowerCase();
+
+  if (market === "sa") {
+    if (SA_STUDENT_PROFILES[normalizedName]) {
+      return SA_STUDENT_PROFILES[normalizedName];
+    }
+    return FEMALE_NAMES.has(normalizedName) ? SA_DEFAULT_FEMALE_PROFILE : SA_DEFAULT_MALE_PROFILE;
+  }
+
   if (STUDENT_PROFILES[normalizedName]) {
     return STUDENT_PROFILES[normalizedName];
   }
@@ -389,7 +438,7 @@ async function synthesizeCustomHFSpace(
   }
 }
 
-// Gemini Persona Voice and Prompt mapping
+// Gemini Persona Voice and Prompt mapping (Egyptian)
 const GEMINI_STUDENT_CONFIGS: Record<string, { voice: string; promptPrefix: string }> = {
   "عمر": {
     voice: "Puck",
@@ -443,6 +492,60 @@ const GEMINI_STUDENT_CONFIGS: Record<string, { voice: string; promptPrefix: stri
   },
 };
 
+// Gemini Persona Voice and Prompt mapping (Saudi)
+const SA_GEMINI_STUDENT_CONFIGS: Record<string, { voice: string; promptPrefix: string }> = {
+  "عمر": {
+    voice: "Puck",
+    promptPrefix:
+      "Speak as Omar, an authentic 10-year-old Saudi schoolboy. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: enthusiastic, active, curious.",
+  },
+  "omar": {
+    voice: "Puck",
+    promptPrefix:
+      "Speak as Omar, an authentic 10-year-old Saudi schoolboy. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: enthusiastic, active, curious.",
+  },
+  "سارة": {
+    voice: "Kore",
+    promptPrefix:
+      "Speak as Sara, an authentic 11-year-old Saudi schoolgirl. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: diligent, polite, cheerful, articulate.",
+  },
+  "sara": {
+    voice: "Kore",
+    promptPrefix:
+      "Speak as Sara, an authentic 11-year-old Saudi schoolgirl. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: diligent, polite, cheerful, articulate.",
+  },
+  "sarah": {
+    voice: "Kore",
+    promptPrefix:
+      "Speak as Sara, an authentic 11-year-old Saudi schoolgirl. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: diligent, polite, cheerful, articulate.",
+  },
+  "ياسين": {
+    voice: "Zephyr",
+    promptPrefix:
+      "Speak as Yassin, an authentic 9-year-old Saudi schoolboy. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: playful, lively, spontaneous.",
+  },
+  "yassin": {
+    voice: "Zephyr",
+    promptPrefix:
+      "Speak as Yassin, an authentic 9-year-old Saudi schoolboy. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: playful, lively, spontaneous.",
+  },
+  "yasin": {
+    voice: "Zephyr",
+    promptPrefix:
+      "Speak as Yassin, an authentic 9-year-old Saudi schoolboy. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: playful, lively, spontaneous.",
+  },
+  "نور": {
+    voice: "Aoede",
+    promptPrefix:
+      "Speak as Nour, an authentic 10-year-old Saudi schoolgirl. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: softly, gentle, thoughtful.",
+  },
+  "nour": {
+    voice: "Aoede",
+    promptPrefix:
+      "Speak as Nour, an authentic 10-year-old Saudi schoolgirl. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: softly, gentle, thoughtful.",
+  },
+};
+
 /**
  * Prepend standard 44-byte RIFF/WAVE header to raw 16-bit linear PCM audio.
  */
@@ -483,15 +586,22 @@ function getGeminiKeys(): string[] {
 /**
  * Synthesize speech via Google Gemini TTS (gemini-3.1-flash-tts-preview).
  */
-async function synthesizeGeminiTTS(text: string, personaName?: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+async function synthesizeGeminiTTS(
+  text: string,
+  personaName?: string,
+  market: "eg" | "sa" = "eg"
+): Promise<{ buffer: Buffer; contentType: string } | null> {
   const keys = getGeminiKeys();
   if (keys.length === 0) return null;
 
   const normalizedName = (personaName ?? "").trim().toLowerCase();
+  const configs = market === "sa" ? SA_GEMINI_STUDENT_CONFIGS : GEMINI_STUDENT_CONFIGS;
   const config =
-    GEMINI_STUDENT_CONFIGS[normalizedName] || {
+    configs[normalizedName] || {
       voice: FEMALE_NAMES.has(normalizedName) ? "Kore" : "Puck",
-      promptPrefix: "Speak as an authentic Egyptian student with natural Cairo inflection.",
+      promptPrefix: market === "sa"
+        ? "Speak as an authentic Saudi student with natural school inflection."
+        : "Speak as an authentic Egyptian student with natural Cairo inflection.",
     };
 
   const fullPrompt = `${config.promptPrefix} Deliver the following text: ${text}`;
@@ -722,15 +832,16 @@ const audioCache = new Map<string, CachedAudio>();
 export async function synthesizeStudentSpeech(
   text: string,
   personaName?: string,
-  voiceOverride?: string
+  voiceOverride?: string,
+  market: "eg" | "sa" = "eg"
 ): Promise<{ buffer: Buffer; contentType: string } | null> {
   if (!text || !text.trim()) return null;
 
-  const profile = resolveVoiceProfile(personaName, voiceOverride);
-  const normalizedText = normalizeEgyptianSpeech(text.trim());
+  const profile = resolveVoiceProfile(personaName, voiceOverride, market);
+  const normalizedText = market === "sa" ? text.trim() : normalizeEgyptianSpeech(text.trim());
   if (!normalizedText) return null;
 
-  const cacheKey = `v4::${profile.voice}::${profile.pitch}::${profile.rate}:::${normalizedText}`;
+  const cacheKey = `v5::${market}::${profile.voice}::${profile.pitch}::${profile.rate}:::${normalizedText}`;
 
   if (audioCache.has(cacheKey)) {
     return audioCache.get(cacheKey)!;
@@ -741,7 +852,7 @@ export async function synthesizeStudentSpeech(
   // 1. Priority 1: Google AI Studio Gemini Direct TTS (Puck, Kore, Zephyr, Aoede)
   if (!resultAudio && !voiceOverride && (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GEMINI_BACKUP_KEYS)) {
     try {
-      resultAudio = await synthesizeGeminiTTS(normalizedText, personaName);
+      resultAudio = await synthesizeGeminiTTS(normalizedText, personaName, market);
     } catch (e) {
       console.warn("Google AI Studio Gemini TTS synthesis error:", e);
     }
@@ -768,7 +879,7 @@ export async function synthesizeStudentSpeech(
     }
   }
 
-  // 4. Priority 4: Microsoft Edge Neural TTS (ar-EG-ShakirNeural / ar-EG-SalmaNeural) (Fast reliable backup)
+  // 4. Priority 4: Microsoft Edge Neural TTS (ar-EG-ShakirNeural / ar-EG-SalmaNeural / ar-SA-HamedNeural / ar-SA-ZariNeural) (Fast reliable backup)
   if (!resultAudio) {
     try {
       const tts = new MsEdgeTTS();
@@ -788,8 +899,8 @@ export async function synthesizeStudentSpeech(
     }
   }
 
-  // 4. Final Fallback: Fish Audio
-  if (!resultAudio && !voiceOverride && process.env.FISH_AUDIO_API_KEY) {
+  // 5. Final Fallback for Egyptian: Fish Audio
+  if (!resultAudio && !voiceOverride && market === "eg" && process.env.FISH_AUDIO_API_KEY) {
     const fishBuf = await synthesizeFishAudio(normalizedText, personaName);
     if (fishBuf) {
       resultAudio = { buffer: fishBuf, contentType: "audio/mpeg" };
@@ -809,17 +920,24 @@ export async function synthesizeStudentSpeech(
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, personaName, voiceOverride } = (await request.json()) as {
+    const body = (await request.json()) as {
       text?: string;
       personaName?: string;
       voiceOverride?: string;
+      market?: "eg" | "sa";
     };
+    const { text, personaName, voiceOverride, market: requestedMarket } = body;
+
+    const cookieMarket = request.cookies.get("fitna_market")?.value;
+    const market: "eg" | "sa" = (requestedMarket === "sa" || requestedMarket === "eg")
+      ? requestedMarket
+      : (cookieMarket === "sa" ? "sa" : "eg");
 
     if (!text || !text.trim()) {
       return NextResponse.json({ error: "No text provided for audio synthesis" }, { status: 400 });
     }
 
-    const resultAudio = await synthesizeStudentSpeech(text, personaName, voiceOverride);
+    const resultAudio = await synthesizeStudentSpeech(text, personaName, voiceOverride, market);
 
     if (!resultAudio) {
       return NextResponse.json({ error: "Failed to synthesize audio" }, { status: 500 });

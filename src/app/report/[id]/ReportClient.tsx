@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { type Language } from "@/lib/i18n";
+import { MarketSwitcher } from "@/components/MarketSwitcher";
+import { type Language, useTranslation } from "@/lib/i18n";
 import { type FrameworkScoresProps } from "./FrameworkScorecard";
 import { Check, Lightbulb, Mic } from "lucide-react";
 
@@ -57,6 +58,7 @@ export function ReportClient({
   evidenceMoments: EvidenceMoment[];
   lang: Language;
 }) {
+  const { market } = useTranslation();
   const isRtl = lang === "ar";
   const [copied, setCopied] = useState(false);
 
@@ -145,6 +147,7 @@ export function ReportClient({
           body: JSON.stringify({
             text: turn.content,
             personaName: turn.speaker,
+            market,
           }),
         });
         if (!res.ok) throw new Error("TTS generation failed");
@@ -260,7 +263,7 @@ export function ReportClient({
   const scoreOffset = Math.max(0, circumference - (circumference * score) / 100);
 
   const d = new Date(session.started_at);
-  const formattedDate = d.toLocaleDateString(isRtl ? "ar-EG" : "en-US", {
+  const formattedDate = d.toLocaleDateString(isRtl ? (market === "sa" ? "ar-SA" : "ar-EG") : "en-US", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -356,6 +359,7 @@ export function ReportClient({
 
             <div className="h-5 w-px bg-white/15 hidden md:block" />
             <div className="hidden md:flex items-center gap-2">
+              <MarketSwitcher />
               <LanguageSwitcher />
               <ThemeToggle />
             </div>

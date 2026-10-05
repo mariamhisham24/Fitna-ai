@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { signOutAction } from "@/app/(auth)/login/actions";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { MarketSwitcher } from "@/components/MarketSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -21,6 +22,7 @@ export function AppHeader({ title }: { title?: string }) {
         {title && <span className="text-xs sm:text-sm text-[#071B3A]/70 dark:text-white/70 truncate">{title}</span>}
       </div>
       <div className="flex items-center gap-2 sm:gap-3 text-sm shrink-0">
+        <MarketSwitcher />
         <ThemeToggle />
         <LanguageSwitcher />
         <Link

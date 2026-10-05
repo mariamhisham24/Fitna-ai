@@ -214,14 +214,19 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
     }
   }
 
-  // 1. Primary Source of Truth: Session-wide locked teacher title from Session Setup settings
+  // 1. Primary Source of Truth: Session-wide locked teacher title & market from Session Setup settings
   let lockedTeacherTitle: string | null = null;
+  let sessionMarket: "eg" | "sa" = "eg";
   for (const e of chronologicalEvents) {
     if (e.event_type === "session_config" && e.metadata) {
       const meta = e.metadata as {
         teacher_title?: string;
         full_teacher_title?: string;
+        market?: "eg" | "sa";
       };
+      if (meta.market === "sa" || meta.market === "eg") {
+        sessionMarket = meta.market;
+      }
       if (meta.full_teacher_title) {
         lockedTeacherTitle = meta.full_teacher_title;
         break;
@@ -231,6 +236,17 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
       }
     }
   }
+
+  if (sessionMarket === "eg") {
+    const cookieMarket = request.cookies.get("fitna_market")?.value;
+    if (cookieMarket === "sa") {
+      sessionMarket = "sa";
+    }
+  }
+
+  const isSa = sessionMarket === "sa";
+  const defaultFemaleTitle = isSa ? "يا أستاذة" : "يا ميس";
+  const defaultMaleTitle = isSa ? "يا أستاذ" : "يا مستر";
 
   // If not found in session_config, check past events metadata
   if (!lockedTeacherTitle) {
@@ -251,29 +267,29 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
 
   // 2. Only allow explicit verbal self-identification/correction during speech to override:
   const isFemaleSelf =
-    /(?:أنا|انا)\s*(?:مش|غير)\s*(?:مستر|استاذ|أستاذ)|(?:أنا|انا)\s*(?:ميس|مس|معلمة|استاذة|أستاذة)/i.test(
+    /(?:أنا|انا)\s*(?:مش|غير|مو|لست)\s*(?:مستر|استاذ|أستاذ)|(?:أنا|انا)\s*(?:ميس|مس|معلمة|استاذة|أستاذة)/i.test(
       teacherText
     );
   const isMaleSelf =
-    /(?:أنا|انا)\s*(?:مش|غير)\s*(?:ميس|مس|ابلة|أبلة)|(?:أنا|انا)\s*(?:مستر|استاذ|أستاذ|معلم)/i.test(
+    /(?:أنا|انا)\s*(?:مش|غير|مو|لست)\s*(?:ميس|مس|ابلة|أبلة|أستاذة|استاذة)|(?:أنا|انا)\s*(?:مستر|استاذ|أستاذ|معلم)/i.test(
       teacherText
     );
 
   if (isFemaleSelf) {
-    lockedTeacherTitle = "يا ميس";
+    lockedTeacherTitle = defaultFemaleTitle;
   } else if (isMaleSelf) {
-    lockedTeacherTitle = "يا مستر";
+    lockedTeacherTitle = defaultMaleTitle;
   } else if (!lockedTeacherTitle) {
     // Only if NEVER configured in session settings, infer fallback from voice or profile:
     if (effectiveVoiceGender === "female") {
-      lockedTeacherTitle = "يا ميس";
+      lockedTeacherTitle = defaultFemaleTitle;
     } else if (effectiveVoiceGender === "male") {
-      lockedTeacherTitle = "يا مستر";
+      lockedTeacherTitle = defaultMaleTitle;
     } else {
       const isFemaleName = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(
         teacherFullName || ""
       );
-      lockedTeacherTitle = isFemaleName ? "يا ميس" : "يا مستر";
+      lockedTeacherTitle = isFemaleName ? defaultFemaleTitle : defaultMaleTitle;
     }
   }
 
@@ -318,6 +334,7 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
         lockedTeacherTitle,
         resolvedUnknownNames,
         teacherFullName,
+        market: sessionMarket,
       }).catch((err) => {
         console.error("generateStudentReactions failed, using safe fallback:", err);
         return generateFallbackReactions({
@@ -339,6 +356,7 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
           lessonContext: session.lesson_context,
           fullLessonHistory,
           teacherFullName,
+          market: sessionMarket,
         });
       })
     : Promise.resolve([]);
@@ -348,7 +366,7 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
   // 2. Pre-synthesize TTS audio concurrently on the server for the speaking student!
   const speakingStudent = reactions.find((r) => r.responded && r.text);
   const ttsPromise = speakingStudent && speakingStudent.text
-    ? synthesizeStudentSpeech(speakingStudent.text, speakingStudent.name).catch((err) => {
+    ? synthesizeStudentSpeech(speakingStudent.text, speakingStudent.name, undefined, sessionMarket).catch((err) => {
         console.warn("Pre-synthesis TTS error:", err);
         return null;
       })
@@ -357,11 +375,11 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
   // Derive final title used by students
   const activeStudentTitle =
     lockedTeacherTitle ||
-    (reactions.find((r) => r.text && r.text.includes("يا ميس"))
-      ? "يا ميس"
-      : reactions.find((r) => r.text && r.text.includes("يا مستر"))
-      ? "يا مستر"
-      : "يا مستر");
+    (reactions.find((r) => r.text && (r.text.includes("يا ميس") || r.text.includes("يا أستاذة")))
+      ? defaultFemaleTitle
+      : reactions.find((r) => r.text && (r.text.includes("يا مستر") || r.text.includes("يا أستاذ")))
+      ? defaultMaleTitle
+      : defaultMaleTitle);
 
   // 3. Batch DB persistence: Single batch insert for events, parallel updates for students
   // Calculate monotonic timestamps so playback and reports follow the exact live timeline

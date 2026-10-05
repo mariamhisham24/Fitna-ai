@@ -93,64 +93,75 @@ export function extractTeacherTitleAndGender(
   recentHistory: string = "",
   voiceGender?: "male" | "female" | null,
   lockedTeacherTitle?: string | null,
-  teacherFullName?: string
+  teacherFullName?: string,
+  market: "eg" | "sa" = "eg"
 ): { title: string; isFemale: boolean } {
+  const isSa = market === "sa";
+  const defaultFemaleTitle = isSa ? "يا أستاذة" : "يا ميس";
+  const defaultMaleTitle = isSa ? "يا أستاذ" : "يا مستر";
+
   const combined = `${recentHistory}\n${teacherUtterance}`;
 
   // 1. Explicit correction / self-identification in text (Highest precedence)
   const isFemaleSelfId =
-    /(?:أنا|انا)\s*(?:مش|غير)\s*(?:مستر|استاذ|أستاذ)|(?:أنا|انا)\s*(?:ميس|مس|معلمة|استاذة|أستاذة)|(?:ميس|مس)\s*[a-zA-Z\u0600-\u06FF]+/i.test(teacherUtterance) ||
-    /(?:أنا|انا)\s*(?:مش|غير)\s*(?:مستر|استاذ|أستاذ)|(?:أنا|انا)\s*(?:ميس|مس|معلمة|استاذة|أستاذة)|(?:ميس|مس)\s*(?:مريم|فاطمة|سارة|نور|منى|هدى|رنا|ياسمين)/i.test(combined);
+    /(?:أنا|انا)\s*(?:مش|غير|مو|لست)\s*(?:مستر|استاذ|أستاذ)|(?:أنا|انا)\s*(?:ميس|مس|معلمة|استاذة|أستاذة)|(?:ميس|مس|أستاذة|استاذة)\s*[a-zA-Z\u0600-\u06FF]+/i.test(teacherUtterance) ||
+    /(?:أنا|انا)\s*(?:مش|غير|مو|لست)\s*(?:مستر|استاذ|أستاذ)|(?:أنا|انا)\s*(?:ميس|مس|معلمة|استاذة|أستاذة)|(?:ميس|مس|أستاذة|استاذة)\s*(?:مريم|فاطمة|سارة|نور|منى|هدى|رنا|ياسمين)/i.test(combined);
 
   const isMaleSelfId =
-    /(?:أنا|انا)\s*(?:مش|غير)\s*(?:ميس|مس|ابلة|أبلة)|(?:أنا|انا)\s*(?:مستر|استاذ|أستاذ|معلم)/i.test(teacherUtterance) ||
-    /(?:مستر|استاذ)\s*(?:أحمد|احمد|محمد|محمود|علي|عمرو|خالد|يوسف|طارق)/i.test(combined);
+    /(?:أنا|انا)\s*(?:مش|غير|مو|لست)\s*(?:ميس|مس|ابلة|أبلة|أستاذة|استاذة)|(?:أنا|انا)\s*(?:مستر|استاذ|أستاذ|معلم)/i.test(teacherUtterance) ||
+    /(?:مستر|استاذ|أستاذ)\s*(?:أحمد|احمد|محمد|محمود|علي|عمرو|خالد|يوسف|طارق)/i.test(combined);
 
   if (isFemaleSelfId) {
-    return { title: "يا ميس", isFemale: true };
+    return { title: defaultFemaleTitle, isFemale: true };
   }
   if (isMaleSelfId) {
-    return { title: "يا مستر", isFemale: false };
+    return { title: defaultMaleTitle, isFemale: false };
   }
 
   // 2. Session-wide locked title chosen in Session Setup (Primary Source of Truth)
   if (lockedTeacherTitle) {
-    return { title: lockedTeacherTitle, isFemale: lockedTeacherTitle.includes("ميس") };
+    const isFemale =
+      lockedTeacherTitle.includes("ميس") ||
+      lockedTeacherTitle.includes("أستاذة") ||
+      lockedTeacherTitle.includes("استاذة") ||
+      lockedTeacherTitle.includes("أبلة") ||
+      lockedTeacherTitle.includes("ابلة");
+    return { title: lockedTeacherTitle, isFemale };
   }
 
   // 3. Fallback: Profile full name & feminine grammar markers (only if no title was chosen in Session Setup)
   const isFemaleName = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(
     teacherFullName || ""
   );
-  const isFemaleGrammar = /(?:عايزة|عاوزة|شايفة|سامعة|معلمتكم|مدرستكم|أبلتكم|انا\s*ميس|أنا\s*ميس|أنا\s*معلمة|انا\s*معلمة)/i.test(
+  const isFemaleGrammar = /(?:عايزة|عاوزة|شايفة|سامعة|معلمتكم|مدرستكم|أبلتكم|استاذتكم|أستاذتكم|انا\s*ميس|أنا\s*ميس|أنا\s*معلمة|انا\s*معلمة|أنا\s*أستاذة|انا\s*استاذة)/i.test(
     teacherUtterance
   );
 
   if (isFemaleName || isFemaleGrammar) {
-    return { title: "يا ميس", isFemale: true };
+    return { title: defaultFemaleTitle, isFemale: true };
   }
 
   // 4. Explicit mention of titles in transcript
   const hasMaleTitle = /(?<=^|[\s.,?!،؛:])(مستر|استاذ|أستاذ)(?=[\s.,?!،؛:]|$)/i.test(combined);
-  const hasFemaleTitle = /(?<=^|[\s.,?!،؛:])(ميس|مس|ابلة|أبلة)(?=[\s.,?!،؛:]|$)/i.test(combined);
+  const hasFemaleTitle = /(?<=^|[\s.,?!،؛:])(ميس|مس|ابلة|أبلة|أستاذة|استاذة)(?=[\s.,?!،؛:]|$)/i.test(combined);
 
   if (hasFemaleTitle && !hasMaleTitle) {
-    return { title: "يا ميس", isFemale: true };
+    return { title: defaultFemaleTitle, isFemale: true };
   }
   if (hasMaleTitle && !hasFemaleTitle) {
-    return { title: "يا مستر", isFemale: false };
+    return { title: defaultMaleTitle, isFemale: false };
   }
 
   // 5. Voice Pitch & Tone Analysis (Diagnosed from teacher's voice pitch)
   if (voiceGender === "female") {
-    return { title: "يا ميس", isFemale: true };
+    return { title: defaultFemaleTitle, isFemale: true };
   }
   if (voiceGender === "male") {
-    return { title: "يا مستر", isFemale: false };
+    return { title: defaultMaleTitle, isFemale: false };
   }
 
   // 6. Default if totally indeterminate
-  return { title: "يا مستر", isFemale: false };
+  return { title: defaultMaleTitle, isFemale: false };
 }
 
 export interface QuestionContext {
@@ -443,6 +454,7 @@ export async function generateStudentReactions(params: {
   lockedTeacherTitle?: string | null;
   resolvedUnknownNames?: string[];
   teacherFullName?: string;
+  market?: "eg" | "sa";
 }): Promise<StudentTurnResult[]> {
   const {
     personas,
@@ -466,6 +478,7 @@ export async function generateStudentReactions(params: {
     lockedTeacherTitle = null,
     resolvedUnknownNames = [],
     teacherFullName,
+    market = "eg",
   } = params;
 
   // 1. Convert DB personas to rich StudentBrainState
@@ -523,7 +536,7 @@ export async function generateStudentReactions(params: {
   }
 
   // 4. Single-Speaker Pipeline (Spec: Turn manager selects 0 or 1 speaker; only active candidate calls LLM, other 3 students silent in code)
-  const teacherInfo = extractTeacherTitleAndGender(teacherUtterance, recentHistory, voiceGender, lockedTeacherTitle, teacherFullName);
+  const teacherInfo = extractTeacherTitleAndGender(teacherUtterance, recentHistory, voiceGender, lockedTeacherTitle, teacherFullName, market);
   const title = teacherInfo.title;
   const cleanTitle = title.startsWith("يا ") ? title : `يا ${title}`;
 
@@ -555,31 +568,41 @@ export async function generateStudentReactions(params: {
     );
 
   const isCorrectiveFeedback =
-    /(?:مش\s*(?:صح|مضبوط|صحيح|كده)|مش\s*قوي|غلط|راجع\s*نفسك|فكر\s*تاني|ركز\s*شوية|ليه\s*قلت\s*كده|متأكد)/i.test(
+    /(?:مش\s*(?:صح|مضبوط|صحيح|كده)|مو\s*(?:صح|مضبوط|صحيح|كذا)|مش\s*قوي|غلط|راجع\s*نفسك|فكر\s*(?:تاني|مرة\s*ثانية)|ركز\s*شوية|ليه\s*قلت\s*كده|ليش\s*قلت\s*كذا|متأكد)/i.test(
       teacherUtterance
     );
 
-  const systemPrompt = buildClassroomSwarmSystemPrompt(isGreeting ? null : lessonContext);
+  const systemPrompt = buildClassroomSwarmSystemPrompt(isGreeting ? null : lessonContext, market);
 
   async function generateSpeechForCandidate(candidate: (typeof decision.candidateSpeakers)[0]): Promise<string | null> {
-    // 1. Direct, instant, natural Egyptian responses for classroom conversational rituals (Zero hallucination):
+    // 1. Direct, instant, natural responses for classroom conversational rituals (Zero hallucination):
     if (isGreeting) {
       if (/صباح\s*الخير/i.test(teacherUtterance)) {
-        return `صباح النور ${cleanTitle}! الحمد لله كويسين.`;
+        return market === "sa"
+          ? `صباح النور ${cleanTitle}! الحمد لله طيبين.`
+          : `صباح النور ${cleanTitle}! الحمد لله كويسين.`;
       }
       if (/مساء\s*الخير/i.test(teacherUtterance)) {
         return `مساء النور ${cleanTitle}!`;
       }
       if (/سلام/i.test(teacherUtterance)) {
-        return `وعليكم السلام ${cleanTitle}! الحمد لله كويسين.`;
+        return market === "sa"
+          ? `وعليكم السلام ${cleanTitle}! الحمد لله بخير.`
+          : `وعليكم السلام ${cleanTitle}! الحمد لله كويسين.`;
       }
-      if (/عاملين\s*(?:ايه|إيه|اي)|ازيكم|ازيكو/i.test(teacherUtterance)) {
-        return `الحمد لله ${cleanTitle} تمام، حضرتك عامل${cleanTitle.includes("ميس") ? "ة" : ""} إيه؟`;
+      if (/عاملين\s*(?:ايه|إيه|اي)|ازيكم|ازيكو|كيف\s*(?:حالكم|الأحوال|أموركم)|شلونكم/i.test(teacherUtterance)) {
+        return market === "sa"
+          ? `الحمد لله ${cleanTitle} بخير، كيف حال حضرتك؟`
+          : `الحمد لله ${cleanTitle} تمام، حضرتك عامل${cleanTitle.includes("ميس") ? "ة" : ""} إيه؟`;
       }
       if (/سامعيني|صوتي\s*واضح/i.test(teacherUtterance)) {
-        return `أيوه ${cleanTitle} سامعين حضرتك كويس!`;
+        return market === "sa"
+          ? `أيوا ${cleanTitle} سامعينك بوضوح!`
+          : `أيوه ${cleanTitle} سامعين حضرتك كويس!`;
       }
-      return `أهلاً ${cleanTitle}! الحمد لله كويسين.`;
+      return market === "sa"
+        ? `أهلاً ${cleanTitle}! الحمد لله طيبين.`
+        : `أهلاً ${cleanTitle}! الحمد لله كويسين.`;
     }
 
     if (intentAnalysis.intent === "religious_blessing") {
@@ -587,11 +610,15 @@ export async function generateStudentReactions(params: {
     }
 
     if (intentAnalysis.intent === "teacher_identity") {
-      return `آسفين ${cleanTitle} خلاص حفظنا!`;
+      return market === "sa"
+        ? `عذراً ${cleanTitle} خلاص حفظنا!`
+        : `آسفين ${cleanTitle} خلاص حفظنا!`;
     }
 
     if (intentAnalysis.intent === "attention_check") {
-      return `معاك${cleanTitle.includes("ميس") ? "ِ" : ""} ${cleanTitle} ومركزين!`;
+      return market === "sa"
+        ? `معاك ${cleanTitle} ومركزين!`
+        : `معاك${cleanTitle.includes("ميس") ? "ِ" : ""} ${cleanTitle} ومركزين!`;
     }
 
     if (intentAnalysis.intent === "session_farewell") {
@@ -619,6 +646,7 @@ export async function generateStudentReactions(params: {
       teacherExplanations,
       studentContributions,
       fullLessonHistory,
+      market,
     });
 
     const userPrompt = `${studentPrompt}\n\nرد بصيغة JSON فقط بهذا الشكل تماماً:\n{\n  "text": "كلام الطالب المنطوق هنا فقط"\n}`;
@@ -884,6 +912,7 @@ export function generateFallbackReactions(params: {
   lessonContext?: string | null;
   fullLessonHistory?: string;
   teacherFullName?: string;
+  market?: "eg" | "sa";
 }): StudentTurnResult[] {
   const {
     personas,
@@ -904,6 +933,7 @@ export function generateFallbackReactions(params: {
     lessonContext = null,
     fullLessonHistory = "",
     teacherFullName,
+    market = "eg",
   } = params;
 
   const studentBrains: StudentBrainState[] = personas.map((p) => {
@@ -933,7 +963,7 @@ export function generateFallbackReactions(params: {
     lastSpeakingPersonaId,
     recentSpeakerPersonaIds
   );
-  const teacherInfo = extractTeacherTitleAndGender(teacherUtterance, recentHistory, voiceGender, lockedTeacherTitle, teacherFullName);
+  const teacherInfo = extractTeacherTitleAndGender(teacherUtterance, recentHistory, voiceGender, lockedTeacherTitle, teacherFullName, market);
   const title = teacherInfo.title;
 
   const candidateSpeakerMap = new Map(decision.candidateSpeakers.map((c) => [c.name, c]));

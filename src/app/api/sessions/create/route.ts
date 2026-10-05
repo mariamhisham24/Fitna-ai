@@ -59,15 +59,22 @@ async function handleCreate(request: NextRequest) {
     lessonContext,
     teacherTitle,
     teacherName,
+    market: requestedMarket,
   } = body as {
     topicId?: string;
     durationMinutes: number;
     classroomStyle?: "balanced" | "disruptive" | "disengaged";
     trainingObjective?: "socratic_focus" | "talk_time_reduction" | "inclusive_engagement" | "behavior_redirection";
     lessonContext?: string;
-    teacherTitle?: "يا مستر" | "يا ميس";
+    teacherTitle?: "يا مستر" | "يا ميس" | "يا أستاذ" | "يا أستاذة";
     teacherName?: string;
+    market?: "eg" | "sa";
   };
+
+  const cookieStore = await cookies();
+  const cookieMarket = cookieStore.get("fitna_market")?.value;
+  const rawMarket = requestedMarket || cookieMarket;
+  const market: "eg" | "sa" = rawMarket === "sa" ? "sa" : "eg";
 
   if (!durationMinutes || durationMinutes < 10 || durationMinutes > 30) {
     return NextResponse.json({ error: "مدة الجلسة لازم تكون بين 10 و30 دقيقة" }, { status: 400 });
@@ -107,10 +114,15 @@ async function handleCreate(request: NextRequest) {
   }
 
   // Lock teacher title in session_events at ms 0 so students address the teacher accurately from turn 1
-  const cleanTitle = teacherTitle === "يا ميس" ? "يا ميس" : "يا مستر";
+  let cleanTitle: string;
+  if (market === "sa") {
+    cleanTitle = (teacherTitle === "يا أستاذة" || teacherTitle === "يا ميس") ? "يا أستاذة" : "يا أستاذ";
+  } else {
+    cleanTitle = (teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة") ? "يا ميس" : "يا مستر";
+  }
   let cleanName = teacherName ? teacherName.trim() : "";
-  // Strip duplicate title if teacher typed "ميس مريم" or "مستر أحمد"
-  cleanName = cleanName.replace(/^(?:يا\s*)?(?:ميس|مس|مستر|استاذ|أستاذ|أبلة|ابلة)\s+/i, "").trim();
+  // Strip duplicate title if teacher typed "ميس مريم" or "مستر أحمد" or "أستاذة مريم" or "أستاذ أحمد"
+  cleanName = cleanName.replace(/^(?:يا\s*)?(?:ميس|مس|مستر|استاذ|أستاذ|أستاذة|استاذة|أبلة|ابلة)\s+/i, "").trim();
   const fullTitle = cleanName ? `${cleanTitle} ${cleanName}` : cleanTitle;
 
   await supabase.from("session_events").insert({
@@ -122,7 +134,8 @@ async function handleCreate(request: NextRequest) {
       teacher_title: cleanTitle,
       teacher_name: cleanName,
       full_teacher_title: fullTitle,
-      is_female: cleanTitle === "يا ميس",
+      is_female: cleanTitle === "يا ميس" || cleanTitle === "يا أستاذة",
+      market,
     },
     occurred_at_ms: 0,
   });

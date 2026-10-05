@@ -32,24 +32,29 @@ export default async function HistoryPage({
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
+  const market = (cookieStore.get("fitna_market")?.value === "sa" ? "sa" : "eg");
+  const isDemoUser = user.id === "d3300000-0000-4000-8000-000000000001" || user.email === "demo@fitna.ai";
+
   const {
     data: sessions,
     count,
-  } = await Promise.race([
-    db
-      .from("sessions")
-      .select(
-        "id, started_at, duration_minutes, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, topic_id",
-        { count: "exact" }
-      )
-      .eq("teacher_id", user.id)
-      .eq("status", "completed")
-      .order("started_at", { ascending: false })
-      .range(from, to),
-    new Promise<{ data: any[]; count: number }>((resolve) =>
-      setTimeout(() => resolve({ data: [], count: 0 }), 10000)
-    ),
-  ]).catch(() => ({ data: [], count: 0 }));
+  } = (isDemoUser && market === "sa")
+    ? { data: [], count: 0 }
+    : await Promise.race([
+        db
+          .from("sessions")
+          .select(
+            "id, started_at, duration_minutes, overall_score, teacher_talk_ratio, socratic_question_rate, inclusivity_index, classroom_pattern, topic_id",
+            { count: "exact" }
+          )
+          .eq("teacher_id", user.id)
+          .eq("status", "completed")
+          .order("started_at", { ascending: false })
+          .range(from, to),
+        new Promise<{ data: any[]; count: number }>((resolve) =>
+          setTimeout(() => resolve({ data: [], count: 0 }), 10000)
+        ),
+      ]).catch(() => ({ data: [], count: 0 }));
 
   const topicIds = [...new Set((sessions ?? []).map((s) => s.topic_id).filter(Boolean))] as string[];
   const { data: topics } = topicIds.length

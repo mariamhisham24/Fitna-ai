@@ -16,7 +16,7 @@ const FALLBACK_PERSONAS = [
   { id: "p-nour", name: "نور", age: 9, base_attention: 50, strengths: ["هادئة وتفكر بعمق"], weaknesses: ["خجولة وتحتاج تشجيع"] },
 ];
 
-async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T): Promise<T> {
+async function withTimeout<T>(promise: PromiseLike<any>, ms: number, fallback: any): Promise<any> {
   return Promise.race([
     Promise.resolve(promise),
     new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
@@ -53,7 +53,6 @@ export default async function SessionSetupPage() {
     db
       .from("student_personas")
       .select("id, name, age, base_attention, strengths, weaknesses")
-      .eq("is_active", true)
       .order("created_at", { ascending: true }),
     10000,
     { data: null, error: null }

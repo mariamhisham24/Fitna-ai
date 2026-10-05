@@ -1,4 +1,5 @@
 export type Language = "ar" | "en";
+export type Market = "eg" | "sa";
 export type Direction = "rtl" | "ltr";
 
 export interface Dictionary {
