@@ -8,6 +8,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getDictionary, type Language } from "@/lib/i18n";
 import { Check } from "lucide-react";
 import { cleanPedagogicalText } from "@/lib/utils/pedagogy";
+import { TelegramIcon } from "@/components/TelegramIcon";
 
 export default async function SessionComparePage({
   searchParams,
@@ -412,9 +413,15 @@ export default async function SessionComparePage({
             <Link href="/" className="hover:text-[#071B3A] dark:hover:text-white transition">
               {isRtl ? "سياسة الخصوصية" : "Privacy Policy"}
             </Link>
-            <Link href="/" className="hover:text-[#071B3A] dark:hover:text-white transition">
-              {isRtl ? "المساعدة والدعم" : "Help & Support"}
-            </Link>
+            <a
+              href="https://t.me/fitnaai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#12B8C4] transition flex items-center gap-1.5 font-medium text-[#071B3A]/70 dark:text-white/70"
+            >
+              <TelegramIcon className="w-4 h-4 text-[#229ED9]" />
+              <span>{isRtl ? "المساعدة والدعم" : "Help & Support"}</span>
+            </a>
           </div>
         </div>
       </footer>

@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, ArrowUpLeft, ArrowUpRight, Check, CirclePlay, La
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { type Market } from "@/lib/i18n/types";
 import { MarketSelectorModal } from "@/components/MarketSelectorModal";
+import { TelegramIcon } from "@/components/TelegramIcon";
 
 const getTrainingEntryPath = () => "/login";
 
@@ -718,8 +719,17 @@ export function HomeClient({
             <a href="#pricing">{t.nav[2]}</a>
           </div>
           <div>
-            <b>{lang === "ar" ? "تواصل معنا" : "Contact"}</b>
-            <a href="#cta">hello@fitna.ai</a>
+            <b>{lang === "ar" ? "تواصل والدعم" : "Support & Contact"}</b>
+            <a
+              href="https://t.me/fitnaai"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+            >
+              <TelegramIcon className="w-3.5 h-3.5 text-[#229ED9]" />
+              <span>{lang === "ar" ? "الدعم عبر تيليجرام" : "Telegram Support"}</span>
+            </a>
+            <a href="mailto:hello@fitna.ai">hello@fitna.ai</a>
             <a href="#cta">LinkedIn</a>
             <a href="#cta">Instagram</a>
           </div>

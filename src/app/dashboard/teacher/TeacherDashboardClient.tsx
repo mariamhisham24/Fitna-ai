@@ -12,6 +12,7 @@ import { type Language, type Dictionary } from "@/lib/i18n";
 import { SettingsModal } from "./SettingsModal";
 import { Sparkles, HelpCircle } from "lucide-react";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { TelegramIcon } from "@/components/TelegramIcon";
 
 type Profile = {
   full_name: string | null;
@@ -449,9 +450,15 @@ export function TeacherDashboardClient({
             <Link href="/" className="hover:text-[#071B3A] dark:hover:text-white transition">
               {lang === "ar" ? "سياسة الخصوصية" : "Privacy Policy"}
             </Link>
-            <Link href="/" className="hover:text-[#071B3A] dark:hover:text-white transition">
-              {lang === "ar" ? "المساعدة والدعم" : "Help & Support"}
-            </Link>
+            <a
+              href="https://t.me/fitnaai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#12B8C4] transition flex items-center gap-1.5 font-medium text-[#071B3A]/70 dark:text-white/70"
+            >
+              <TelegramIcon className="w-4 h-4 text-[#229ED9]" />
+              <span>{lang === "ar" ? "المساعدة والدعم" : "Help & Support"}</span>
+            </a>
           </div>
         </div>
       </footer>
