@@ -187,6 +187,26 @@ export function LiveRoom({
   const lastInterimResultTimeRef = useRef<number>(0);
   const lastSubmittedTeacherTextRef = useRef<string>("");
   const lastSubmittedTimeRef = useRef<number>(0);
+  const mobileAudioPlayerRef = useRef<HTMLAudioElement | null>(null);
+
+  const primeMobileAudio = useCallback(() => {
+    try {
+      if (!mobileAudioPlayerRef.current && typeof Audio !== "undefined") {
+        const audio = new Audio();
+        // 1-sample silent WAV data URI to unlock audio element under user gesture
+        audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+        audio.load();
+        audio.play().then(() => {
+          audio.pause();
+        }).catch(() => {});
+        mobileAudioPlayerRef.current = audio;
+      } else if (mobileAudioPlayerRef.current) {
+        mobileAudioPlayerRef.current.play().then(() => {
+          mobileAudioPlayerRef.current?.pause();
+        }).catch(() => {});
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     isLiveOpenMicRef.current = isLiveOpenMic;
@@ -372,6 +392,7 @@ export function LiveRoom({
   const startRecording = useCallback(async () => {
     if (recording || processing) return;
     setMicError(null);
+    primeMobileAudio();
 
     if (typeof window !== "undefined" && !window.isSecureContext && !navigator?.mediaDevices) {
       setMicError(
@@ -518,7 +539,7 @@ export function LiveRoom({
       }
 
       // Diagnose teacher voice pitch and gender if audio blob is available
-      if (blob && blob.size >= 500) {
+      if (blob && blob.size >= 200) {
         if (!detectedTeacherGenderRef.current && !isTeacherFemaleName && !isTeacherMaleName) {
           try {
             const detected = await detectVoiceGenderFromBlob(blob, audioContextRef.current);
@@ -683,7 +704,8 @@ export function LiveRoom({
             }
 
             if (audioUrl) {
-              const audio = new Audio(audioUrl);
+              const audio = mobileAudioPlayerRef.current || new Audio();
+              audio.src = audioUrl;
 
               audio.onloadedmetadata = () => {
                 if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
@@ -714,7 +736,13 @@ export function LiveRoom({
                   setActiveSpeakingAudio(audio);
                 };
 
-                audio.play().catch(finish);
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                  playPromise.catch((playErr) => {
+                    console.warn("[Playback] Audio play catch on mobile:", playErr);
+                    finish();
+                  });
+                }
               });
 
               // Natural conversational breath pause (200ms)
@@ -798,7 +826,12 @@ export function LiveRoom({
 
       const isMp4 = (recorder.mimeType || activeAudioMimeTypeRef.current).includes("mp4");
       if (isMp4) {
-        recorder.start();
+        // iOS Safari 14.8+ supports timeslice safely; using 250ms prevents empty chunks when stopping
+        try {
+          recorder.start(250);
+        } catch {
+          recorder.start();
+        }
       } else {
         recorder.start(100);
       }
@@ -1025,9 +1058,9 @@ export function LiveRoom({
       openMicChunksRef.current = [];
 
       const hasDirect = Boolean(directTranscript && directTranscript.trim().length >= 2);
-      // Voice detection fallback: if browser SpeechRecognition produced text OR real voice audio was captured (> 1500 bytes and > 500ms),
+      // Voice detection fallback: if browser SpeechRecognition produced text OR real voice audio was captured (> 200 bytes and > 200ms),
       // we ALWAYS process the turn (falling back to server Whisper STT if needed) so teacher's speech is NEVER lost!
-      const canFallbackToAudio = Boolean(blob && blob.size >= 400 && durationMs >= 300);
+      const canFallbackToAudio = Boolean(blob && blob.size >= 200 && durationMs >= 200);
 
       if (hasDirect || canFallbackToAudio) {
         const preview = directTranscript
@@ -1218,18 +1251,19 @@ export function LiveRoom({
               setIsTeacherSpeaking(false);
             }
 
-            // Adaptive natural pause:
+            // Adaptive natural pause (optimized for mobile latency and responsiveness):
             const hasAccumulatedText = nativeTranscriptAccumulatorRef.current.trim().length >= 2;
             const currentAccText = nativeTranscriptAccumulatorRef.current.trim();
             const isQuestionOrCall =
               /(?:[؟?]|ليه|إيه|ايه|إزاي|ازاي|مين|هل|متى|أين|اين|كام|كم|فين|ليش|وش|شو|كيف|ايش|يا\s*(?:سارة|عمر|ياسين|نور|ريم|سلطان|فهد|جوري|ولاد|شباب|جماعة|شطار|عيال|بنات)|جاوب|قول|جاوبي|قولي|شاركونا|شاركينا|تفضلي|اتفضلي|اتفضل|تفضل|تفضلوا)\b/i.test(
                 currentAccText
               );
-            const effectiveSilenceMs = isQuestionOrCall ? 1200 : hasAccumulatedText ? 2000 : 2200;
-            const minSpeechMs = hasAccumulatedText ? 200 : 350;
+            // On mobile or when SpeechRecognition isn't firing interim results, 1200ms - 1500ms gives swift conversational feel
+            const effectiveSilenceMs = isQuestionOrCall ? 1000 : hasAccumulatedText ? 1400 : 1600;
+            const minSpeechMs = hasAccumulatedText ? 200 : 250;
 
             const timeSinceInterim = now - (lastInterimResultTimeRef.current || 0);
-            const isBrowserSpeechActive = timeSinceInterim < 1500;
+            const isBrowserSpeechActive = isRecognitionRunningRef.current && timeSinceInterim < 1200;
 
             if (silenceDuration > effectiveSilenceMs && !isBrowserSpeechActive) {
               speechDetectedRef.current = false;
@@ -1290,6 +1324,7 @@ export function LiveRoom({
   const startOpenMic = useCallback(async () => {
     if (processing) return;
     setMicError(null);
+    primeMobileAudio();
 
     // CRITICAL: Unlock AudioContext synchronously during user gesture for iOS Safari & Android
     try {

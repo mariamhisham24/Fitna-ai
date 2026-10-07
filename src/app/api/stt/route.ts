@@ -123,12 +123,9 @@ export async function POST(request: NextRequest) {
       /حصة\s*(تفاعلية|وشرح)/i.test(text) ||
       /(Past Simple.*){2,}/i.test(text) ||
       /أفعال\s*منتظمة.*(play|watched|run)/i.test(text) ||
-      /(play.*watched|watched.*visited|visited.*run|play.*watched.*run)/i.test(text) ||
-      /اشرح\s*يا\s*عمر.*برافو/i.test(text) ||
+      /^(اشرح\s*يا\s*عمر.*برافو)$/i.test(text) ||
       /^(\.|\s)*(سبحان\s*الله(\s*وبحمده)?|أستغفر\s*الله)[.!؟?]*$/i.test(text.trim()) ||
-      /^(\.|\s)*شكرا(ً)?(\s*(لكم|جزيلا(ً)?))?[.!؟?]*$/i.test(text.trim()) ||
-      /^(\.|\s)*(مع\s*السلامة|إلى\s*اللقاء|في\s*أمان\s*الله)[.!؟?]*$/i.test(text.trim()) ||
-      /^(\.|\s)*(نعم|أجل)[.!؟?]*$/i.test(text.trim());
+      /^(\.|\s)*(مع\s*السلامة|إلى\s*اللقاء|في\s*أمان\s*الله)[.!؟?]*$/i.test(text.trim());
 
     if (isHallucination) {
       return NextResponse.json({ error: "صمت أو ضوضاء غير واضحة" }, { status: 400 });
