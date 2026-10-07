@@ -731,6 +731,8 @@ export function HomeClient({
         <div className="footer-links">
           <div>
             <b>{lang === "ar" ? "عن المنصة" : "Platform"}</b>
+            <a href="/about">{lang === "ar" ? "نبذة عن فِطْنَة" : "About Fitna"}</a>
+            <a href="/guide">{lang === "ar" ? "دليل الاستخدام" : "User Guide"}</a>
             <a href="#features">{t.nav[0]}</a>
             <a href="#how">{t.nav[1]}</a>
             <a href="#pricing">{t.nav[2]}</a>

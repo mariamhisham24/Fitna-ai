@@ -446,6 +446,9 @@ export function TeacherDashboardClient({
               <BookOpen className="w-3.5 h-3.5" />
               <span>{isRtl ? "دليل الاستخدام" : "User Guide"}</span>
             </Link>
+            <Link href="/about" className="hover:text-[#071B3A] dark:hover:text-white transition font-medium">
+              {lang === "ar" ? "عن المنصة" : "About Platform"}
+            </Link>
             <Link href="/" className="hover:text-[#071B3A] dark:hover:text-white transition">
               {lang === "ar" ? "المعايير المعتمدة" : "Standards"}
             </Link>

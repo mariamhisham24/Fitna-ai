@@ -352,7 +352,7 @@ export function GuideClient({ initialLang, isAuthenticated }: GuideClientProps) 
             </Link>
 
             <Link
-              href="/"
+              href="/about"
               className="px-6 py-3 rounded-xl border border-[#12B8C4]/40 hover:border-[#12B8C4] text-[#12B8C4] hover:bg-[#12B8C4]/10 font-bold text-xs sm:text-sm transition-all duration-200 active:scale-95"
             >
               {isRtl ? "عن المنصة" : "About Platform"}
