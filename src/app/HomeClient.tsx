@@ -263,6 +263,19 @@ export function HomeClient({
             </button>
 
             <ThemeToggle />
+
+            {/* Telegram Support Navbar Button */}
+            <a
+              href="https://t.me/fitnaai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-lg text-[#229ED9] hover:bg-white/10 transition-all duration-150 hover:scale-110 active:scale-95 inline-flex items-center justify-center cursor-pointer"
+              title={lang === "ar" ? "الدعم عبر تيليجرام" : "Telegram Support"}
+              aria-label="Telegram Support"
+            >
+              <TelegramIcon className="w-5 h-5 text-[#229ED9]" />
+            </a>
+
             <button className="language-button" onClick={flipLanguage} title={lang === "ar" ? "Switch to English" : "التحويل إلى العربية"}>
               {t.language}
             </button>

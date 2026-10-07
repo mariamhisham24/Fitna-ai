@@ -119,6 +119,18 @@ export function TeacherDashboardClient({
               <ThemeToggle />
             </div>
 
+            {/* Telegram Support Navbar Button */}
+            <a
+              href="https://t.me/fitnaai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#229ED9] hover:text-[#229ED9]/80 p-1.5 rounded-lg hover:bg-white/10 transition-all duration-150 hover:scale-110 active:scale-95 inline-flex items-center justify-center cursor-pointer"
+              title={activeLang === "ar" ? "الدعم عبر تيليجرام" : "Telegram Support"}
+              aria-label="Telegram Support"
+            >
+              <TelegramIcon className="w-4 h-4 text-[#229ED9]" />
+            </a>
+
             {/* User Guide / دليل الاستخدام Button */}
             <button
               type="button"

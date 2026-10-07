@@ -7,6 +7,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MarketSwitcher } from "@/components/MarketSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTranslation } from "@/lib/i18n/context";
+import { TelegramIcon } from "@/components/TelegramIcon";
 
 export function AppHeader({ title }: { title?: string }) {
   const { t } = useTranslation();
@@ -25,6 +26,17 @@ export function AppHeader({ title }: { title?: string }) {
         <MarketSwitcher />
         <ThemeToggle />
         <LanguageSwitcher />
+        {/* Telegram Support Navbar Button */}
+        <a
+          href="https://t.me/fitnaai"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#229ED9] hover:text-[#229ED9]/80 p-1 rounded-lg hover:bg-[#071B3A]/5 dark:hover:bg-white/10 transition-all duration-150 hover:scale-110 active:scale-95 inline-flex items-center justify-center cursor-pointer"
+          title="الدعم عبر تيليجرام / Telegram Support"
+          aria-label="Telegram Support"
+        >
+          <TelegramIcon className="w-4 h-4 text-[#229ED9]" />
+        </a>
         <Link
           href="/settings"
           className="text-[#071B3A]/70 dark:text-white/70 hover:text-[#071B3A] dark:hover:text-white text-xs font-medium"
