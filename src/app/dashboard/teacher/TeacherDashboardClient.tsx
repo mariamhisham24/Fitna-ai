@@ -10,9 +10,10 @@ import { signOutAction } from "@/app/(auth)/login/actions";
 import { useTranslation } from "@/lib/i18n/context";
 import { type Language, type Dictionary } from "@/lib/i18n";
 import { SettingsModal } from "./SettingsModal";
-import { Sparkles, HelpCircle } from "lucide-react";
+import { Sparkles, HelpCircle, BookOpen } from "lucide-react";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { TelegramIcon } from "@/components/TelegramIcon";
+import { UserGuideButton } from "@/components/UserGuideButton";
 
 type Profile = {
   full_name: string | null;
@@ -131,18 +132,8 @@ export function TeacherDashboardClient({
               <TelegramIcon className="w-4 h-4 text-[#229ED9]" />
             </a>
 
-            {/* User Guide / دليل الاستخدام Button */}
-            <button
-              type="button"
-              onClick={() => setShowTour(true)}
-              className="text-[#12B8C4] hover:text-[#12B8C4]/80 px-2.5 py-1.5 rounded-lg hover:bg-[#12B8C4]/10 transition-all duration-150 hover:scale-105 active:scale-95 inline-flex items-center gap-1.5 font-medium cursor-pointer border border-[#12B8C4]/25"
-              title={t.onboarding?.manualButton || (activeLang === "ar" ? "دليل الاستخدام" : "User Guide")}
-            >
-              <HelpCircle className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline">
-                {t.onboarding?.manualButton || (activeLang === "ar" ? "دليل الاستخدام" : "User Guide")}
-              </span>
-            </button>
+            {/* Pinned User Guide Button */}
+            <UserGuideButton />
 
             {/* Open Settings Card in Dashboard Button */}
             <button
@@ -448,14 +439,13 @@ export function TeacherDashboardClient({
               : "All rights reserved © 2026 Fitna AI Pedagogical System"}
           </span>
           <div className="flex items-center gap-6">
-            <button
-              type="button"
-              onClick={() => setShowTour(true)}
-              className="hover:text-[#12B8C4] transition cursor-pointer text-start flex items-center gap-1 text-[#12B8C4]/90 font-medium"
+            <Link
+              href="/guide"
+              className="hover:text-[#12B8C4] transition text-start flex items-center gap-1 text-[#12B8C4]/90 font-medium"
             >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>{t.onboarding?.manualButton || (activeLang === "ar" ? "دليل الاستخدام" : "User Guide")}</span>
-            </button>
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>{isRtl ? "دليل الاستخدام" : "User Guide"}</span>
+            </Link>
             <Link href="/" className="hover:text-[#071B3A] dark:hover:text-white transition">
               {lang === "ar" ? "المعايير المعتمدة" : "Standards"}
             </Link>

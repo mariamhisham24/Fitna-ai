@@ -9,6 +9,7 @@ import { signOutAction } from "@/app/(auth)/login/actions";
 import { type Language } from "@/lib/i18n";
 import { Target, Check, Lock } from "lucide-react";
 import { TelegramIcon } from "@/components/TelegramIcon";
+import { UserGuideButton } from "@/components/UserGuideButton";
 
 type SessionPoint = {
   id: string;
@@ -215,6 +216,9 @@ export function GrowthClient({
             <div className="hover:scale-105 active:scale-95 transition-transform duration-150">
               <ThemeToggle />
             </div>
+
+            {/* User Guide Pinned Navbar Button */}
+            <UserGuideButton />
 
             {/* Telegram Support Navbar Button */}
             <a

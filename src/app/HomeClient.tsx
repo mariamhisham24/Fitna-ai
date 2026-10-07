@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { type Market } from "@/lib/i18n/types";
 import { MarketSelectorModal } from "@/components/MarketSelectorModal";
 import { TelegramIcon } from "@/components/TelegramIcon";
+import { UserGuideButton } from "@/components/UserGuideButton";
 
 const getTrainingEntryPath = () => "/login";
 
@@ -263,6 +264,9 @@ export function HomeClient({
             </button>
 
             <ThemeToggle />
+
+            {/* User Guide Pinned Navbar Button */}
+            <UserGuideButton />
 
             {/* Telegram Support Navbar Button */}
             <a

@@ -9,6 +9,7 @@ import { getDictionary, type Language } from "@/lib/i18n";
 import { Check } from "lucide-react";
 import { cleanPedagogicalText } from "@/lib/utils/pedagogy";
 import { TelegramIcon } from "@/components/TelegramIcon";
+import { UserGuideButton } from "@/components/UserGuideButton";
 
 export default async function SessionComparePage({
   searchParams,
@@ -91,6 +92,9 @@ export default async function SessionComparePage({
             <div className="hover:scale-105 active:scale-95 transition-transform duration-150">
               <ThemeToggle />
             </div>
+
+            {/* User Guide Pinned Navbar Button */}
+            <UserGuideButton />
 
             {/* Telegram Support Navbar Button */}
             <a

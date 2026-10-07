@@ -10,6 +10,7 @@ import { type Language, useTranslation } from "@/lib/i18n";
 import { type FrameworkScoresProps } from "./FrameworkScorecard";
 import { Check, Lightbulb, Mic } from "lucide-react";
 import { TelegramIcon } from "@/components/TelegramIcon";
+import { UserGuideButton } from "@/components/UserGuideButton";
 
 export type PlaybackTurn = {
   id: string;
@@ -363,6 +364,8 @@ export function ReportClient({
               <MarketSwitcher />
               <LanguageSwitcher />
               <ThemeToggle />
+              {/* User Guide Pinned Navbar Button */}
+              <UserGuideButton />
               {/* Telegram Support Navbar Button */}
               <a
                 href="https://t.me/fitnaai"

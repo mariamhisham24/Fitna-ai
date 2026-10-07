@@ -11,6 +11,7 @@ import { signOutAction } from "@/app/(auth)/login/actions";
 import { useTranslation } from "@/lib/i18n/context";
 import { X, GraduationCap, UserCheck, Globe, MessageSquare } from "lucide-react";
 import { TelegramIcon } from "@/components/TelegramIcon";
+import { UserGuideButton } from "@/components/UserGuideButton";
 
 type Topic = { id: string; title_ar: string; title_en: string | null };
 type Persona = {
@@ -326,6 +327,9 @@ export function SessionSetupForm({
             <div className="hover:scale-105 active:scale-95 transition-transform duration-150">
               <ThemeToggle />
             </div>
+
+            {/* User Guide Pinned Navbar Button */}
+            <UserGuideButton />
 
             {/* Telegram Support Navbar Button */}
             <a

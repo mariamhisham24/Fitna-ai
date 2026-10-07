@@ -8,6 +8,7 @@ import { MarketSwitcher } from "@/components/MarketSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTranslation } from "@/lib/i18n/context";
 import { TelegramIcon } from "@/components/TelegramIcon";
+import { UserGuideButton } from "@/components/UserGuideButton";
 
 export function AppHeader({ title }: { title?: string }) {
   const { t } = useTranslation();
@@ -26,6 +27,7 @@ export function AppHeader({ title }: { title?: string }) {
         <MarketSwitcher />
         <ThemeToggle />
         <LanguageSwitcher />
+        <UserGuideButton />
         {/* Telegram Support Navbar Button */}
         <a
           href="https://t.me/fitnaai"

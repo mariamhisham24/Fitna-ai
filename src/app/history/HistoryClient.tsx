@@ -9,6 +9,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { signOutAction } from "@/app/(auth)/login/actions";
 import { type Language } from "@/lib/i18n";
 import { TelegramIcon } from "@/components/TelegramIcon";
+import { UserGuideButton } from "@/components/UserGuideButton";
 
 export type SessionItem = {
   id: string;
@@ -100,6 +101,9 @@ export function HistoryClient({
             <div className="hover:scale-105 active:scale-95 transition-transform duration-150">
               <ThemeToggle />
             </div>
+
+            {/* User Guide Pinned Navbar Button */}
+            <UserGuideButton />
 
             {/* Telegram Support Navbar Button */}
             <a
