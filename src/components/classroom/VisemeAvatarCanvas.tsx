@@ -8,10 +8,14 @@ export const STUDENT_MOUTH_BOXES: Record<string, { x: number; y: number; w: numb
   omar: { x: 407, y: 461, w: 210, h: 110 },
   yassin: { x: 405, y: 461, w: 210, h: 110 },
   nour: { x: 408, y: 465, w: 200, h: 106 },
+  reem: { x: 409, y: 437, w: 210, h: 110 },
+  sultan: { x: 407, y: 461, w: 210, h: 110 },
+  fahd: { x: 405, y: 461, w: 210, h: 110 },
+  jouri: { x: 408, y: 465, w: 200, h: 106 },
 };
 
 interface VisemeAvatarCanvasProps {
-  persona: "sara" | "omar" | "yassin" | "nour";
+  persona: "sara" | "omar" | "yassin" | "nour" | "reem" | "sultan" | "fahd" | "jouri";
   baseState: "attentive" | "hand_raised" | "distracted";
   isSpeaking: boolean;
   currentViseme: VisemeType;

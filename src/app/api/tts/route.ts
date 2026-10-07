@@ -53,21 +53,31 @@ const DEFAULT_MALE_PROFILE: StudentVoiceProfile = {
  * to authentically reflect Saudi school students.
  */
 const SA_STUDENT_PROFILES: Record<string, StudentVoiceProfile> = {
-  // عمر (Omar - 10 yrs): energetic boy, Saudi boyish pitch & active tempo
+  // ريم (Reem - 10 yrs): diligent, clear schoolgirl, Saudi female voice
+  "ريم": { voice: "ar-SA-ZariNeural", pitch: "+18Hz", rate: "+4%" },
+  "reem": { voice: "ar-SA-ZariNeural", pitch: "+18Hz", rate: "+4%" },
+
+  // سلطان (Sultan - 10 yrs): respectful, active boy tone
+  "سلطان": { voice: "ar-SA-HamedNeural", pitch: "+22Hz", rate: "+6%" },
+  "sultan": { voice: "ar-SA-HamedNeural", pitch: "+22Hz", rate: "+6%" },
+
+  // فهد (Fahd - 10 yrs): energetic boy, Saudi boyish pitch & active tempo
+  "فهد": { voice: "ar-SA-HamedNeural", pitch: "+24Hz", rate: "+8%" },
+  "fahd": { voice: "ar-SA-HamedNeural", pitch: "+24Hz", rate: "+8%" },
+
+  // جوري (Jouri - 9 yrs): gentle, younger thoughtful girl tone
+  "جوري": { voice: "ar-SA-ZariNeural", pitch: "+20Hz", rate: "-2%" },
+  "jouri": { voice: "ar-SA-ZariNeural", pitch: "+20Hz", rate: "-2%" },
+
+  // Fallbacks for previous personas
   "عمر": { voice: "ar-SA-HamedNeural", pitch: "+20Hz", rate: "+6%" },
   "omar": { voice: "ar-SA-HamedNeural", pitch: "+20Hz", rate: "+6%" },
-
-  // سارة (Sara - 11 yrs): diligent, clear schoolgirl, Saudi female voice
   "سارة": { voice: "ar-SA-ZariNeural", pitch: "+18Hz", rate: "+4%" },
   "sara": { voice: "ar-SA-ZariNeural", pitch: "+18Hz", rate: "+4%" },
   "sarah": { voice: "ar-SA-ZariNeural", pitch: "+18Hz", rate: "+4%" },
-
-  // ياسين (Yassin - 9 yrs): playful, spontaneous younger boy tone
   "ياسين": { voice: "ar-SA-HamedNeural", pitch: "+26Hz", rate: "+10%" },
   "yassin": { voice: "ar-SA-HamedNeural", pitch: "+26Hz", rate: "+10%" },
   "yasin": { voice: "ar-SA-HamedNeural", pitch: "+26Hz", rate: "+10%" },
-
-  // نور (Nour - 10 yrs): calm, gentle, thoughtful pacing
   "نور": { voice: "ar-SA-ZariNeural", pitch: "+20Hz", rate: "-2%" },
   "nour": { voice: "ar-SA-ZariNeural", pitch: "+20Hz", rate: "-2%" },
 };
@@ -84,7 +94,7 @@ const SA_DEFAULT_MALE_PROFILE: StudentVoiceProfile = {
   rate: "+4%",
 };
 
-const FEMALE_NAMES = new Set(["سارة", "نور", "فاطمة", "مريم", "سلمى", "sara", "sarah", "nour", "fatima", "maryam"]);
+const FEMALE_NAMES = new Set(["سارة", "نور", "ريم", "جوري", "فاطمة", "مريم", "سلمى", "sara", "sarah", "nour", "reem", "jouri", "fatima", "maryam"]);
 
 function resolveVoiceProfile(
   personaName?: string,
@@ -494,6 +504,54 @@ const GEMINI_STUDENT_CONFIGS: Record<string, { voice: string; promptPrefix: stri
 
 // Gemini Persona Voice and Prompt mapping (Saudi)
 const SA_GEMINI_STUDENT_CONFIGS: Record<string, { voice: string; promptPrefix: string }> = {
+  // ريم (Reem - 10 yrs): diligent Saudi schoolgirl
+  "ريم": {
+    voice: "Kore",
+    promptPrefix:
+      "Speak as Reem, an authentic 10-year-old Saudi schoolgirl. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: diligent, polite, cheerful, articulate.",
+  },
+  "reem": {
+    voice: "Kore",
+    promptPrefix:
+      "Speak as Reem, an authentic 10-year-old Saudi schoolgirl. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: diligent, polite, cheerful, articulate.",
+  },
+
+  // سلطان (Sultan - 10 yrs): respectful Saudi schoolboy
+  "سلطان": {
+    voice: "Puck",
+    promptPrefix:
+      "Speak as Sultan, an authentic 10-year-old Saudi schoolboy. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: practical, respectful, polite, engaged.",
+  },
+  "sultan": {
+    voice: "Puck",
+    promptPrefix:
+      "Speak as Sultan, an authentic 10-year-old Saudi schoolboy. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: practical, respectful, polite, engaged.",
+  },
+
+  // فهد (Fahd - 10 yrs): energetic sports-loving Saudi schoolboy
+  "فهد": {
+    voice: "Zephyr",
+    promptPrefix:
+      "Speak as Fahd, an authentic 10-year-old Saudi schoolboy. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: energetic, sports-loving, active, spontaneous.",
+  },
+  "fahd": {
+    voice: "Zephyr",
+    promptPrefix:
+      "Speak as Fahd, an authentic 10-year-old Saudi schoolboy. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: energetic, sports-loving, active, spontaneous.",
+  },
+
+  // جوري (Jouri - 9 yrs): gentle, thoughtful Saudi schoolgirl
+  "جوري": {
+    voice: "Aoede",
+    promptPrefix:
+      "Speak as Jouri, an authentic 9-year-old Saudi schoolgirl. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: softly, gentle, thoughtful, calm.",
+  },
+  "jouri": {
+    voice: "Aoede",
+    promptPrefix:
+      "Speak as Jouri, an authentic 9-year-old Saudi schoolgirl. Accent & Phrasing: Natural Saudi Arabic school inflection. Tone: softly, gentle, thoughtful, calm.",
+  },
+
   "عمر": {
     voice: "Puck",
     promptPrefix:

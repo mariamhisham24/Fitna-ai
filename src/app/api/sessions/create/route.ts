@@ -140,13 +140,35 @@ async function handleCreate(request: NextRequest) {
     occurred_at_ms: 0,
   });
 
-  // Attach all four student personas to this session with their
+  // Attach the 4 matching student personas (Egyptian or Saudi) to this session with their
   // real base_attention adjusted for the chosen classroom style —
   // this is what the live room (Milestone 3) will animate in real time
   // based on teacher behavior.
-  const { data: personas } = await supabase.from("student_personas").select("id, base_attention");
+  const targetDialect = market === "sa" ? "saudi_arabic" : "egyptian_arabic";
+  let { data: personas } = await supabase
+    .from("student_personas")
+    .select("id, name, base_attention, dialect")
+    .eq("dialect", targetDialect);
+
+  if (!personas || personas.length === 0) {
+    const { data: fallbackPersonas } = await supabase
+      .from("student_personas")
+      .select("id, name, base_attention, dialect")
+      .limit(4);
+    personas = fallbackPersonas;
+  }
 
   if (personas && personas.length > 0) {
+    const preferredOrder = market === "sa"
+      ? ["ريم", "سلطان", "فهد", "جوري"]
+      : ["سارة", "ياسين", "عمر", "نور"];
+
+    personas.sort((a, b) => {
+      const ia = preferredOrder.findIndex((n) => (a.name || "").includes(n));
+      const ib = preferredOrder.findIndex((n) => (b.name || "").includes(n));
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+
     const attentionModifier =
       classroomStyle === "disruptive" ? -15 : classroomStyle === "disengaged" ? -20 : 0;
 

@@ -54,6 +54,13 @@ export default async function LiveSessionPage({
     };
   });
 
+  const preferredOrder = ["ريم", "سلطان", "فهد", "جوري", "سارة", "ياسين", "عمر", "نور"];
+  students.sort((a, b) => {
+    const ia = preferredOrder.findIndex((n) => (a.name || "").includes(n));
+    const ib = preferredOrder.findIndex((n) => (b.name || "").includes(n));
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+
   return (
     <LiveRoom
       sessionId={session.id}

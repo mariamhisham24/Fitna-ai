@@ -55,7 +55,12 @@ const words = {
     roleAdminTitle: "مشرف تربوي / مؤسسة",
     roleAdminDesc: "إدارة وتدريب فريق المعلمين ومتابعة نموهم",
     demoBtn: "تجربة المنصة فوراً بحساب تجريبي (بدون تسجيل)",
-    demoSub: "وصول كامل ومجاني للمعلم والمحاكاة بنقرة واحدة"
+    demoSub: "وصول كامل ومجاني للمعلم والمحاكاة بنقرة واحدة",
+    nationalityQuestion: "الجنسية",
+    nationalityEgTitle: "مصري",
+    nationalityEgDesc: "معلّم مصري",
+    nationalitySaTitle: "سعودي",
+    nationalitySaDesc: "معلّم سعودي"
   },
   sa: {
     dir: "rtl",
@@ -99,7 +104,12 @@ const words = {
     roleAdminTitle: "مشرف تربوي / مؤسسة تعليمية",
     roleAdminDesc: "إدارة وتدريب فريق المعلمين ومتابعة كفاءتهم المهنية",
     demoBtn: "تجربة المنصة فوراً بحساب تجريبي (بدون تسجيل)",
-    demoSub: "وصول كامل ومجاني للمعلم والمحاكاة بنقرة واحدة"
+    demoSub: "وصول كامل ومجاني للمعلم والمحاكاة بنقرة واحدة",
+    nationalityQuestion: "الجنسية",
+    nationalityEgTitle: "مصري",
+    nationalityEgDesc: "معلّم مصري",
+    nationalitySaTitle: "سعودي",
+    nationalitySaDesc: "معلّم سعودي"
   },
   en: {
     dir: "ltr",
@@ -143,7 +153,12 @@ const words = {
     roleAdminTitle: "Leader / Institution",
     roleAdminDesc: "Manage and train teacher teams",
     demoBtn: "1-Click Instant Demo (No Signup Required)",
-    demoSub: "Full instant access to the simulation & classroom"
+    demoSub: "Full instant access to the simulation & classroom",
+    nationalityQuestion: "Nationality",
+    nationalityEgTitle: "Egyptian",
+    nationalityEgDesc: "Egyptian Teacher",
+    nationalitySaTitle: "Saudi",
+    nationalitySaDesc: "Saudi Teacher"
   }
 };
 
@@ -201,13 +216,16 @@ function LoginPageContent() {
     document.documentElement.dir = nextLang === "en" ? "ltr" : "rtl";
   };
 
-  const toggleMarket = () => {
-    const nextMarket = market === "sa" ? "eg" : "sa";
+  const handleSelectMarket = (nextMarket: Market) => {
     setMarket(nextMarket);
     document.cookie = `fitna_market=${nextMarket}; path=/; max-age=31536000; SameSite=Lax`;
     if (typeof localStorage !== "undefined") {
       localStorage.setItem("fitna_market", nextMarket);
     }
+  };
+
+  const toggleMarket = () => {
+    handleSelectMarket(market === "sa" ? "eg" : "sa");
   };
 
   const searchParams = useSearchParams();
@@ -255,7 +273,7 @@ function LoginPageContent() {
               className="px-2.5 py-1 rounded-full text-xs font-semibold border transition-all duration-150 flex items-center gap-1 cursor-pointer border-amber-400/40 text-amber-300 hover:bg-amber-400/10 hover:border-amber-400"
               title={lang === "ar" ? "انقر للتبديل بين مصر والسعودية" : "Toggle Region"}
             >
-              <span>{market === "sa" ? "🇸🇦 السعودية" : "🇪🇬 مصر"}</span>
+              <span>{market === "sa" ? "السعودية" : "مصر"}</span>
             </button>
             <button className="auth-lang" onClick={flipLang}>
               {t.language}
@@ -541,6 +559,58 @@ function LoginPageContent() {
                     </div>
                     <p style={{ margin: 0, fontSize: "11px", color: "var(--muted)", lineHeight: "1.5" }}>
                       {t.roleAdminDesc}
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Nationality / Market Selection inside Sign Up */}
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ fontSize: "11px", fontWeight: "700", marginBottom: "8px", display: "block" }}>
+                  {t.nationalityQuestion}
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectMarket("eg")}
+                    style={{
+                      textAlign: "inherit",
+                      padding: "12px 14px",
+                      borderRadius: "12px",
+                      border: market === "eg" ? "2px solid var(--teal)" : "1px solid var(--border)",
+                      background: market === "eg" ? "color-mix(in srgb, var(--teal) 14%, transparent)" : "color-mix(in srgb, var(--background) 40%, transparent)",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      boxShadow: market === "eg" ? "0 0 14px rgba(18,184,196,0.18)" : "none",
+                    }}
+                  >
+                    <span style={{ fontSize: "12px", fontWeight: "700", display: "block", marginBottom: "4px", color: "var(--foreground)" }}>
+                      {t.nationalityEgTitle}
+                    </span>
+                    <p style={{ margin: 0, fontSize: "11px", color: "var(--muted)", lineHeight: "1.5" }}>
+                      {t.nationalityEgDesc}
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectMarket("sa")}
+                    style={{
+                      textAlign: "inherit",
+                      padding: "12px 14px",
+                      borderRadius: "12px",
+                      border: market === "sa" ? "2px solid var(--teal)" : "1px solid var(--border)",
+                      background: market === "sa" ? "color-mix(in srgb, var(--teal) 14%, transparent)" : "color-mix(in srgb, var(--background) 40%, transparent)",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      boxShadow: market === "sa" ? "0 0 14px rgba(18,184,196,0.18)" : "none",
+                    }}
+                  >
+                    <span style={{ fontSize: "12px", fontWeight: "700", display: "block", marginBottom: "4px", color: "var(--foreground)" }}>
+                      {t.nationalitySaTitle}
+                    </span>
+                    <p style={{ margin: 0, fontSize: "11px", color: "var(--muted)", lineHeight: "1.5" }}>
+                      {t.nationalitySaDesc}
                     </p>
                   </button>
                 </div>

@@ -198,7 +198,7 @@ export function initializeStudentBrain(
 }
 
 export function getActionDescription(action: StudentPhysicalAction, name: string): string {
-  const isFemale = name === "سارة" || name === "نور";
+  const isFemale = name === "سارة" || name === "نور" || name === "ريم" || name === "جوري";
   switch (action) {
     case "hand_raised":
       return isFemale ? `${name} رافعة إيدها بهدوء ومستنية دورها` : `${name} رافع إيده بحماس ومستني يجاوب`;

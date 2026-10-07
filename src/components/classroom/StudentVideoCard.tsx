@@ -5,7 +5,15 @@ import { VisemeAvatarCanvas } from "./VisemeAvatarCanvas";
 import { useVisemeClassifier } from "@/lib/audio/visemeClassifier";
 import { Zap, Hand, Moon, Volume2, CheckCircle2 } from "lucide-react";
 
-export type StudentPersonaId = "sara" | "omar" | "yassin" | "nour";
+export type StudentPersonaId =
+  | "sara"
+  | "omar"
+  | "yassin"
+  | "nour"
+  | "reem"
+  | "sultan"
+  | "fahd"
+  | "jouri";
 
 interface StudentVideoCardProps {
   name: string;
@@ -31,6 +39,12 @@ export function StudentVideoCard({
   // Normalize name to persona key
   const personaKey: StudentPersonaId = useMemo(() => {
     const trimmed = name.trim().toLowerCase();
+    // Saudi personas
+    if (trimmed.includes("ريم") || trimmed.includes("reem")) return "reem";
+    if (trimmed.includes("سلطان") || trimmed.includes("sultan")) return "sultan";
+    if (trimmed.includes("فهد") || trimmed.includes("fahd")) return "fahd";
+    if (trimmed.includes("جوري") || trimmed.includes("jouri") || trimmed.includes("juri")) return "jouri";
+    // Egyptian personas
     if (trimmed.includes("عمر") || trimmed.includes("omar")) return "omar";
     if (trimmed.includes("سارة") || trimmed.includes("sara")) return "sara";
     if (trimmed.includes("ياسين") || trimmed.includes("yassin")) return "yassin";
@@ -75,6 +89,38 @@ export function StudentVideoCard({
           glow: "rgba(168, 85, 247, 0.45)",
           ringColor: "ring-purple-400",
           accentColor: "#A855F7",
+        };
+      case "reem":
+        return {
+          pillBg: "bg-purple-600",
+          pillBorder: "border-purple-400/40",
+          glow: "rgba(168, 85, 247, 0.45)",
+          ringColor: "ring-purple-400",
+          accentColor: "#A855F7",
+        };
+      case "sultan":
+        return {
+          pillBg: "bg-amber-600",
+          pillBorder: "border-amber-400/40",
+          glow: "rgba(245, 158, 11, 0.45)",
+          ringColor: "ring-amber-400",
+          accentColor: "#F59E0B",
+        };
+      case "fahd":
+        return {
+          pillBg: "bg-emerald-600",
+          pillBorder: "border-emerald-400/40",
+          glow: "rgba(16, 185, 129, 0.45)",
+          ringColor: "ring-emerald-400",
+          accentColor: "#10B981",
+        };
+      case "jouri":
+        return {
+          pillBg: "bg-cyan-600",
+          pillBorder: "border-cyan-400/40",
+          glow: "rgba(6, 182, 212, 0.45)",
+          ringColor: "ring-cyan-400",
+          accentColor: "#06B6D4",
         };
     }
   }, [personaKey]);

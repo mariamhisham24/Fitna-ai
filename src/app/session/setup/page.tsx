@@ -10,10 +10,14 @@ const FALLBACK_TOPICS = [
 ];
 
 const FALLBACK_PERSONAS = [
-  { id: "p-sara", name: "سارة", age: 10, base_attention: 88, strengths: ["متفوقة ومنظمة"], weaknesses: ["حساسة للمقاطعة"] },
-  { id: "p-yassin", name: "ياسين", age: 10, base_attention: 75, strengths: ["مجتهد وعملي"], weaknesses: ["مفاهيم ملتبسة أحياناً"] },
-  { id: "p-omar", name: "عمر", age: 10, base_attention: 65, strengths: ["نشيط ومتحمس"], weaknesses: ["تشتت الانتباه بسرعة"] },
-  { id: "p-nour", name: "نور", age: 9, base_attention: 50, strengths: ["هادئة وتفكر بعمق"], weaknesses: ["خجولة وتحتاج تشجيع"] },
+  { id: "p-sara", name: "سارة", age: 10, dialect: "egyptian_arabic", base_attention: 88, strengths: ["متفوقة ومنظمة"], weaknesses: ["حساسة للمقاطعة"] },
+  { id: "p-yassin", name: "ياسين", age: 10, dialect: "egyptian_arabic", base_attention: 75, strengths: ["مجتهد وعملي"], weaknesses: ["مفاهيم ملتبسة أحياناً"] },
+  { id: "p-omar", name: "عمر", age: 10, dialect: "egyptian_arabic", base_attention: 65, strengths: ["نشيط ومتحمس"], weaknesses: ["تشتت الانتباه بسرعة"] },
+  { id: "p-nour", name: "نور", age: 9, dialect: "egyptian_arabic", base_attention: 50, strengths: ["هادئة وتفكر بعمق"], weaknesses: ["خجولة وتحتاج تشجيع"] },
+  { id: "p-reem", name: "ريم", age: 10, dialect: "saudi_arabic", base_attention: 88, strengths: ["متفوقة ومنظمة"], weaknesses: ["حساسة للمقاطعة"] },
+  { id: "p-sultan", name: "سلطان", age: 10, dialect: "saudi_arabic", base_attention: 75, strengths: ["مجتهد وعملي"], weaknesses: ["مفاهيم ملتبسة أحياناً"] },
+  { id: "p-fahd", name: "فهد", age: 10, dialect: "saudi_arabic", base_attention: 65, strengths: ["نشيط ومتحمس"], weaknesses: ["تشتت الانتباه بسرعة"] },
+  { id: "p-jouri", name: "جوري", age: 9, dialect: "saudi_arabic", base_attention: 50, strengths: ["هادئة وتفكر بعمق"], weaknesses: ["خجولة وتحتاج تشجيع"] },
 ];
 
 async function withTimeout<T>(promise: PromiseLike<any>, ms: number, fallback: any): Promise<any> {
@@ -52,7 +56,7 @@ export default async function SessionSetupPage() {
   const personasRes = await withTimeout(
     db
       .from("student_personas")
-      .select("id, name, age, base_attention, strengths, weaknesses")
+      .select("id, name, age, dialect, base_attention, strengths, weaknesses")
       .order("created_at", { ascending: true }),
     10000,
     { data: null, error: null }

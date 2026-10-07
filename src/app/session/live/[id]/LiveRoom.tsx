@@ -731,7 +731,7 @@ export function LiveRoom({
           }
         } else if (!loggedSystemEvent && s.state === "distracted" && prevStudent?.state !== "distracted") {
           loggedSystemEvent = true;
-          const isFemale = s.name === "سارة" || s.name === "نور";
+          const isFemale = s.name === "سارة" || s.name === "نور" || s.name === "ريم" || s.name === "جوري";
           addEvent(
             `${s.name}: ${
               isRtl
@@ -744,7 +744,7 @@ export function LiveRoom({
           );
         } else if (!loggedSystemEvent && s.state === "hand_raised" && prevStudent?.state !== "hand_raised") {
           loggedSystemEvent = true;
-          const isFemale = s.name === "سارة" || s.name === "نور";
+          const isFemale = s.name === "سارة" || s.name === "نور" || s.name === "ريم" || s.name === "جوري";
           addEvent(
             `${s.name}: ${
               isRtl
@@ -1222,7 +1222,7 @@ export function LiveRoom({
             const hasAccumulatedText = nativeTranscriptAccumulatorRef.current.trim().length >= 2;
             const currentAccText = nativeTranscriptAccumulatorRef.current.trim();
             const isQuestionOrCall =
-              /(?:[؟?]|ليه|إيه|ايه|إزاي|ازاي|مين|هل|متى|أين|اين|كام|كم|فين|ليش|وش|شو|كيف|ايش|يا\s*(?:سارة|عمر|ياسين|نور|ولاد|شباب|جماعة|شطار|عيال|بنات)|جاوب|قول|جاوبي|قولي|شاركونا|شاركينا|تفضلي|اتفضلي|اتفضل|تفضل|تفضلوا)\b/i.test(
+              /(?:[؟?]|ليه|إيه|ايه|إزاي|ازاي|مين|هل|متى|أين|اين|كام|كم|فين|ليش|وش|شو|كيف|ايش|يا\s*(?:سارة|عمر|ياسين|نور|ريم|سلطان|فهد|جوري|ولاد|شباب|جماعة|شطار|عيال|بنات)|جاوب|قول|جاوبي|قولي|شاركونا|شاركينا|تفضلي|اتفضلي|اتفضل|تفضل|تفضلوا)\b/i.test(
                 currentAccText
               );
             const effectiveSilenceMs = isQuestionOrCall ? 1200 : hasAccumulatedText ? 2000 : 2200;

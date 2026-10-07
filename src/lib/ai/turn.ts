@@ -302,7 +302,7 @@ export function sanitizeStudentResponse(
 
   // 3e. Intercept AI recovery / garbled phrases ("سببلي تاني", "متشوش")
   if (/(?:سببلي|متشوش|مشوش|سبب\s*لي)/i.test(text)) {
-    const isFemale = studentName === "سارة" || studentName === "نور";
+    const isFemale = studentName === "سارة" || studentName === "نور" || studentName === "ريم" || studentName === "جوري";
     text = `مش فاهم${isFemale ? "ة" : ""} قصدك ${cleanTitle}، ممكن تعيد السؤال؟`;
   }
 
@@ -318,7 +318,7 @@ export function sanitizeStudentResponse(
     .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?بالتأكيد(?=[\s.,?!،؛:؟]|$)/gi, "أكيد")
     .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?أجل(?=[\s.,?!،؛:؟]|$)/gi, "أيوه")
     .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?هيا\s*بنا(?=[\s.,?!،؛:؟]|$)/gi, "يلا")
-    .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?(?:لست\s*أدري|لا\s*أدري)(?=[\s.,?!،؛:؟]|$)/gi, studentName === "سارة" || studentName === "نور" ? "مش عارفة" : "مش عارف")
+    .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?(?:لست\s*أدري|لا\s*أدري)(?=[\s.,?!،؛:؟]|$)/gi, (studentName === "سارة" || studentName === "نور" || studentName === "ريم" || studentName === "جوري") ? "مش عارفة" : "مش عارف")
     .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?ماذا\s+تقصد[ي]?(?=[\s.,?!،؛:؟]|$)/gi, "قصدك إيه")
     .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?لماذا(?=[\s.,?!،؛:؟]|$)/gi, "ليه")
     .replace(/(?<=^|[\s.,?!،؛:؟])(?:و)?بالفعل(?=[\s.,?!،؛:؟]|$)/gi, "فعلاً")
@@ -355,7 +355,7 @@ export function sanitizeStudentResponse(
   // If denominators differ and teacher hasn't taught common denominators yet, block terms like "المقام المشترك"
   if (context?.hasUnlikeDenominators && !context?.isCommonDenominatorTaught) {
     if (/(?:مقام\s*مشترك|المقام\s*المشترك|توحيد\s*المقامات|المضاعف\s*المشترك)/i.test(text)) {
-      const isFemale = studentName === "سارة" || studentName === "نور";
+      const isFemale = studentName === "سارة" || studentName === "نور" || studentName === "ريم" || studentName === "جوري";
       text = `مش عارف${isFemale ? "ة" : ""} ${cleanTitle} عشان المقامات مختلفة ومش زي بعض.. إزاي نقارنهم؟`;
     }
   }

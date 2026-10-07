@@ -37,25 +37,7 @@ export function MarketSwitcher({ className = "" }: { className?: string }) {
         title={lang === "ar" ? "تغيير الدولة / السوق" : "Switch Region"}
         aria-expanded={open}
       >
-        {market === "sa" ? (
-          <span className="inline-flex items-center gap-1.5">
-            <svg className="w-4 h-3 rounded-xs shadow-xs shrink-0 overflow-hidden" viewBox="0 0 640 480">
-              <path fill="#006c35" d="M0 0h640v480H0z"/>
-              <path fill="#fff" d="M120 280h400v20H120zM220 180h200v40H220z"/>
-            </svg>
-            <span>السعودية</span>
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5">
-            <svg className="w-4 h-3 rounded-xs shadow-xs shrink-0 overflow-hidden" viewBox="0 0 640 480">
-              <path fill="#ce1126" d="M0 0h640v160H0z"/>
-              <path fill="#fff" d="M0 160h640v160H0z"/>
-              <path fill="#000" d="M0 320h640v160H0z"/>
-              <circle cx="320" cy="240" r="26" fill="#c09300"/>
-            </svg>
-            <span>مصر</span>
-          </span>
-        )}
+        <span>{market === "sa" ? "السعودية" : "مصر"}</span>
         <ChevronDown className={`w-3.5 h-3.5 opacity-70 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
 
@@ -72,12 +54,9 @@ export function MarketSwitcher({ className = "" }: { className?: string }) {
               market === "eg" ? "text-[#12B8C4] font-bold bg-white/5" : "text-white/90"
             }`}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-base leading-none">🇪🇬</span>
-              <div className="flex flex-col">
-                <span>مصر (Egypt)</span>
-                <span className="text-[10px] text-white/50 font-normal">بيئة مدرسية مصرية</span>
-              </div>
+            <div className="flex flex-col">
+              <span className="font-semibold">مصر (Egypt)</span>
+              <span className="text-[10px] text-white/50 font-normal">بيئة مدرسية مصرية</span>
             </div>
             {market === "eg" && <Check className="w-3.5 h-3.5 text-[#12B8C4]" />}
           </button>
@@ -89,12 +68,9 @@ export function MarketSwitcher({ className = "" }: { className?: string }) {
               market === "sa" ? "text-amber-300 font-bold bg-white/5" : "text-white/90"
             }`}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-base leading-none">🇸🇦</span>
-              <div className="flex flex-col">
-                <span>السعودية (KSA)</span>
-                <span className="text-[10px] text-white/50 font-normal">بيئة مدرسية سعودية (فصحى)</span>
-              </div>
+            <div className="flex flex-col">
+              <span className="font-semibold">السعودية (KSA)</span>
+              <span className="text-[10px] text-white/50 font-normal">بيئة مدرسية سعودية (فصحى)</span>
             </div>
             {market === "sa" && <Check className="w-3.5 h-3.5 text-amber-300" />}
           </button>

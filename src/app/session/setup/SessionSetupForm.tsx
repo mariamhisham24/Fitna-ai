@@ -9,13 +9,14 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MarketSwitcher } from "@/components/MarketSwitcher";
 import { signOutAction } from "@/app/(auth)/login/actions";
 import { useTranslation } from "@/lib/i18n/context";
-import { X, GraduationCap, UserCheck } from "lucide-react";
+import { X, GraduationCap, UserCheck, Globe, MessageSquare } from "lucide-react";
 
 type Topic = { id: string; title_ar: string; title_en: string | null };
 type Persona = {
   id: string;
   name: string;
   age: number;
+  dialect?: string;
   base_attention: number;
   strengths: string[];
   weaknesses: string[];
@@ -26,6 +27,20 @@ type TrainingObjective = "socratic_focus" | "talk_time_reduction" | "inclusive_e
 
 function getStudentPreviewAvatar(name: string): { key: string; image: string; ringColor: string } {
   const trimmed = name.trim().toLowerCase();
+  // Saudi students
+  if (trimmed.includes("ريم") || trimmed.includes("reem")) {
+    return { key: "reem", image: "/students/reem/neutral.jpg", ringColor: "border-purple-400 ring-2 ring-purple-400/30" };
+  }
+  if (trimmed.includes("سلطان") || trimmed.includes("sultan")) {
+    return { key: "sultan", image: "/students/sultan/neutral.jpg", ringColor: "border-amber-400 ring-2 ring-amber-400/30" };
+  }
+  if (trimmed.includes("فهد") || trimmed.includes("fahd")) {
+    return { key: "fahd", image: "/students/fahd/neutral.jpg", ringColor: "border-emerald-400 ring-2 ring-emerald-400/30" };
+  }
+  if (trimmed.includes("جوري") || trimmed.includes("jouri")) {
+    return { key: "jouri", image: "/students/jouri/neutral.jpg", ringColor: "border-cyan-400 ring-2 ring-cyan-400/30" };
+  }
+  // Egyptian students
   if (trimmed.includes("عمر") || trimmed.includes("omar")) {
     return { key: "omar", image: "/students/omar/neutral.jpg", ringColor: "border-teal-400 ring-2 ring-teal-400/30" };
   }
@@ -55,6 +70,14 @@ export function SessionSetupForm({
 
   type TeacherTitle = "يا مستر" | "يا ميس" | "يا أستاذ" | "يا أستاذة";
 
+  const [selectedDialect, setSelectedDialect] = useState<"sa" | "eg">(market === "sa" ? "sa" : "eg");
+  const isDialectSa = selectedDialect === "sa";
+
+  // Sync with top market button (مصر / السعودية) when it changes
+  useEffect(() => {
+    setSelectedDialect(market === "sa" ? "sa" : "eg");
+  }, [market]);
+
   const [topics, setTopics] = useState<Topic[]>(initialTopics);
   const [topicQuery, setTopicQuery] = useState("");
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
@@ -77,24 +100,62 @@ export function SessionSetupForm({
   const [teacherTitle, setTeacherTitle] = useState<TeacherTitle>(market === "sa" ? "يا أستاذ" : "يا مستر");
   const [teacherName, setTeacherName] = useState("");
 
+  const handleDialectChange = (dialect: "sa" | "eg") => {
+    setSelectedDialect(dialect);
+    if (dialect === "sa") {
+      setTeacherTitle((prev) => (prev === "يا ميس" || prev === "يا أستاذة" ? "يا أستاذة" : "يا أستاذ"));
+    } else {
+      setTeacherTitle((prev) => (prev === "يا ميس" || prev === "يا أستاذة" ? "يا ميس" : "يا مستر"));
+    }
+  };
+
+  const activePersonas = useMemo(() => {
+    if (selectedDialect === "sa") {
+      const saFromProps = personas.filter(
+        (p) => p.dialect === "saudi_arabic" || ["ريم", "سلطان", "فهد", "جوري"].some((n) => p.name.includes(n))
+      );
+      if (saFromProps.length >= 4) {
+        const order = ["ريم", "سلطان", "فهد", "جوري"];
+        return [...saFromProps].sort((a, b) => {
+          const ia = order.findIndex((o) => a.name.includes(o));
+          const ib = order.findIndex((o) => b.name.includes(o));
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        });
+      }
+      return [
+        { id: "p-reem", name: "ريم", age: 10, dialect: "saudi_arabic", base_attention: 88, strengths: ["متفوقة ومنظمة"], weaknesses: ["حساسة للمقاطعة"] },
+        { id: "p-sultan", name: "سلطان", age: 10, dialect: "saudi_arabic", base_attention: 75, strengths: ["مجتهد وعملي"], weaknesses: ["مفاهيم ملتبسة أحياناً"] },
+        { id: "p-fahd", name: "فهد", age: 10, dialect: "saudi_arabic", base_attention: 65, strengths: ["نشيط ومتحمس"], weaknesses: ["تشتت الانتباه بسرعة"] },
+        { id: "p-jouri", name: "جوري", age: 9, dialect: "saudi_arabic", base_attention: 50, strengths: ["هادئة وتفكر بعمق"], weaknesses: ["خجولة وتحتاج تشجيع"] },
+      ];
+    }
+    const egFromProps = personas.filter(
+      (p) => p.dialect === "egyptian_arabic" || ["سارة", "ياسين", "عمر", "نور"].some((n) => p.name.includes(n))
+    );
+    if (egFromProps.length >= 4) {
+      const order = ["سارة", "ياسين", "عمر", "نور"];
+      return [...egFromProps].sort((a, b) => {
+        const ia = order.findIndex((o) => a.name.includes(o));
+        const ib = order.findIndex((o) => b.name.includes(o));
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+    }
+    return [
+      { id: "p-sara", name: "سارة", age: 10, dialect: "egyptian_arabic", base_attention: 88, strengths: ["متفوقة ومنظمة"], weaknesses: ["حساسة للمقاطعة"] },
+      { id: "p-yassin", name: "ياسين", age: 10, dialect: "egyptian_arabic", base_attention: 75, strengths: ["مجتهد وعملي"], weaknesses: ["مفاهيم ملتبسة أحياناً"] },
+      { id: "p-omar", name: "عمر", age: 10, dialect: "egyptian_arabic", base_attention: 65, strengths: ["نشيط ومتحمس"], weaknesses: ["تشتت الانتباه بسرعة"] },
+      { id: "p-nour", name: "نور", age: 9, dialect: "egyptian_arabic", base_attention: 50, strengths: ["هادئة وتفكر بعمق"], weaknesses: ["خجولة وتحتاج تشجيع"] },
+    ];
+  }, [personas, selectedDialect]);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedTitle = localStorage.getItem("fitna_teacher_title") as TeacherTitle | null;
-      if (savedTitle) {
-        if (market === "sa") {
-          setTeacherTitle(savedTitle === "يا ميس" || savedTitle === "يا أستاذة" ? "يا أستاذة" : "يا أستاذ");
-        } else {
-          setTeacherTitle(savedTitle === "يا ميس" || savedTitle === "يا أستاذة" ? "يا ميس" : "يا مستر");
-        }
-      } else {
-        setTeacherTitle(market === "sa" ? "يا أستاذ" : "يا مستر");
-      }
       const savedName = localStorage.getItem("fitna_teacher_name");
       if (savedName) {
         setTeacherName(savedName);
       }
     }
-  }, [market]);
+  }, []);
 
   const handleTitleSelect = (title: TeacherTitle) => {
     setTeacherTitle(title);
@@ -204,7 +265,7 @@ export function SessionSetupForm({
           lessonContext,
           teacherTitle,
           teacherName: teacherName.trim(),
-          market,
+          market: selectedDialect,
         }),
       });
       const json = await res.json();
@@ -330,7 +391,7 @@ export function SessionSetupForm({
               {/* Option 1: Male Teacher */}
               <button
                 type="button"
-                onClick={() => handleTitleSelect(isSa ? "يا أستاذ" : "يا مستر")}
+                onClick={() => handleTitleSelect(isDialectSa ? "يا أستاذ" : "يا مستر")}
                 className={`flex items-center gap-3.5 p-4 rounded-2xl border text-start transition-all cursor-pointer ${
                   (teacherTitle === "يا مستر" || teacherTitle === "يا أستاذ")
                     ? "bg-[#12B8C4]/10 border-[#12B8C4] shadow-sm text-[#071B3A] dark:text-white ring-2 ring-[#12B8C4]/30"
@@ -349,7 +410,7 @@ export function SessionSetupForm({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-[#071B3A] dark:text-white">
-                      {isSa ? (isRtl ? "أستاذ (معلم)" : "Mr. (Male Teacher)") : (isRtl ? "مستر (معلم)" : "Mr. (Male Teacher)")}
+                      {isDialectSa ? (isRtl ? "أستاذ (معلم)" : "Mr. (Male Teacher)") : (isRtl ? "مستر (معلم)" : "Mr. (Male Teacher)")}
                     </span>
                     <span
                       className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
@@ -362,7 +423,7 @@ export function SessionSetupForm({
                     </span>
                   </div>
                   <p className="text-xs text-[#071B3A]/50 dark:text-white/50 mt-0.5">
-                    {isSa
+                    {isDialectSa
                       ? (isRtl ? "يناديك الطلاب: «يا أستاذ»" : "Students address you: «Mr.»")
                       : (isRtl ? "يناديك الطلاب: «يا مستر»" : "Students address you: «Mr.»")}
                   </p>
@@ -372,7 +433,7 @@ export function SessionSetupForm({
               {/* Option 2: Female Teacher */}
               <button
                 type="button"
-                onClick={() => handleTitleSelect(isSa ? "يا أستاذة" : "يا ميس")}
+                onClick={() => handleTitleSelect(isDialectSa ? "يا أستاذة" : "يا ميس")}
                 className={`flex items-center gap-3.5 p-4 rounded-2xl border text-start transition-all cursor-pointer ${
                   (teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة")
                     ? "bg-[#FFB52E]/15 border-[#FFB52E] shadow-sm text-[#071B3A] dark:text-white ring-2 ring-[#FFB52E]/30"
@@ -391,7 +452,7 @@ export function SessionSetupForm({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-[#071B3A] dark:text-white">
-                      {isSa ? (isRtl ? "أستاذة (معلمة)" : "Ms. (Female Teacher)") : (isRtl ? "ميس (معلمة)" : "Ms. (Female Teacher)")}
+                      {isDialectSa ? (isRtl ? "أستاذة (معلمة)" : "Ms. (Female Teacher)") : (isRtl ? "ميس (معلمة)" : "Ms. (Female Teacher)")}
                     </span>
                     <span
                       className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
@@ -404,7 +465,7 @@ export function SessionSetupForm({
                     </span>
                   </div>
                   <p className="text-xs text-[#071B3A]/50 dark:text-white/50 mt-0.5">
-                    {isSa
+                    {isDialectSa
                       ? (isRtl ? "يناديك الطلاب: «يا أستاذة»" : "Students address you: «Ms.»")
                       : (isRtl ? "يناديك الطلاب: «يا ميس»" : "Students address you: «Ms.»")}
                   </p>
@@ -1089,6 +1150,112 @@ export function SessionSetupForm({
             )}
           </section>
 
+          {/* Card: Virtual Classroom Dialect Selection */}
+          <section className="bg-white dark:bg-white/5 rounded-3xl border border-[#071B3A]/10 dark:border-white/10 p-6 sm:p-7 shadow-sm space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-sm font-bold text-[#071B3A] dark:text-white flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#12B8C4]" />
+                  <span>
+                    {isRtl ? "لهجة طلاب الفصل الافتراضي" : "Virtual Classroom Dialect"}
+                  </span>
+                </h2>
+                <p className="text-xs text-[#071B3A]/50 dark:text-white/50 mt-0.5">
+                  {isRtl
+                    ? "اختر لهجة حوار الطلاب وأصواتهم خلال المحاكاة"
+                    : "Choose students' dialogue dialect and voices during simulation"}
+                </p>
+              </div>
+              <span className="text-xs font-medium text-[#12B8C4] bg-[#12B8C4]/10 border border-[#12B8C4]/20 px-3 py-1 rounded-full">
+                {isRtl ? "حفظ تلقائي" : "Auto-save"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+              {/* Option 1: Egyptian Classroom (First in RTL grid -> displays on right) */}
+              <button
+                type="button"
+                onClick={() => handleDialectChange("eg")}
+                className={`flex items-center justify-between p-4 sm:p-5 rounded-2xl border text-start transition-all cursor-pointer ${
+                  !isDialectSa
+                    ? "bg-[#EBFBFC] dark:bg-[#12B8C4]/10 border-2 border-[#12B8C4] shadow-sm text-[#071B3A] dark:text-white ring-2 ring-[#12B8C4]/20"
+                    : "bg-[#FBF9F4] dark:bg-white/[0.03] border border-[#071B3A]/10 dark:border-white/10 text-[#071B3A]/70 dark:text-white/70 hover:border-[#12B8C4]/40 hover:bg-white dark:hover:bg-white/5"
+                }`}
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition ${
+                      !isDialectSa
+                        ? "bg-[#071B3A] text-[#12B8C4] shadow-sm border border-[#12B8C4]/30"
+                        : "bg-[#E9EEF2] dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-slate-700"
+                    }`}
+                  >
+                    <MessageSquare className={`w-5 h-5 ${!isDialectSa ? "text-[#12B8C4]" : "text-[#12B8C4]"}`} />
+                  </div>
+                  <div className="text-start">
+                    <span className="text-sm font-bold text-[#071B3A] dark:text-white block">
+                      {isRtl ? "فصل مصري (عمر، سارة، ياسين، نور)" : "Egyptian Classroom (Omar, Sara, Yassin, Nour)"}
+                    </span>
+                    <p className="text-xs text-[#071B3A]/60 dark:text-white/60 mt-0.5">
+                      {isRtl ? "طلاب يتحدثون باللهجة المصرية" : "Students speaking in Egyptian school dialect"}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ms-3 transition-colors ${
+                    !isDialectSa
+                      ? "border-[#12B8C4] bg-white dark:bg-[#071B3A]"
+                      : "border-slate-300 dark:border-slate-600 bg-transparent"
+                  }`}
+                >
+                  {!isDialectSa && <span className="w-2.5 h-2.5 rounded-full bg-[#12B8C4]" />}
+                </div>
+              </button>
+
+              {/* Option 2: Saudi Classroom (Second in RTL grid -> displays on left) */}
+              <button
+                type="button"
+                onClick={() => handleDialectChange("sa")}
+                className={`flex items-center justify-between p-4 sm:p-5 rounded-2xl border text-start transition-all cursor-pointer ${
+                  isDialectSa
+                    ? "bg-[#FFF8ED] dark:bg-[#E5A93C]/10 border-2 border-[#E5A93C] shadow-sm text-[#071B3A] dark:text-white ring-2 ring-[#E5A93C]/20"
+                    : "bg-[#FBF9F4] dark:bg-white/[0.03] border border-[#071B3A]/10 dark:border-white/10 text-[#071B3A]/70 dark:text-white/70 hover:border-[#E5A93C]/40 hover:bg-white dark:hover:bg-white/5"
+                }`}
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition ${
+                      isDialectSa
+                        ? "bg-[#081830] text-[#E5A93C] shadow-sm border border-[#E5A93C]/40"
+                        : "bg-[#E9EEF2] dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-slate-700"
+                    }`}
+                  >
+                    <Globe className="w-5 h-5 text-[#E5A93C]" />
+                  </div>
+                  <div className="text-start">
+                    <span className="text-sm font-bold text-[#071B3A] dark:text-white block">
+                      {isRtl ? "فصل سعودي (ريم، سلطان، فهد، جوري)" : "Saudi Classroom (Reem, Sultan, Fahd, Jouri)"}
+                    </span>
+                    <p className="text-xs text-[#071B3A]/60 dark:text-white/60 mt-0.5">
+                      {isRtl ? "طلاب يتحدثون باللهجة السعودية" : "Students speaking in Saudi school dialect"}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ms-3 transition-colors ${
+                    isDialectSa
+                      ? "border-[#E5A93C] bg-white dark:bg-[#071B3A]"
+                      : "border-slate-300 dark:border-slate-600 bg-transparent"
+                  }`}
+                >
+                  {isDialectSa && <span className="w-2.5 h-2.5 rounded-full bg-[#E5A93C]" />}
+                </div>
+              </button>
+            </div>
+          </section>
+
           {/* Card 6: Student Personas Preview */}
           <section className="bg-white dark:bg-white/5 rounded-3xl border border-[#071B3A]/10 dark:border-white/10 p-6 sm:p-7 shadow-sm space-y-4">
             <div className="flex justify-between items-center">
@@ -1097,13 +1264,13 @@ export function SessionSetupForm({
                   <span className="w-2.5 h-2.5 rounded-full bg-[#12B8C4]" />
                   <span>
                     {isRtl
-                      ? `معاينة طلاب الفصل الافتراضي (${personas.length} طلاب)`
-                      : `Virtual Classroom Students (${personas.length} Personas)`}
+                      ? `معاينة طلاب الفصل ${isDialectSa ? "السعودي" : "المصري"} الافتراضي (${activePersonas.length} طلاب)`
+                      : `Virtual Classroom Students (${activePersonas.length} Personas)`}
                   </span>
                 </h2>
                 <p className="text-xs text-[#071B3A]/50 dark:text-white/50 mt-0.5">
                   {isRtl
-                    ? "الشخصيات التي ستتفاعل معك بالصوت والنص خلال الجلسة"
+                    ? `الشخصيات ${isDialectSa ? "السعودية" : "المصرية"} التي ستتفاعل معك بالصوت والنص خلال الجلسة`
                     : "Real-time AI personas responding to voice and pedagogical cues"}
                 </p>
               </div>
@@ -1113,7 +1280,7 @@ export function SessionSetupForm({
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-1">
-              {personas.map((p, idx) => {
+              {activePersonas.map((p, idx) => {
                 const avatar = getStudentPreviewAvatar(p.name);
                 const colorSchemes = [
                   { bg: "bg-[#12B8C4]/20", text: "text-[#12B8C4]", bar: "bg-[#12B8C4]" },

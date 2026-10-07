@@ -255,28 +255,10 @@ export function HomeClient({
             <button
               type="button"
               onClick={() => handleSelectMarket(market === "sa" ? "eg" : "sa")}
-              className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-2 cursor-pointer shadow-sm border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 dark:border-amber-400/40 hover:border-amber-500"
+              className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 cursor-pointer shadow-sm border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 dark:border-amber-400/40 hover:border-amber-500"
               title={lang === "ar" ? "انقر للتبديل بين مصر والسعودية" : "Toggle Region"}
             >
-              {market === "sa" ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <svg className="w-4 h-3 rounded-xs shadow-xs shrink-0 overflow-hidden" viewBox="0 0 640 480">
-                    <path fill="#006c35" d="M0 0h640v480H0z"/>
-                    <path fill="#fff" d="M120 280h400v20H120zM220 180h200v40H220z"/>
-                  </svg>
-                  <span>السعودية</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5">
-                  <svg className="w-4 h-3 rounded-xs shadow-xs shrink-0 overflow-hidden" viewBox="0 0 640 480">
-                    <path fill="#ce1126" d="M0 0h640v160H0z"/>
-                    <path fill="#fff" d="M0 160h640v160H0z"/>
-                    <path fill="#000" d="M0 320h640v160H0z"/>
-                    <circle cx="320" cy="240" r="26" fill="#c09300"/>
-                  </svg>
-                  <span>مصر</span>
-                </span>
-              )}
+              <span>{market === "sa" ? "السعودية" : "مصر"}</span>
             </button>
 
             <ThemeToggle />

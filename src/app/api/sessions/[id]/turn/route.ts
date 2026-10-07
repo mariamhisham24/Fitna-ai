@@ -214,9 +214,17 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
     }
   }
 
-  // 1. Primary Source of Truth: Session-wide locked teacher title & market from Session Setup settings
+  // 1. Primary Source of Truth: Session personas dialect and session_config metadata
   let lockedTeacherTitle: string | null = null;
   let sessionMarket: "eg" | "sa" = "eg";
+
+  // Authoritative check: If session students are Saudi personas, session is definitively Saudi
+  if (personas && personas.some((p: any) => p.dialect === "saudi_arabic")) {
+    sessionMarket = "sa";
+  } else if (personas && personas.some((p: any) => p.dialect === "egyptian_arabic")) {
+    sessionMarket = "eg";
+  }
+
   for (const e of chronologicalEvents) {
     if (e.event_type === "session_config" && e.metadata) {
       const meta = e.metadata as {
@@ -234,13 +242,6 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
         lockedTeacherTitle = meta.teacher_title;
         break;
       }
-    }
-  }
-
-  if (sessionMarket === "eg") {
-    const cookieMarket = request.cookies.get("fitna_market")?.value;
-    if (cookieMarket === "sa") {
-      sessionMarket = "sa";
     }
   }
 

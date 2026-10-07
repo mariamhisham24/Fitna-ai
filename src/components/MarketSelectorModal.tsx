@@ -51,8 +51,7 @@ export function MarketSelectorModal({ isOpen, onSelect }: MarketSelectorModalPro
             className="group p-5 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] border-2 border-white/10 hover:border-[#12B8C4] transition-all duration-200 text-start flex flex-col justify-between gap-4 cursor-pointer hover:-translate-y-1 hover:shadow-[0_12px_24px_-4px_rgba(18,184,196,0.3)] relative overflow-hidden"
           >
             <div className="flex items-start justify-between">
-              <span className="text-4xl">🇪🇬</span>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#12B8C4]/20 text-[#12B8C4] border border-[#12B8C4]/40">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#12B8C4]/20 text-[#12B8C4] border border-[#12B8C4]/40">
                 مصر
               </span>
             </div>
@@ -77,8 +76,7 @@ export function MarketSelectorModal({ isOpen, onSelect }: MarketSelectorModalPro
             className="group p-5 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] border-2 border-white/10 hover:border-amber-400 transition-all duration-200 text-start flex flex-col justify-between gap-4 cursor-pointer hover:-translate-y-1 hover:shadow-[0_12px_24px_-4px_rgba(251,191,36,0.3)] relative overflow-hidden"
           >
             <div className="flex items-start justify-between">
-              <span className="text-4xl">🇸🇦</span>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40">
                 المملكة العربية السعودية
               </span>
             </div>
