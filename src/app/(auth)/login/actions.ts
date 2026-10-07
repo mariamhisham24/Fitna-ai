@@ -113,7 +113,7 @@ export async function signUpAction(
       password,
       options: {
         data: { full_name: fullName, role, market },
-        emailRedirectTo: `${appUrl}/auth/confirm?next=${role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher"}`,
+        emailRedirectTo: `${appUrl}/auth/confirm?next=${role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher?tour=1"}`,
       },
     });
 
@@ -141,7 +141,7 @@ export async function signUpAction(
 
     // If session was granted immediately (email confirmation disabled in Supabase)
     if (data?.session) {
-      const targetDashboard = role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
+      const targetDashboard = role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher?tour=1";
       return { error: null, redirectTo: targetDashboard };
     } else {
       // Email confirmation is required by Supabase project settings

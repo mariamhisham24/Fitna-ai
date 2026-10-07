@@ -282,4 +282,32 @@ export interface Dictionary {
     langEnglish: string;
     savePreferences: string;
   };
+  onboarding: {
+    badge: string;
+    stepOf: string;
+    skip: string;
+    next: string;
+    back: string;
+    startTour: string;
+    finishAndStart: string;
+    close: string;
+    manualButton: string;
+    step1Title: string;
+    step1Desc: string;
+    step2Title: string;
+    step2Desc: string;
+    step3Title: string;
+    step3Desc: string;
+    step4Title: string;
+    step4Desc: string;
+    step5Title: string;
+    step5Desc: string;
+    step5MetricsTitle: string;
+    step5MetricTtt: string;
+    step5MetricSocratic: string;
+    step5MetricInclusion: string;
+    step5MetricPatterns: string;
+    step6Title: string;
+    step6Desc: string;
+  };
 }

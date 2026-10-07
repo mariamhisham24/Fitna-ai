@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { SettingsForm } from "@/app/settings/SettingsForm";
 import { useTranslation } from "@/lib/i18n/context";
+import { HelpCircle } from "lucide-react";
 
 type Profile = {
   full_name: string | null;
@@ -19,10 +20,12 @@ export function SettingsModal({
   isOpen,
   onClose,
   profile,
+  onStartTour,
 }: {
   isOpen: boolean;
   onClose: () => void;
   profile: Profile;
+  onStartTour?: () => void;
 }) {
   const { t, lang } = useTranslation();
   const isRtl = lang === "ar";
@@ -94,21 +97,37 @@ export function SettingsModal({
         </div>
 
         {/* Modal Footer Controls */}
-        <div className="px-6 sm:px-8 py-4 bg-white dark:bg-[#071B3A] border-t border-[#071B3A]/5 dark:border-white/10 flex justify-end items-center gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl text-xs font-bold text-[#071B3A]/60 dark:text-white/60 hover:text-[#071B3A] dark:hover:text-white hover:bg-[#F6F0E4] dark:hover:bg-white/5 transition cursor-pointer"
-          >
-            {isRtl ? "إلغاء" : "Cancel"}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-6 py-2 rounded-xl bg-[#071B3A] dark:bg-[#143566] text-white font-bold text-xs hover:bg-[#0B2246] dark:hover:bg-[#1c447e] transition shadow cursor-pointer border border-white/10"
-          >
-            {isRtl ? "تم" : "Done"}
-          </button>
+        <div className="px-6 sm:px-8 py-4 bg-white dark:bg-[#071B3A] border-t border-[#071B3A]/5 dark:border-white/10 flex justify-between items-center gap-3 shrink-0">
+          {onStartTour ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onStartTour();
+              }}
+              className="px-3 py-1.5 rounded-xl border border-[#12B8C4]/30 hover:border-[#12B8C4] text-[#12B8C4] hover:bg-[#12B8C4]/10 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+            >
+              <HelpCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{t.onboarding?.manualButton || (isRtl ? "دليل الاستخدام" : "User Guide")}</span>
+            </button>
+          ) : <div />}
+
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2 rounded-xl text-xs font-bold text-[#071B3A]/60 dark:text-white/60 hover:text-[#071B3A] dark:hover:text-white hover:bg-[#F6F0E4] dark:hover:bg-white/5 transition cursor-pointer"
+            >
+              {isRtl ? "إلغاء" : "Cancel"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 rounded-xl bg-[#071B3A] dark:bg-[#143566] text-white font-bold text-xs hover:bg-[#0B2246] dark:hover:bg-[#1c447e] transition shadow cursor-pointer border border-white/10"
+            >
+              {isRtl ? "تم" : "Done"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

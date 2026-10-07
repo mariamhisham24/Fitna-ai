@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -10,7 +10,8 @@ import { signOutAction } from "@/app/(auth)/login/actions";
 import { useTranslation } from "@/lib/i18n/context";
 import { type Language, type Dictionary } from "@/lib/i18n";
 import { SettingsModal } from "./SettingsModal";
-import { Sparkles } from "lucide-react";
+import { Sparkles, HelpCircle } from "lucide-react";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 
 type Profile = {
   full_name: string | null;
@@ -49,10 +50,32 @@ export function TeacherDashboardClient({
   lang: Language;
 }) {
   const [showSettings, setShowSettings] = useState(false);
+  const [showTour, setShowTour] = useState(false);
   const { t, lang: ctxLang, market } = useTranslation();
   const activeLang = ctxLang || lang;
   const isRtl = activeLang === "ar";
   const isSa = market === "sa";
+
+  // Auto-launch onboarding tour for first-time users or if URL query ?tour=1
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isTourParam = urlParams.get("tour") === "1";
+      const storageKey = `fitna_has_seen_onboarding_${profile?.email || "user"}`;
+      const hasSeenTour =
+        localStorage.getItem(storageKey) === "true" ||
+        localStorage.getItem("fitna_has_seen_onboarding") === "true";
+
+      if (isTourParam || (!hasSeenTour && completed.length === 0)) {
+        const timer = setTimeout(() => {
+          setShowTour(true);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    } catch {
+      // safe fallback
+    }
+  }, [completed.length, profile?.email]);
 
   // Radius 38, Circumference = 238.76
   const radius = 38;
@@ -95,6 +118,19 @@ export function TeacherDashboardClient({
               <ThemeToggle />
             </div>
 
+            {/* User Guide / دليل الاستخدام Button */}
+            <button
+              type="button"
+              onClick={() => setShowTour(true)}
+              className="text-[#12B8C4] hover:text-[#12B8C4]/80 px-2.5 py-1.5 rounded-lg hover:bg-[#12B8C4]/10 transition-all duration-150 hover:scale-105 active:scale-95 inline-flex items-center gap-1.5 font-medium cursor-pointer border border-[#12B8C4]/25"
+              title={t.onboarding?.manualButton || (activeLang === "ar" ? "دليل الاستخدام" : "User Guide")}
+            >
+              <HelpCircle className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">
+                {t.onboarding?.manualButton || (activeLang === "ar" ? "دليل الاستخدام" : "User Guide")}
+              </span>
+            </button>
+
             {/* Open Settings Card in Dashboard Button */}
             <button
               type="button"
@@ -121,7 +157,10 @@ export function TeacherDashboardClient({
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow flex flex-col gap-6">
         {/* Welcome Card - Clean & Compact SaaS Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white dark:bg-white/5 px-5 py-3.5 sm:py-4 rounded-xl border border-[#071B3A]/10 dark:border-white/10 shadow-sm">
+        <header
+          data-tour="dashboard-header"
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white dark:bg-white/5 px-5 py-3.5 sm:py-4 rounded-xl border border-[#071B3A]/10 dark:border-white/10 shadow-sm"
+        >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#12B8C4]/15 text-[#12B8C4] flex items-center justify-center font-bold text-sm shrink-0 border border-[#12B8C4]/25">
               {displayName.charAt(0).toUpperCase()}
@@ -160,6 +199,7 @@ export function TeacherDashboardClient({
             </div>
 
             <Link
+              data-tour="new-session-btn"
               href="/session/setup"
               className="group relative inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FFB52E] hover:bg-[#E5A93C] text-[#071B3A] font-bold text-xs shadow-md shadow-amber-400/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-400/30 active:translate-y-0 active:scale-95 overflow-hidden"
             >
@@ -175,7 +215,10 @@ export function TeacherDashboardClient({
         {/* Dashboard Sections Grid: 2/3 and 1/3 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Section 1 (2/3 width): Recent Simulations */}
-          <section className="lg:col-span-2 bg-white dark:bg-white/5 rounded-2xl border border-[#071B3A]/10 dark:border-white/10 p-5 sm:p-6 shadow-sm">
+          <section
+            data-tour="recent-simulations-card"
+            className="lg:col-span-2 bg-white dark:bg-white/5 rounded-2xl border border-[#071B3A]/10 dark:border-white/10 p-5 sm:p-6 shadow-sm"
+          >
             <div className="flex justify-between items-center pb-4 mb-4 border-b border-[#071B3A]/5 dark:border-white/10">
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-[#071B3A] dark:text-white">
@@ -292,7 +335,10 @@ export function TeacherDashboardClient({
           </section>
 
           {/* Section 2 (1/3 width): Overall Level Donut */}
-          <section className="bg-white dark:bg-white/5 rounded-2xl border border-[#071B3A]/10 dark:border-white/10 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+          <section
+            data-tour="overall-level-card"
+            className="bg-white dark:bg-white/5 rounded-2xl border border-[#071B3A]/10 dark:border-white/10 p-5 sm:p-6 shadow-sm flex flex-col justify-between"
+          >
             <div className="flex justify-between items-center">
               <h2 className="text-sm sm:text-base font-bold text-[#071B3A] dark:text-white">
                 {lang === "ar" ? "المستوى العام" : "Overall Level"}
@@ -389,6 +435,14 @@ export function TeacherDashboardClient({
               : "All rights reserved © 2026 Fitna AI Pedagogical System"}
           </span>
           <div className="flex items-center gap-6">
+            <button
+              type="button"
+              onClick={() => setShowTour(true)}
+              className="hover:text-[#12B8C4] transition cursor-pointer text-start flex items-center gap-1 text-[#12B8C4]/90 font-medium"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>{t.onboarding?.manualButton || (activeLang === "ar" ? "دليل الاستخدام" : "User Guide")}</span>
+            </button>
             <Link href="/" className="hover:text-[#071B3A] dark:hover:text-white transition">
               {lang === "ar" ? "المعايير المعتمدة" : "Standards"}
             </Link>
@@ -408,8 +462,16 @@ export function TeacherDashboardClient({
           isOpen={showSettings}
           onClose={() => setShowSettings(false)}
           profile={profile}
+          onStartTour={() => setShowTour(true)}
         />
       )}
+
+      {/* Interactive Onboarding Tour Modal & Spotlight */}
+      <OnboardingTour
+        isOpen={showTour}
+        onClose={() => setShowTour(false)}
+        storageKey={`fitna_has_seen_onboarding_${profile?.email || "user"}`}
+      />
     </div>
   );
 }
