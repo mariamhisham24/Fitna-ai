@@ -3,7 +3,7 @@
 import { useActionState, useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, UserRound, UsersRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, UserRound, UsersRound, BookOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserGuideButton } from "@/components/UserGuideButton";
 import { signInAction, signUpAction, requestPasswordResetAction, loginAsDemoAction, type ActionState } from "./actions";
@@ -268,7 +268,14 @@ function LoginPageContent() {
             {t.back}
           </Link>
           <div className="flex items-center gap-2">
-            <UserGuideButton />
+            <Link
+              href="/guide"
+              className="auth-lang !border-teal-400/40 !bg-teal-400/10 hover:!bg-teal-400/25 !text-teal-200 hover:!text-white shadow-sm font-semibold !text-xs !py-1 !px-3"
+              title="دليل استخدام فِطْنَة"
+            >
+              <BookOpen size={14} className="text-teal-300" />
+              <span>دليل الاستخدام</span>
+            </Link>
             <button
               type="button"
               onClick={toggleMarket}
