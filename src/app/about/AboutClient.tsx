@@ -27,53 +27,53 @@ interface AboutClientProps {
 export function AboutClient({
   isAuthenticated = false,
 }: AboutClientProps) {
-  // How it works steps
+  // How it works steps in pure Standard Arabic
   const howItWorks = [
     {
       num: "١",
-      title: "١. اتكلم زي ما انت بتكلم في فصل حقيقي",
-      desc: "اضغط زر المايك وابدأ الشرح أو الأسئلة أو التوبيخ — النظام بيحول صوتك لنص لحظيًا ويحلل نبرتك (ثقة، سرعة، حماس، توتر، دفء).",
+      title: "١. تحدث بطبيعتك كما في الفصل الحقيقي",
+      desc: "انقر على زر الميكروفون وابدأ بالشرح أو طرح الأسئلة أو التوجيه — يُحوّل النظام صوتك إلى نص في الوقت الفعلي مع تحليل دقيق لنبرة الصوت (الثقة، السرعة، الحماس، الهدوء، والدفء).",
       icon: Mic,
     },
     {
       num: "٢",
-      title: "٢. الطلاب بيفكروا ويردوا لحظيًا",
-      desc: "كل طالب له عقل محاكٍ: نسبة استيعاب، ثقة، انتباه، وأخطاء مفاهيم حقيقية. بيختاروا يتكلموا أو يسكتوا أو يرفعوا إيدهم — وبيجاوبوا بلهجة أطفال حقيقية.",
+      title: "٢. تفكير وتفاعل فوري من الطلاب الافتراضيين",
+      desc: "يمتلك كل طالب نموذجًا إدراكيًا مستقلاً يشمل: معدل الاستيعاب، الانتباه، الأخطاء المفاهيمية الشائعة. يقرر الطلاب الإجابة أو الاستفسار أو رفع اليدين بأصوات ولهجات واقعية.",
       icon: Brain,
     },
     {
       num: "٣",
-      title: "٣. تقرير تقييم كامل في الآخر",
-      desc: "ستة محاور بيداغوجية (إدارة الفصل، التواصل، الأسئلة، الشمول، النبرة، التوقيت) بمعايير دانيالسون وCLASS، مع نقاط قوة وخطط تطوير عملية مبنية على حوارك فعليًا.",
+      title: "٣. تقرير تقييمي بيداغوجي متكامل",
+      desc: "تقييم مبني على ستة محاور تربوية (إدارة الصف، التواصل، مهارات الاستجواب، الشمول، النبرة، والتوقيت) وفق إطاري Danielson و CLASS، متضمنًا نقاط القوة وخطة تطوير إجرائية مخصصة.",
       icon: BarChart3,
     },
   ];
 
-  // Features grid (what makes it real)
+  // Features grid (what makes it real) in pure Standard Arabic
   const features = [
     {
-      title: "شخصيات طلاب ثابتة",
-      desc: "٤ شخصيات لكل لهجة بذكريات وأخطاء مفاهيم — ريم الفنانة، فهد الرياضي، سلطان المرح، وجوري القارئة.",
+      title: "شخصيات طلابية مستمرة",
+      desc: "أربع شخصيات محددة لكل بيئة تعليمية بذاكرة تراكمية وأخطاء مفاهيمية واقعية — ريم، وفهد، وسلطان، وجوري.",
       icon: Users,
     },
     {
-      title: "لهجتين حقيقيتين",
-      desc: "مصري وسعودي بتفاصيلهما — مش فصحى جامدة. كل برومبت مضبوط على اللهجة واللقب (يا مستر / يا أستاذ).",
+      title: "بيئات ولهجات متعددة",
+      desc: "دعم مخصص للهجتين المصرية والسعودية بدقة متناهية، مع مراعاة الألقاب والأنماط الثقافية المعتمدة في البيئة المدرسية.",
       icon: Languages,
     },
     {
-      title: "أحداث صف عشوائية",
-      desc: "كل ٣٠–٦٠ ثانية ممكن يحصل حدث حقيقي: همس جانبي، سؤال خارج الموضوع، تشتت موبايل، رفع إيد مفاجئ.",
+      title: "أحداث ومواقف صفية ديناميكية",
+      desc: "مواقف مفاجئة تحاكي الواقع الصفي: مقاطعات جانبية، أسئلة غير متوقعة، تشتت الانتباه، وتفاعل متنوع بين الطلاب.",
       icon: Dices,
     },
     {
-      title: "خصوصية بالكامل",
-      desc: "صوتك بيتعالج داخل الجلسة لإنتاج التقرير، ومفيش تخزين أو استخدام خارجي. بياناتك مشفّرة.",
+      title: "خصوصية وأمان تام للبيانات",
+      desc: "تتم معالجة الصوت حصرًا لإنتاج التقييم التربوي الخاص بك دون أي مشاركة أو تخزين خارجي، مع تشفير شامل لجميع البيانات.",
       icon: ShieldCheck,
     },
     {
-      title: "مقاطعة ذكية",
-      desc: "اتكلم وأي طالب بيتكلم — يوقف فورًا ويسمع لك، زي فصل حقيقي بالظبط. دي مهارة إدارة صف جوهرية تتدرب عليها.",
+      title: "مقاطعة ذكية في الوقت الفعلي",
+      desc: "تحدث أثناء إجابة أي طالب ليتوقف فورًا وينصت لتوجيهك تمامًا كما في الحصة الفعلية؛ لتنمية مهارة الحزم وإدارة الحوار الصفي.",
       icon: Headphones,
     },
   ];
@@ -130,30 +130,30 @@ export function AboutClient({
 
       {/* Main Container */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 flex-grow space-y-12 w-full">
-        {/* Header Hero Section */}
+        {/* Header Hero Section in pure Standard Arabic */}
         <section className="text-center space-y-3 pt-2">
           <h1 className="text-3xl sm:text-4xl font-black text-[#071B3A] dark:text-white tracking-tight">
             عن منصة فِطْنَة
           </h1>
           <p className="text-sm sm:text-base font-semibold text-[#12B8C4]">
-            أول فصل افتراضي بيتكلم بلهجتك — تدرّب على إدارة الصف قبل ما تدخله.
+            أول بيئة محاكاة صفية تفاعلية تحاكي واقعك التدريسي — تدرّب على إدارة الصف قبل دخوله الفعلي.
           </p>
         </section>
 
         {/* Section 1: What is Fitna? Card */}
         <section className="bg-white dark:bg-[#0A1A33] border border-[#071B3A]/10 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-sm transition-all">
           <h2 className="text-lg sm:text-xl font-black text-[#071B3A] dark:text-white mb-3">
-            إيه هي فِطْنة؟
+            ما هي منصة فِطْنَة؟
           </h2>
           <p className="text-xs sm:text-sm text-[#071B3A]/80 dark:text-white/80 leading-relaxed font-normal">
-            فِطْنة منصة تدريب للمعلمين بتحاكي فصل ابتدائي حقيقي بالذكاء الاصطناعي: ٤ طلاب لكل واحد شخصيته ومستواه وأسلوبه الخاص، بيسمعوا كلامك بصوتك، بيردوا عليك بالصوت ولهجة حقيقية (مصرية أو سعودية)، وبيتأثروا بطريقتك في الشرح والأسئلة والإدارة. الهدف: تجرّب مواقف الصف الصعبة — الطالب المشاغب، السؤال المفاجئ، الفقدان المفاجئ للانتباه — في مكان آمن قبل أول حصة حقيقية.
+            فِطْنَة هي منصة تدريب متطورة للمعلمين تُحاكي بيئة الفصل الابتدائي الحقيقي بالذكاء الاصطناعي التوليدي؛ حيث يتفاعل المعلم مع أربعة طلاب افتراضيين لكل منهم سماته النفسية ومستواه الأكاديمي وطريقته الخاصة في الاستجابة. يستمع الطلاب لصوتك ويتفاعلون معك بنبرات صوتية طبيعية، متأثرين بأسلوبك في الشرح وطرح الأسئلة والإدارة الصفية. تهدف المنصة إلى إتاحة مساحة آمنة لاختبار المواقف الصفية الصعبة، مثل التعامل مع الطلاب المشاغبين، والأسئلة المفاجئة، وضعف التركيز، قبل بدء الحصة الفعلية.
           </p>
         </section>
 
         {/* Section 2: How Does the Platform Work? */}
         <section className="space-y-4">
           <h2 className="text-base sm:text-lg font-black text-[#071B3A] dark:text-white px-1">
-            المنصة بتشتغل إزاي؟
+            كيف تعمل المنصة؟
           </h2>
 
           <div className="space-y-3.5">
@@ -184,7 +184,7 @@ export function AboutClient({
         {/* Section 3: What Makes the Experience Real? (Grid of Cards) */}
         <section className="space-y-4">
           <h2 className="text-base sm:text-lg font-black text-[#071B3A] dark:text-white px-1">
-            اللي بيخلي التجربة حقيقية
+            عوامل الواقعية في التجربة
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -231,16 +231,16 @@ export function AboutClient({
         <section className="bg-[#E6F8F9] dark:bg-[#082436] border border-[#12B8C4]/30 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-sm">
           <div className="space-y-1">
             <h3 className="text-sm sm:text-base font-black text-[#071B3A] dark:text-white">
-              لمين؟
+              الفئات المستهدفة
             </h3>
             <p className="text-xs sm:text-sm text-[#071B3A]/75 dark:text-white/75 max-w-2xl mx-auto leading-relaxed">
-              للمعلم الجديد قبل أول حصة، للمعلم المخضرم اللي عايز يجرّب استراتيجيات جديدة، وللمؤسسات تدريب المعلمين اللي عايزة قياس تطور فريقها عبر لوحة نمو واضحة.
+              مخصصة للمعلمين الجدد قبل بدء التدريس الفعلي، وللمعلمين ذوي الخبرة الراغبين بتجربة استراتيجيات صفية جديدة، ولمؤسسات إعداد وتأهيل المعلمين الساعية لقياس تقدم كوادرها بدقة.
             </p>
           </div>
 
           <div className="pt-2 space-y-3">
             <h4 className="text-base sm:text-lg font-black text-[#12B8C4]">
-              جاهز تدخل أول فصل افتراضي في حياتك؟
+              هل أنت مستعد لبدء أول جلسة محاكاة صفية؟
             </h4>
 
             <div className="flex flex-wrap items-center justify-center gap-3">
@@ -248,7 +248,7 @@ export function AboutClient({
                 href={isAuthenticated ? "/session/setup" : "/login"}
                 className="px-6 py-2.5 rounded-xl bg-[#12B8C4] hover:bg-[#0ea5b1] text-white font-bold text-xs sm:text-sm shadow-md transition-all duration-200 hover:scale-105 active:scale-95 inline-flex items-center gap-2 cursor-pointer"
               >
-                <span>ابدأ التدريب</span>
+                <span>ابدأ التدريب الآن</span>
                 <ArrowLeft className="w-4 h-4" />
               </Link>
 
