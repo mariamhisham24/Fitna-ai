@@ -265,9 +265,6 @@ export function HomeClient({
 
             <ThemeToggle />
 
-            {/* User Guide Pinned Navbar Button */}
-            <UserGuideButton />
-
             {/* Telegram Support Navbar Button */}
             <a
               href="https://t.me/fitnaai"

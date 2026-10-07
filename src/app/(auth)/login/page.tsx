@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, UserRound, UsersRound } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UserGuideButton } from "@/components/UserGuideButton";
 import { signInAction, signUpAction, requestPasswordResetAction, loginAsDemoAction, type ActionState } from "./actions";
 
 import { type Market } from "@/lib/i18n/types";
@@ -267,6 +268,7 @@ function LoginPageContent() {
             {t.back}
           </Link>
           <div className="flex items-center gap-2">
+            <UserGuideButton />
             <button
               type="button"
               onClick={toggleMarket}
