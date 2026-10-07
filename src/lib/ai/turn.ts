@@ -120,13 +120,25 @@ export function extractTeacherTitleAndGender(
 
   // 2. Session-wide locked title chosen in Session Setup (Primary Source of Truth)
   if (lockedTeacherTitle) {
+    let effectiveTitle = lockedTeacherTitle;
+    const isFemaleNameInTitle = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(
+      `${effectiveTitle} ${teacherFullName || ""}`
+    );
+    if (isFemaleNameInTitle) {
+      if (isSa) {
+        effectiveTitle = effectiveTitle.replace(/(?:يا\s*)?أستاذ\b/g, "يا أستاذة").replace(/(?:يا\s*)?مستر\b/g, "يا أستاذة");
+      } else {
+        effectiveTitle = effectiveTitle.replace(/(?:يا\s*)?مستر\b/g, "يا ميس").replace(/(?:يا\s*)?أستاذ\b/g, "يا ميس");
+      }
+    }
     const isFemale =
-      lockedTeacherTitle.includes("ميس") ||
-      lockedTeacherTitle.includes("أستاذة") ||
-      lockedTeacherTitle.includes("استاذة") ||
-      lockedTeacherTitle.includes("أبلة") ||
-      lockedTeacherTitle.includes("ابلة");
-    return { title: lockedTeacherTitle, isFemale };
+      isFemaleNameInTitle ||
+      effectiveTitle.includes("ميس") ||
+      effectiveTitle.includes("أستاذة") ||
+      effectiveTitle.includes("استاذة") ||
+      effectiveTitle.includes("أبلة") ||
+      effectiveTitle.includes("ابلة");
+    return { title: effectiveTitle, isFemale };
   }
 
   // 3. Fallback: Profile full name & feminine grammar markers (only if no title was chosen in Session Setup)
@@ -371,15 +383,22 @@ export function sanitizeStudentResponse(
   }
 
   // 5f. Teacher Title Consistency
-  if (cleanTitle.includes("ميس")) {
-    text = text.replace(/مستر\s+مريم/gi, "ميس مريم");
-    text = text.replace(/يا\s+مستر\s+مريم/gi, "يا ميس مريم");
+  const isFemaleCleanTitle =
+    cleanTitle.includes("ميس") ||
+    cleanTitle.includes("أستاذة") ||
+    cleanTitle.includes("استاذة") ||
+    cleanTitle.includes("أبلة") ||
+    cleanTitle.includes("ابلة");
+
+  if (isFemaleCleanTitle) {
+    text = text.replace(/(?:يا\s*)?(?:مستر|استاذ|أستاذ)\s+مريم/gi, cleanTitle.includes("أستاذة") ? "يا أستاذة مريم" : "يا ميس مريم");
+    text = text.replace(/أستاذ\s+مريم/gi, cleanTitle.includes("أستاذة") ? "أستاذة مريم" : "ميس مريم");
     text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:مستر|استاذ|أستاذ)(?:\s+[^\s.,?!،؛:]+)?(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
-    if (!text.includes(cleanTitle) && !text.includes("ميس مريم")) {
-      text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:ميس|مس|ابلة|أبلة)(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
+    if (!text.includes(cleanTitle) && !text.includes("مريم")) {
+      text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:ميس|مس|ابلة|أبلة|أستاذة|استاذة)(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
     }
-  } else if (cleanTitle.includes("مستر")) {
-    text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:ميس|مس|ابلة|أبلة)(?:\s+[^\s.,?!،؛:]+)?(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
+  } else {
+    text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:ميس|مس|ابلة|أبلة|أستاذة|استاذة)(?:\s+[^\s.,?!،؛:]+)?(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
     if (!text.includes(cleanTitle)) {
       text = text.replace(/(?<=^|[\s.,?!،؛:])(?:يا\s*)?(?:مستر|استاذ|أستاذ)(?=[\s.,?!،؛:]|$)/gi, cleanTitle);
     }
@@ -502,6 +521,7 @@ export async function generateStudentReactions(params: {
     studentsWithHandRaised,
     resolvedUnknownNames,
     lockedTeacherTitle,
+    activeStudentNames: personas.map((p) => p.name),
   });
   const decision = decideClassroomReaction(
     studentBrains,
@@ -954,6 +974,7 @@ export function generateFallbackReactions(params: {
     studentsWithHandRaised,
     resolvedUnknownNames,
     lockedTeacherTitle,
+    activeStudentNames: personas.map((p) => p.name),
   });
 
   const decision = decideClassroomReaction(

@@ -266,6 +266,20 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
     }
   }
 
+  // Sanitize lockedTeacherTitle to ensure female teachers (e.g. Mariam / مريم) are addressed correctly
+  if (lockedTeacherTitle) {
+    const isFemaleNameInTitle = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(
+      lockedTeacherTitle
+    );
+    if (isFemaleNameInTitle) {
+      if (isSa) {
+        lockedTeacherTitle = lockedTeacherTitle.replace(/(?:يا\s*)?أستاذ\b/g, "يا أستاذة").replace(/(?:يا\s*)?مستر\b/g, "يا أستاذة");
+      } else {
+        lockedTeacherTitle = lockedTeacherTitle.replace(/(?:يا\s*)?مستر\b/g, "يا ميس").replace(/(?:يا\s*)?أستاذ\b/g, "يا ميس");
+      }
+    }
+  }
+
   // 2. Only allow explicit verbal self-identification/correction during speech to override:
   const isFemaleSelf =
     /(?:أنا|انا)\s*(?:مش|غير|مو|لست)\s*(?:مستر|استاذ|أستاذ)|(?:أنا|انا)\s*(?:ميس|مس|معلمة|استاذة|أستاذة)/i.test(

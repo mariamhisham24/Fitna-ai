@@ -114,15 +114,22 @@ async function handleCreate(request: NextRequest) {
   }
 
   // Lock teacher title in session_events at ms 0 so students address the teacher accurately from turn 1
-  let cleanTitle: string;
-  if (market === "sa") {
-    cleanTitle = (teacherTitle === "يا أستاذة" || teacherTitle === "يا ميس") ? "يا أستاذة" : "يا أستاذ";
-  } else {
-    cleanTitle = (teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة") ? "يا ميس" : "يا مستر";
-  }
   let cleanName = teacherName ? teacherName.trim() : "";
   // Strip duplicate title if teacher typed "ميس مريم" or "مستر أحمد" or "أستاذة مريم" or "أستاذ أحمد"
   cleanName = cleanName.replace(/^(?:يا\s*)?(?:ميس|مس|مستر|استاذ|أستاذ|أستاذة|استاذة|أبلة|ابلة)\s+/i, "").trim();
+
+  // If the teacher has a female name (e.g. مريم / Mariam), strictly enforce female title!
+  const isFemaleTeacher =
+    teacherTitle === "يا أستاذة" ||
+    teacherTitle === "يا ميس" ||
+    /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(cleanName);
+
+  let cleanTitle: string;
+  if (market === "sa") {
+    cleanTitle = isFemaleTeacher ? "يا أستاذة" : "يا أستاذ";
+  } else {
+    cleanTitle = isFemaleTeacher ? "يا ميس" : "يا مستر";
+  }
   const fullTitle = cleanName ? `${cleanTitle} ${cleanName}` : cleanTitle;
 
   await supabase.from("session_events").insert({
@@ -134,7 +141,7 @@ async function handleCreate(request: NextRequest) {
       teacher_title: cleanTitle,
       teacher_name: cleanName,
       full_teacher_title: fullTitle,
-      is_female: cleanTitle === "يا ميس" || cleanTitle === "يا أستاذة",
+      is_female: isFemaleTeacher,
       market,
     },
     occurred_at_ms: 0,

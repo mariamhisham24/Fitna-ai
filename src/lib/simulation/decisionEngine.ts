@@ -31,6 +31,7 @@ export interface TeacherAnalysisContext {
   lastHandRaiseIntent?: Record<string, string>;
   resolvedUnknownNames?: string[];
   lockedTeacherTitle?: string | null;
+  activeStudentNames?: string[];
 }
 
 export interface TeacherAnalysis {
@@ -67,7 +68,10 @@ export interface DecisionResult {
   } | null;
 }
 
-export const CLASSROOM_ROSTER = ["عمر", "سارة", "ياسين", "نور"] as const;
+export const CLASSROOM_ROSTER = [
+  "عمر", "سارة", "ياسين", "نور",
+  "ريم", "سلطان", "فهد", "جوري"
+] as const;
 export type ClassroomStudent = (typeof CLASSROOM_ROSTER)[number];
 
 export const COLLECTIVE_CLASS_TERMS = [
@@ -104,8 +108,8 @@ function _analyzeTeacherIntentInternal(
 ): TeacherAnalysis {
   const clean = (teacherText || "").replace(/[إأآا]/g, "ا").trim();
 
-  const hasQuestionWord = /(?:مين|إيه|ايه|ليه|إزاي|ازاي|كام|كم|فين|منين|هل|قول|قولي|جاوب|جاوبي|حل)/i.test(clean);
-  const hasStudentName = /(?:عمر|عمار|سار[ةه]|ياسين|نور)/i.test(clean);
+  const hasQuestionWord = /(?:مين|إيه|ايه|ليه|إزاي|ازاي|كام|كم|فين|منين|هل|قول|قولي|جاوب|جاوبي|حل|وش|ليش)/i.test(clean);
+  const hasStudentName = /(?:عمر|عمار|سار[ةه]|ياسين|نور|ريم|سلطان|فهد|جور[ية])/i.test(clean);
 
   // 1. Check Repeated Utterance (Teacher said virtually the same statement again, without naming a student or asking a question)
   if (!hasStudentName && !hasQuestionWord && isRepeatedUtterance(teacherText, context?.lastTeacherUtterance)) {
@@ -121,11 +125,13 @@ function _analyzeTeacherIntentInternal(
   }
 
   // 2. Strict Silence Command
-  if (/اسكتوا\s*خالص|محدش\s*يتكلم|سكوت\s*تام|هدوء\s*تام/i.test(clean)) {
+  if (/اسكتوا\s*خالص|محدش\s*يتكلم|سكوت\s*تام|هدوء\s*تام|اسكتوا\s*يا\s*شباب|اسكتوا/i.test(clean)) {
     return {
       intent: "scolding",
       calledStudents: [],
-      excludedStudents: ["عمر", "سارة", "ياسين", "نور"],
+      excludedStudents: (context?.activeStudentNames && context.activeStudentNames.length > 0)
+        ? context.activeStudentNames
+        : Array.from(CLASSROOM_ROSTER),
       targetStudentName: null,
       conceptTaught: null,
       difficultyLevel: "medium",
@@ -139,16 +145,24 @@ function _analyzeTeacherIntentInternal(
   if (/لا\s*يا\s*عمر|كفاية\s*(كده\s*)?يا\s*عمر|مش\s*عمر|اقعد\s*يا\s*عمر|(?:و?غير|بدل)\s*(?:ك\s*يا\s*)?عمر/i.test(clean)) excludedStudents.push("عمر");
   if (/لا\s*يا\s*سار[ةه]|كفاية\s*(كده\s*)?يا\s*سار[ةه]|مش\s*سار[ةه]|اقعدي\s*يا\s*سار[ةه]|(?:و?غير|بدل)\s*(?:ك\s*يا\s*)?سار[ةه]/i.test(clean)) excludedStudents.push("سارة");
   if (/لا\s*يا\s*ياسين|كفاية\s*(كده\s*)?يا\s*ياسين|مش\s*ياسين|اقعد\s*يا\s*ياسين|(?:و?غير|بدل)\s*(?:ك\s*يا\s*)?ياسين/i.test(clean)) excludedStudents.push("ياسين");
+  if (/لا\s*يا\s*ريم|كفاية\s*(كده\s*)?يا\s*ريم|مش\s*ريم|اقعدي\s*يا\s*ريم|(?:و?غير|بدل)\s*(?:ك\s*يا\s*)?ريم/i.test(clean)) excludedStudents.push("ريم");
+  if (/لا\s*يا\s*سلطان|كفاية\s*(كده\s*)?يا\s*سلطان|مش\s*سلطان|اقعد\s*يا\s*سلطان|(?:و?غير|بدل)\s*(?:ك\s*يا\s*)?سلطان/i.test(clean)) excludedStudents.push("سلطان");
+  if (/لا\s*يا\s*فهد|كفاية\s*(كده\s*)?يا\s*فهد|مش\s*فهد|اقعد\s*يا\s*فهد|(?:و?غير|بدل)\s*(?:ك\s*يا\s*)?فهد/i.test(clean)) excludedStudents.push("فهد");
+  if (/لا\s*يا\s*جور[ية]|كفاية\s*(كده\s*)?يا\s*جور[ية]|مش\s*جور[ية]|اقعدي\s*يا\s*جور[ية]|(?:و?غير|بدل)\s*(?:ك\s*يا\s*)?جور[ية]/i.test(clean)) excludedStudents.push("جوري");
 
   // Asking someone else ("حد تاني", "حد غيرك", "غيرك"):
   const isAskingSomeoneElse =
-    /حد\s*(?:تاني|ثاني|غير|مختلف|يضيف|يشارك|يشترك|يقدر|فاهم|فهم|يقول)|غير\s*(?:ياسين|عمر|سارة|نور)|حد\s*غيرك|غيرك|سيب\s*فرصة/i.test(clean);
+    /حد\s*(?:تاني|ثاني|غير|مختلف|يضيف|يشارك|يشترك|يقدر|فاهم|فهم|يقول)|غير\s*(?:ياسين|عمر|سارة|نور|ريم|سلطان|فهد|جور[ية])|حد\s*غيرك|غيرك|سيب\s*فرصة/i.test(clean);
 
   if (isAskingSomeoneElse) {
-    if (/(?:برافو|براو|براهو|شاطر|شكرا|حلو)\s*(?:يا\s*)?ياسين/i.test(clean)) excludedStudents.push("ياسين");
-    if (/(?:برافو|براو|براهو|شاطر|شكرا|حلو)\s*(?:يا\s*)?عمر/i.test(clean)) excludedStudents.push("عمر");
-    if (/(?:برافو|براو|براهو|شاطر[ةه]|شكرا|حلو)\s*(?:يا\s*)?سار[ةه]/i.test(clean)) excludedStudents.push("سارة");
-    if (/(?:برافو|براو|براهو|شاطر[ةه]|شكرا|حلو)\s*(?:يا\s*)?نور/i.test(clean)) excludedStudents.push("نور");
+    if (/(?:برافو|براو|براهو|شاطر|شكرا|حلو|كفو|يعطيك\s*العافية)\s*(?:يا\s*)?ياسين/i.test(clean)) excludedStudents.push("ياسين");
+    if (/(?:برافو|براو|براهو|شاطر|شكرا|حلو|كفو|يعطيك\s*العافية)\s*(?:يا\s*)?عمر/i.test(clean)) excludedStudents.push("عمر");
+    if (/(?:برافو|براو|براهو|شاطر[ةه]|شكرا|حلو|كفو|يعطيك\s*العافية)\s*(?:يا\s*)?سار[ةه]/i.test(clean)) excludedStudents.push("سارة");
+    if (/(?:برافو|براو|براهو|شاطر[ةه]|شكرا|حلو|كفو|يعطيك\s*العافية)\s*(?:يا\s*)?نور/i.test(clean)) excludedStudents.push("نور");
+    if (/(?:برافو|براو|براهو|شاطر[ةه]|شكرا|حلو|كفو|يعطيك\s*العافية)\s*(?:يا\s*)?ريم/i.test(clean)) excludedStudents.push("ريم");
+    if (/(?:برافو|براو|براهو|شاطر|شكرا|حلو|كفو|يعطيك\s*العافية)\s*(?:يا\s*)?سلطان/i.test(clean)) excludedStudents.push("سلطان");
+    if (/(?:برافو|براو|براهو|شاطر|شكرا|حلو|كفو|يعطيك\s*العافية)\s*(?:يا\s*)?فهد/i.test(clean)) excludedStudents.push("فهد");
+    if (/(?:برافو|براو|براهو|شاطر[ةه]|شكرا|حلو|كفو|يعطيك\s*العافية)\s*(?:يا\s*)?جور[ية]/i.test(clean)) excludedStudents.push("جوري");
 
     // "حد غيرك" / "غيرك" refers to the student who just spoke!
     if (/حد\s*غيرك|غيرك/i.test(clean) && context?.lastSpeakingStudentName) {
@@ -162,15 +176,19 @@ function _analyzeTeacherIntentInternal(
   // e.g. "حد فهم اللي نور قالته؟", "زي ما عمر قال", "رأيكم في كلام سارة", "مين يكمل على كلام عمر؟"
   let referencedStudentName: string | null = null;
   const peerReferenceRegex =
-    /(?:اللي\s*قال(?:ه|ته)|زي\s*ما\s*(?:قال|قالت)|كلام|على\s*كلام|على\s*إجابة|يكمل\s*على|يضيف\s*على|متفق\s*مع|موافق\s*على|رأيكم\s*في)\s*(نور|عمر|سار[ةه]|ياسين)/gi;
+    /(?:اللي\s*قال(?:ه|ته)|زي\s*ما\s*(?:قال|قالت)|كلام|على\s*كلام|على\s*إجابة|يكمل\s*على|يضيف\s*على|متفق\s*مع|موافق\s*على|رأيكم\s*في)\s*(نور|عمر|سار[ةه]|ياسين|ريم|سلطان|فهد|جور[ية])/gi;
   const thirdPersonMatches = Array.from(clean.matchAll(peerReferenceRegex));
   const directlyCalledVocatives = new Set(
-    Array.from(clean.matchAll(/(?<=^|[\s.,?!،؛:؟])يا\s*(عمر|سار[ةه]|ياسين|نور)(?=[\s.,?!،؛:؟]|$)/gi)).map(m => m[1].startsWith("سار") ? "سارة" : m[1])
+    Array.from(clean.matchAll(/(?<=^|[\s.,?!،؛:؟])يا\s*(عمر|سار[ةه]|ياسين|نور|ريم|سلطان|فهد|جور[ية])(?=[\s.,?!،؛:؟]|$)/gi)).map(m => {
+      if (m[1].startsWith("سار")) return "سارة";
+      if (m[1].startsWith("جور")) return "جوري";
+      return m[1];
+    })
   );
 
   for (const m of thirdPersonMatches) {
     const raw = m[1];
-    const sName = raw.startsWith("سار") ? "سارة" : raw;
+    const sName = raw.startsWith("سار") ? "سارة" : raw.startsWith("جور") ? "جوري" : raw;
     referencedStudentName = sName;
     // NEVER exclude a student if they are directly addressed with "يا فلان" or if the teacher asks their direct opinion!
     if (sName && !excludedStudents.includes(sName) && !directlyCalledVocatives.has(sName)) {
@@ -180,14 +198,17 @@ function _analyzeTeacherIntentInternal(
 
   // 3b0. Teacher Slip of the Tongue / Apology ("معلش اتلخبطت في الاسم", "أقصد سارة", "سوري اتلخبطت", "معلش يا سارة غلطت في الاسم")
   const isTeacherApology =
-    /(?:معلش|سوري|عفوا[ً]?)\s*(?:يا\s*(?:عمر|سار[ةه]|ياسين|نور))?.*?(?:اتلخبطت|لخبطت|غلطت|مكانش\s*قصدي|مكنش\s*قصدي|اقصد|أقصد)|(?:اتلخبطت|لخبطت|غلطت)\s*في\s*(?:الاسم|اسمك)|(?:اقصد|أقصد)\s*(?:يا\s*)?(?:عمر|سار[ةه]|ياسين|نور)/i.test(clean);
+    /(?:معلش|سوري|عفوا[ً]?|السموحة|معليش)\s*(?:يا\s*(?:عمر|سار[ةه]|ياسين|نور|ريم|سلطان|فهد|جور[ية]))?.*?(?:اتلخبطت|لخبطت|غلطت|مكانش\s*قصدي|مكنش\s*قصدي|اقصد|أقصد)|(?:اتلخبطت|لخبطت|غلطت)\s*في\s*(?:الاسم|اسمك)|(?:اقصد|أقصد)\s*(?:يا\s*)?(?:عمر|سار[ةه]|ياسين|نور|ريم|سلطان|فهد|جور[ية])/i.test(clean);
 
-  const candidateNames = ["عمر", "سارة", "ياسين", "نور"];
+  const candidateNames = (context?.activeStudentNames && context.activeStudentNames.length > 0)
+    ? context.activeStudentNames
+    : Array.from(CLASSROOM_ROSTER);
 
   if (isTeacherApology) {
-    const matchedStudent = candidateNames.find((n) =>
-      new RegExp(`(?:يا\\s*)?${n === "سارة" ? "سار[ةه]" : n}`, "i").test(clean)
-    ) || context?.lastSpeakingStudentName || null;
+    const matchedStudent = candidateNames.find((n) => {
+      const p = n === "عمر" ? "(?:عمر|عمار)" : n === "سارة" ? "سار[ةه]" : n === "جوري" ? "جور[ية]" : n;
+      return new RegExp(`(?:يا\\s*)?${p}`, "i").test(clean);
+    }) || context?.lastSpeakingStudentName || null;
 
     return {
       intent: "teacher_apology",
@@ -203,13 +224,13 @@ function _analyzeTeacherIntentInternal(
   // 3b. Redirection & Exclusive Turn Enforcement ("أنا قلت ياسين اللي يجاوب", "لا عايزة ياسين يجاوب", "عايزة ياسين يقول لي", "ياسين اللي يجاوب", "بكلم ياسين", "سيب ياسين")
   // Teacher is reprimanding an out-of-turn answer and strictly directing the floor to the intended student.
   const redirectMatch =
-    clean.match(/(?:أنا\s*)?(?:قلت|بقول|بسأل|بكلم|طلبت\s*من|سيب|سيبوا|خلي|خلوا|عايز[ةه]?|عاوز[ةه]?|محتاج[ةه]?|دور)\s*(?:يا\s*)?(عمر|سار[ةه]|ياسين|نور)/i) ||
-    clean.match(/(عمر|سار[ةه]|ياسين|نور)\s*(?:اللي\s*(?:يجاوب|تجاوب|يتكلم|تتكلم|يقول|تقول)|هو\s*اللي|هي\s*اللي|بس(?!\s*(?:اتلخبطت|لخبطت|غلطت)))(?=[\s.,?!،؛:]|$)/i);
+    clean.match(/(?:أنا\s*)?(?:قلت|بقول|بسأل|بكلم|طلبت\s*من|سيب|سيبوا|خلي|خلوا|عايز[ةه]?|عاوز[ةه]?|محتاج[ةه]?|دور)\s*(?:يا\s*)?(عمر|سار[ةه]|ياسين|نور|ريم|سلطان|فهد|جور[ية])/i) ||
+    clean.match(/(عمر|سار[ةه]|ياسين|نور|ريم|سلطان|فهد|جور[ية])\s*(?:اللي\s*(?:يجاوب|تجاوب|يتكلم|تتكلم|يقول|تقول)|هو\s*اللي|هي\s*اللي|بس(?!\s*(?:اتلخبطت|لخبطت|غلطت)))(?=[\s.,?!،؛:]|$)/i);
 
   if (redirectMatch) {
     const rawTarget = redirectMatch[1];
-    const target = rawTarget.startsWith("سار") ? "سارة" : rawTarget;
-    const allCandidates = ["عمر", "سارة", "ياسين", "نور"];
+    const target = rawTarget.startsWith("سار") ? "سارة" : rawTarget.startsWith("جور") ? "جوري" : rawTarget;
+    const allCandidates = candidateNames;
     const otherCandidates = allCandidates.filter((n) => n !== target);
 
     return {
@@ -266,21 +287,21 @@ function _analyzeTeacherIntentInternal(
   for (const name of candidateNames) {
     if (excludedStudents.includes(name)) continue;
 
-    const namePattern = name === "عمر" ? "(?:عمر|عمار)" : name === "سارة" ? "سار[ةه]" : name;
+    const namePattern = name === "عمر" ? "(?:عمر|عمار)" : name === "سارة" ? "سار[ةه]" : name === "جوري" ? "جور[ية]" : name;
 
-    // 1. Directive after name: "ياسين قولي", "ياسين قول لي", "ياسين يقول لي", "عمر جاوب", "سارة اتفضلي", "نور سامعاني"
+    // 1. Directive after name: "ياسين قولي", "فهد اخبارك", "سلطان تفضل", "ريم جاوبي"
     const isDirectiveAfter = new RegExp(
-      `(?<=^|[\\s.,?!،؛:؟])${namePattern}\\s*(?:قول|قولي|قول\\s*لي|قولي\\s*لي|يقول|تقول|يقول\\s*لي|تقول\\s*لي|يشرح|تشرح|جاوب|جاوبي|اتفضل|اتفضلي|إيه\\s*رأيك|ايه\\s*رايك|معانا|سامعني|سمعني|سمعنا|سامعاني|انت|انتي|شايف|شايفة|ركز|ركزي)(?=[\\s.,?!،؛:؟]|$)`,
+      `(?<=^|[\\s.,?!،؛:؟])${namePattern}\\s*(?:قول|قولي|قول\\s*لي|قولي\\s*لي|يقول|تقول|يقول\\s*لي|تقول\\s*لي|يشرح|تشرح|جاوب|جاوبي|اتفضل|اتفضلي|تفضل|تفضلي|إيه\\s*رأيك|ايه\\s*رايك|وش\\s*رايك|وش\\s*رأيك|اخبارك|أخبارك|شخبارك|كيفك|معانا|سامعني|سمعني|سمعنا|سامعاني|انت|انتي|شايف|شايفة|ركز|ركزي)(?=[\\s.,?!،؛:؟]|$)`,
       "i"
     ).test(clean);
 
-    // 2. Directive or inquiry before name: "إيه رأيك يا ياسين", "عايزة ياسين", "عاوز عمر", "قول يا عمر", "قولي يا نور", "اتفضل يا ياسين", "سؤال لسارة", "نسمع ياسين"
+    // 2. Directive or inquiry before name: "إيه رأيك يا فهد", "عايزة فهد", "قول يا فهد", "كيفك يا سلطان"
     const isDirectiveBefore = new RegExp(
-      `(?<=^|[\\s.,?!،؛:؟])(?:قول|قولي|جاوب|جاوبي|اتفضل|اتفضلي|معانا|شايف|شايفة|ركز|ركزي|اسمع|نسمع|عاوز\\s*أ?سمع|عايز\\s*أ?سمع|عايز[ةه]?|عاوز[ةه]?|محتاج[ةه]?|حابب|حابة|نسأل|سؤال\\s*(?:لـ?|موجه\\s*لـ?)|دور|نبدأ\\s*بـ?|(?:إيه|ايه)?\\s*رأيك|رأيك\\s*(?:إيه|ايه)?|إيه\\s*رأي|ايه\\s*راي)\\s*(?:يا\\s*)?${namePattern}(?=[\\s.,?!،؛:؟]|$)`,
+      `(?<=^|[\\s.,?!،؛:؟])(?:قول|قولي|جاوب|جاوبي|اتفضل|اتفضلي|تفضل|تفضلي|معانا|شايف|شايفة|ركز|ركزي|اسمع|نسمع|عاوز\\s*أ?سمع|عايز\\s*أ?سمع|عايز[ةه]?|عاوز[ةه]?|محتاج[ةه]?|حابب|حابة|نسأل|سؤال\\s*(?:لـ?|موجه\\s*لـ?)|دور|نبدأ\\s*بـ?|(?:إيه|ايه|وش)?\\s*رأيك|رأيك\\s*(?:إيه|ايه)?|إيه\\s*رأي|ايه\\s*راي|اخبارك|أخبارك|شخبارك|كيفك)\\s*(?:يا\\s*)?${namePattern}(?=[\\s.,?!،؛:؟]|$)`,
       "i"
     ).test(clean);
 
-    // 3. Direct vocative: "يا ياسين"
+    // 3. Direct vocative: "يا فهد", "يا سلطان", "يا ريم", "يا جوري"
     const isVocative = new RegExp(
       `(?<=^|[\\s.,?!،؛:؟])يا\\s*${namePattern}(?=[\\s.,?!،؛:؟]|$)`,
       "i"
@@ -292,21 +313,21 @@ function _analyzeTeacherIntentInternal(
       "i"
     ).test(clean);
 
-    // 5. Name at end of utterance: "... ياسين"
+    // 5. Name at end of utterance: "... فهد"
     const isEnding = new RegExp(
       `(?<=^|[\\s.,?!،؛:؟])${namePattern}\\s*[.,?!،؛:؟]*$`,
       "i"
     ).test(clean);
 
-    // 6. Name immediately after punctuation: "...؟ ياسين" or "...، يا سارة"
+    // 6. Name immediately after punctuation: "...؟ فهد" or "...، يا فهد"
     const isAfterPunctuation = new RegExp(
       `(?<=[؟?.,!،؛:])\\s*(?:يا\\s*)?${namePattern}(?=[\\s.,?!،؛:؟]|$)`,
       "i"
     ).test(clean);
 
-    // 7. Name followed by future action: "عمر هيقول لنا", "سارة تدينا مثال"
+    // 7. Name followed by future action: "فهد هيقول لنا", "سلطان يشارك"
     const isAction = new RegExp(
-      `(?<=^|[\\s.,?!،؛:؟])${namePattern}\\s*(?:هيقول|هتقول|هيشرح|هتشرح|يقول|تقول|يدينا|تدينا|يحل|تحل|يجاوب|تجاوب)(?=[\\s.,?!،؛:؟]|$)`,
+      `(?<=^|[\\s.,?!،؛:؟])${namePattern}\\s*(?:هيقول|هتقول|هيشرح|هتشرح|يقول|تقول|يدينا|تدينا|يحل|تحل|يجاوب|تجاوب|بيقول|بتجاوب|بيجاوب|بيشرح|بتشرح)(?=[\\s.,?!،؛:؟]|$)`,
       "i"
     ).test(clean);
 
@@ -374,8 +395,8 @@ function _analyzeTeacherIntentInternal(
   const isGrantingPermission =
     isShortFloorGrant &&
     (/(?:^|[\s.,?!،؛:])(?:اتفضل|اتفضلي|تفضل|تفضلي|سامعك|سامعاك|اسمعك|كلي\s*آذان|تفضلوا|اتفضلوا|نعم\s*اتفضل)(?:[\s.,?!،؛:]|$)/i.test(clean) ||
-     /^(?:قول|قولي|تفضل|اتفضل)\s*(?:يا\s*)?(?:عمر|سارة|نور|ياسين)?$/i.test(clean) ||
-     /^(?:نعم|ايوه|أيوة)\s*(?:يا\s*)?(?:عمر|سارة|نور|ياسين)?$/i.test(clean));
+     /^(?:قول|قولي|تفضل|اتفضل)\s*(?:يا\s*)?(?:عمر|سارة|نور|ياسين|ريم|سلطان|فهد|جوري)?$/i.test(clean) ||
+     /^(?:نعم|ايوه|أيوة|هلا)\s*(?:يا\s*)?(?:عمر|سارة|نور|ياسين|ريم|سلطان|فهد|جوري)?$/i.test(clean));
 
   if (isGrantingPermission) {
     let target = calledStudents.length > 0 ? calledStudents[0] : null;
@@ -483,7 +504,7 @@ function _analyzeTeacherIntentInternal(
 
   // 7. Volunteer Question ("مين يعرف الإجابة؟" / "حد عنده اي اضافة؟" / "حد حابب يشارك؟" / "مين يكمل على كلام عمر؟")
   const isVolunteerQuestion =
-    /مين\s*(يعرف|يقول|يجاوب|يكمل|شاطر|يقدر|مستعد|حابب|عايز|عاوز|يشارك|يشترك|فاهم|فهم|فيهم)|حد\s*(يعرف|يقدر|يقول|يجاوب|يكمل|يشارك|يشترك|حابب|عايز|عاوز|فاهم|فهم|فيهم|عارف|عنده|مش\s*فاهم|يرد|يضيف)|(?:غير|بدل)\s*(?:ياسين|عمر|سارة|نور).*?(?:يشارك|يشترك|يتكلم|يقول|حابب)|يشارك\s*(تاني|ثاني)|اضاف[ةه]|اي\s*اضاف[ةه]|اي\s*سؤال|حاج[ةه]\s*تاني[ةه]|حد\s*عنده\s*(?:اي\s*)?(?:اضاف[ةه]|سؤال|فكر[ةه]|تعليق|راي|رأي|كلام)|حد\s*حابب\s*(?:يضيف|يسال|يسأل|يشارك|يقول)|ممكن\s*حد\s*(?:يرد|يجاوب|يشارك|يقول)|who\s*knows|who\s*can|anyone\s*knows/i.test(clean);
+    /مين\s*(يعرف|يقول|يجاوب|يكمل|شاطر|يقدر|مستعد|حابب|عايز|عاوز|يشارك|يشترك|فاهم|فهم|فيهم)|حد\s*(يعرف|يقدر|يقول|يجاوب|يكمل|يشارك|يشترك|حابب|عايز|عاوز|فاهم|فهم|فيهم|عارف|عنده|مش\s*فاهم|يرد|يضيف)|(?:غير|بدل)\s*(?:ياسين|عمر|سارة|نور|ريم|سلطان|فهد|جور[ية]).*?(?:يشارك|يشترك|يتكلم|يقول|حابب)|يشارك\s*(تاني|ثاني)|اضاف[ةه]|اي\s*اضاف[ةه]|اي\s*سؤال|حاج[ةه]\s*تاني[ةه]|حد\s*عنده\s*(?:اي\s*)?(?:اضاف[ةه]|سؤال|فكر[ةه]|تعليق|راي|رأي|كلام)|حد\s*حابب\s*(?:يضيف|يسال|يسأل|يشارك|يقول)|ممكن\s*حد\s*(?:يرد|يجاوب|يشارك|يقول)|who\s*knows|who\s*can|anyone\s*knows/i.test(clean);
 
   if (isVolunteerQuestion) {
     return {
@@ -673,11 +694,11 @@ export function decideClassroomReaction(
     return { candidateSpeakers: [], updatedStudents, classroomEvent: null };
   }
 
-  // 1c. Session Farewell ("يلا الحصة خلصت مع السلامة يا أولاد") -> Students give natural Egyptian farewells
+  // 1c. Session Farewell ("يلا الحصة خلصت مع السلامة يا أولاد") -> Students give natural farewells
   if (analysis.intent === "session_farewell") {
-    // Pick 1 or 2 polite students to say goodbye (Sara and Omar)
-    const speaker1 = students.find((s) => s.name === "سارة") || students[0];
-    const speaker2 = students.find((s) => s.name === "عمر") || students[1];
+    // Pick 1 or 2 polite students to say goodbye
+    const speaker1 = students.find((s) => s.name === "سارة" || s.name === "ريم") || students[0];
+    const speaker2 = students.find((s) => s.name === "عمر" || s.name === "سلطان") || students[1];
     const speakers = [speaker1, speaker2].filter(Boolean);
 
     for (const student of students) {
@@ -797,7 +818,7 @@ export function decideClassroomReaction(
           activeMisconception: copy.activeMisconception ?? null,
         });
       } else {
-        copy.physicalAction = copy.name === "نور" || copy.name === "سارة" ? "taking_notes" : "attentive";
+        copy.physicalAction = (copy.name === "نور" || copy.name === "سارة" || copy.name === "جوري" || copy.name === "ريم") ? "taking_notes" : "attentive";
       }
       copy.actionDescriptionAr = getActionDescription(copy.physicalAction, copy.name);
       updatedStudents.push({ ...copy, attentionDelta, understandingDelta });
@@ -840,7 +861,7 @@ export function decideClassroomReaction(
           activeMisconception: copy.activeMisconception ?? null,
         });
       } else {
-        copy.physicalAction = copy.name === "نور" || copy.name === "سارة" ? "taking_notes" : "attentive";
+        copy.physicalAction = (copy.name === "نور" || copy.name === "سارة" || copy.name === "جوري" || copy.name === "ريم") ? "taking_notes" : "attentive";
       }
       copy.actionDescriptionAr = getActionDescription(copy.physicalAction, copy.name);
       updatedStudents.push({ ...copy, attentionDelta, understandingDelta });
@@ -870,7 +891,7 @@ export function decideClassroomReaction(
   // 4. Greeting (First greeting only: exactly 1 student responds naturally to avoid echo)
   if (analysis.intent === "greeting") {
     const eligible = students.filter((s) => !analysis.excludedStudents.includes(s.name));
-    const greeter = eligible.find((s) => s.name === "سارة") || eligible[0];
+    const greeter = eligible.find((s) => s.name === "سارة" || s.name === "ريم") || eligible[0];
 
     for (const student of students) {
       const copy = { ...student, physicalAction: "attentive" as StudentPhysicalAction };
@@ -896,7 +917,7 @@ export function decideClassroomReaction(
   // 4b. Religious Blessing ("صلى الله عليه وسلم") -> 1 student says "عليه الصلاة والسلام" respectfully
   if (analysis.intent === "religious_blessing") {
     const eligible = students.filter((s) => !analysis.excludedStudents.includes(s.name));
-    const speaker = eligible.find((s) => s.name === "سارة") || eligible[0];
+    const speaker = eligible.find((s) => s.name === "سارة" || s.name === "ريم") || eligible[0];
     for (const student of students) {
       const copy = { ...student, physicalAction: "attentive" as StudentPhysicalAction };
       copy.actionDescriptionAr = getActionDescription("attentive", copy.name);
@@ -919,7 +940,7 @@ export function decideClassroomReaction(
   // 4c. Teacher Identity Correction ("أنا مش مستر أنا ميس مريم") -> 1 student politely apologizes & greets correctly
   if (analysis.intent === "teacher_identity") {
     const eligible = students.filter((s) => !analysis.excludedStudents.includes(s.name));
-    const speaker = eligible.find((s) => s.name === "ياسين") || eligible.find((s) => s.name === "سارة") || eligible[0];
+    const speaker = eligible.find((s) => s.name === "ياسين" || s.name === "فهد") || eligible.find((s) => s.name === "سارة" || s.name === "ريم") || eligible[0];
     for (const student of students) {
       const copy = { ...student, physicalAction: "attentive" as StudentPhysicalAction };
       copy.actionDescriptionAr = getActionDescription("attentive", copy.name);
@@ -942,7 +963,7 @@ export function decideClassroomReaction(
   // 4d. Attention / Liveness Check ("أنتم معايا؟", "ممكن حد يرد عليا؟") -> 1 student immediately confirms with enthusiasm!
   if (analysis.intent === "attention_check") {
     const eligible = students.filter((s) => !analysis.excludedStudents.includes(s.name));
-    const firstResponder = eligible.find((s) => s.name === "عمر") || eligible.find((s) => s.name === "سارة") || eligible[0];
+    const firstResponder = eligible.find((s) => s.name === "عمر" || s.name === "سلطان") || eligible.find((s) => s.name === "سارة" || s.name === "ريم") || eligible[0];
     for (const student of students) {
       const copy = { ...student, physicalAction: "attentive" as StudentPhysicalAction };
       copy.actionDescriptionAr = getActionDescription("attentive", copy.name);
@@ -982,6 +1003,10 @@ export function decideClassroomReaction(
       "عمر": 35,
       "ياسين": 20,
       "نور": 5,
+      "ريم": 40,
+      "سلطان": 35,
+      "فهد": 20,
+      "جوري": 5,
     };
     const totalWeight = pool.reduce((sum, s) => sum + (weights[s.name] || 20), 0);
     let rand = Math.random() * totalWeight;
@@ -1010,11 +1035,11 @@ export function decideClassroomReaction(
           name: copy.name,
           shouldSpeak: true,
           reasonToSpeak: "مشاركة فكرة أو قصة في النقاش المفتوح",
-          spokenEmotion: copy.name === "عمر" ? "excited" : copy.name === "ياسين" ? "playful" : "confident",
+          spokenEmotion: copy.name === "عمر" || copy.name === "سلطان" ? "excited" : copy.name === "ياسين" || copy.name === "فهد" ? "playful" : "confident",
         });
       } else {
-        if (copy.name === "سارة") copy.physicalAction = "hand_raised";
-        else if (copy.name === "نور") copy.physicalAction = "taking_notes";
+        if (copy.name === "سارة" || copy.name === "ريم") copy.physicalAction = "hand_raised";
+        else if (copy.name === "نور" || copy.name === "جوري") copy.physicalAction = "taking_notes";
         else copy.physicalAction = "attentive";
       }
       copy.actionDescriptionAr = getActionDescription(copy.physicalAction, copy.name);
@@ -1040,8 +1065,8 @@ export function decideClassroomReaction(
 
     const chosen =
       handRaisedCandidate ||
-      eligiblePool.find((s) => s.name === "سارة") ||
-      eligiblePool.find((s) => s.name === "عمر") ||
+      eligiblePool.find((s) => s.name === "سارة" || s.name === "ريم") ||
+      eligiblePool.find((s) => s.name === "عمر" || s.name === "سلطان") ||
       eligiblePool[0];
 
     for (const student of students) {
@@ -1062,15 +1087,15 @@ export function decideClassroomReaction(
           name: copy.name,
           shouldSpeak: true,
           reasonToSpeak: analysis.referencedStudentName
-            ? `المعلم طلب البناء أو التعليق على ما قاله زميله (${analysis.referencedStudentName}). ${copy.name} يتفاعل ويؤيد أو يضيف على فكرة زميله بالعامية المصرية.`
+            ? `المعلم طلب البناء أو التعليق على ما قاله زميله (${analysis.referencedStudentName}). ${copy.name} يتفاعل ويؤيد أو يضيف على فكرة زميله.`
             : "التطوع والمشاركة بحماس في إجابة أو نقاش المعلم",
-          spokenEmotion: copy.name === "عمر" ? "excited" : "confident",
+          spokenEmotion: copy.name === "عمر" || copy.name === "سلطان" ? "excited" : "confident",
           activeMisconception: copy.activeMisconception ?? null,
         });
       } else {
-        if (copy.name === "سارة" && !analysis.excludedStudents.includes("سارة") && !isRecent(copy)) {
+        if ((copy.name === "سارة" || copy.name === "ريم") && !analysis.excludedStudents.includes(copy.name) && !isRecent(copy)) {
           copy.physicalAction = "hand_raised";
-        } else if (copy.name === "نور") {
+        } else if (copy.name === "نور" || copy.name === "جوري") {
           copy.physicalAction = "taking_notes";
         } else {
           copy.physicalAction = "attentive";
@@ -1119,11 +1144,11 @@ export function decideClassroomReaction(
             : handRaisedCandidate
             ? `${copy.name} كان رافع إيده ومستني دوره ويشرح الآن إجابته للمعلم`
             : "التفكير والمشاركة في إجابة سؤال المعلم",
-          spokenEmotion: copy.name === "عمر" ? "excited" : "confident",
+          spokenEmotion: copy.name === "عمر" || copy.name === "سلطان" ? "excited" : "confident",
           activeMisconception: copy.activeMisconception ?? null,
         });
       } else {
-        copy.physicalAction = copy.name === "نور" || copy.name === "سارة" ? "taking_notes" : "attentive";
+        copy.physicalAction = (copy.name === "نور" || copy.name === "سارة" || copy.name === "جوري" || copy.name === "ريم") ? "taking_notes" : "attentive";
       }
       copy.actionDescriptionAr = getActionDescription(copy.physicalAction, copy.name);
       updatedStudents.push({ ...copy, attentionDelta, understandingDelta });
@@ -1194,15 +1219,18 @@ export function decideClassroomReaction(
   // 13. Explanation / Lecture -> SILENCE IS GOLDEN: 0 speakers!
   // Students listen attentively, take notes, and sometimes raise hand if curious or have a question!
   const shouldSomeoneRaiseHand = turnIndex >= 2 && Math.random() < 0.45;
-  const handRaiserName = shouldSomeoneRaiseHand ? (Math.random() < 0.5 ? "سارة" : "عمر") : null;
+  const isSaClassroom = students.some((s) => s.name === "ريم" || s.name === "سلطان" || s.name === "فهد" || s.name === "جوري");
+  const handRaiserName = shouldSomeoneRaiseHand
+    ? (Math.random() < 0.5 ? (isSaClassroom ? "ريم" : "سارة") : (isSaClassroom ? "سلطان" : "عمر"))
+    : null;
 
   for (const student of students) {
     const copy = { ...student };
     if (handRaiserName && copy.name === handRaiserName && !analysis.excludedStudents.includes(copy.name)) {
       copy.physicalAction = "hand_raised";
-    } else if (copy.name === "سارة" || copy.name === "نور") {
+    } else if (copy.name === "سارة" || copy.name === "نور" || copy.name === "ريم" || copy.name === "جوري") {
       copy.physicalAction = "taking_notes";
-    } else if (copy.name === "ياسين" && turnIndex > 4 && Math.random() < 0.20) {
+    } else if ((copy.name === "ياسين" || copy.name === "فهد") && turnIndex > 4 && Math.random() < 0.20) {
       copy.physicalAction = "fidgeting";
     } else {
       copy.physicalAction = "attentive";

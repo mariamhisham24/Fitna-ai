@@ -153,9 +153,13 @@ export function SessionSetupForm({
       const savedName = localStorage.getItem("fitna_teacher_name");
       if (savedName) {
         setTeacherName(savedName);
+        const isFemale = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(savedName);
+        if (isFemale) {
+          setTeacherTitle(selectedDialect === "sa" ? "يا أستاذة" : "يا ميس");
+        }
       }
     }
-  }, []);
+  }, [selectedDialect]);
 
   const handleTitleSelect = (title: TeacherTitle) => {
     setTeacherTitle(title);
@@ -168,6 +172,21 @@ export function SessionSetupForm({
     setTeacherName(val);
     if (typeof window !== "undefined") {
       localStorage.setItem("fitna_teacher_name", val);
+    }
+    const isFemale = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(val);
+    const isMale = /(?:أحمد|احمد|محمد|محمود|علي|عمرو|خالد|يوسف|طارق|سلطان|فهد|عبدالله|عبد\s*الله|عمر|ahmed|mohamed)/i.test(val);
+    if (isFemale) {
+      const femaleTitle = selectedDialect === "sa" ? "يا أستاذة" : "يا ميس";
+      setTeacherTitle(femaleTitle);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("fitna_teacher_title", femaleTitle);
+      }
+    } else if (isMale) {
+      const maleTitle = selectedDialect === "sa" ? "يا أستاذ" : "يا مستر";
+      setTeacherTitle(maleTitle);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("fitna_teacher_title", maleTitle);
+      }
     }
   };
 
