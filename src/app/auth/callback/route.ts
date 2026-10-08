@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
 
     if (!error && data?.user) {
       const user = data.user;
-      let targetDashboard = next;
 
       try {
         const adminDb = createAdminClient();
@@ -23,28 +22,22 @@ export async function GET(request: NextRequest) {
           .maybeSingle();
 
         if (profile?.role) {
-          targetDashboard = profile.role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
-        } else {
-          const metaRole = user.user_metadata?.role || "teacher";
-          const fullName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User";
-
-          await adminDb.from("users").insert({
-            id: user.id,
-            email: user.email || "",
-            full_name: fullName,
-            role: metaRole,
-            preferred_theme: "system",
-          }).select().maybeSingle();
-
-          targetDashboard = metaRole === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
+          const targetDashboard = profile.role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
+          const response = NextResponse.redirect(`${origin}${targetDashboard}`);
+          response.cookies.delete("fitna_demo");
+          return response;
         }
-      } catch (profileErr) {
-        console.error("Profile check/create error during OAuth callback:", profileErr);
-      }
 
-      const response = NextResponse.redirect(`${origin}${targetDashboard}`);
-      response.cookies.delete("fitna_demo");
-      return response;
+        // New user! Send to onboarding to select role & market
+        const response = NextResponse.redirect(`${origin}/onboarding`);
+        response.cookies.delete("fitna_demo");
+        return response;
+      } catch (profileErr) {
+        console.error("Profile check error during OAuth callback:", profileErr);
+        const response = NextResponse.redirect(`${origin}/onboarding`);
+        response.cookies.delete("fitna_demo");
+        return response;
+      }
     }
 
     if (error) {
