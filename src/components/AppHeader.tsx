@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
-import { signOutAction } from "@/app/(auth)/login/actions";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MarketSwitcher } from "@/components/MarketSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -45,14 +45,9 @@ export function AppHeader({ title }: { title?: string }) {
         >
           {t.nav.settings}
         </Link>
-        <form action={signOutAction}>
-          <button
-            type="submit"
-            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-xs font-medium"
-          >
-            {t.nav.logout}
-          </button>
-        </form>
+        <LogoutButton className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-xs font-medium cursor-pointer">
+          {t.nav.logout}
+        </LogoutButton>
       </div>
     </header>
   );

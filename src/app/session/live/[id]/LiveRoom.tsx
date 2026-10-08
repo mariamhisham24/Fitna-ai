@@ -10,6 +10,7 @@ import { useTranslation } from "@/lib/i18n/context";
 import { detectVoiceGenderFromBlob } from "@/lib/audio/pitchDetector";
 import { normalizeSpeechTranscription } from "@/lib/audio/speechNormalizer";
 import { StudentVideoCard } from "@/components/classroom/StudentVideoCard";
+import { trackEvent } from "@/lib/analytics";
 import {
   GraduationCap,
   BarChart2,
@@ -641,6 +642,13 @@ export function LiveRoom({
           : prev
       );
 
+      // Track teacher utterance metadata
+      trackEvent("teacher_message_sent", {
+        session_id: sessionId,
+        question_type: turnJson.questionType || "statement",
+        interaction_type: "voice",
+      });
+
       type TurnStudent = {
         personaId: string;
         name: string;
@@ -677,6 +685,15 @@ export function LiveRoom({
             ...prev,
             [s.personaId]: (prev[s.personaId] ?? 0) + 1,
           }));
+
+          // Track student response event (metadata only - no private conversation payload)
+          trackEvent("student_response_received", {
+            session_id: sessionId,
+            student_name: s.name,
+            student_persona_id: s.personaId,
+            interaction_type: "turn",
+          });
+
           // Track student spoken talk time (estimated by words, calibrated by audio)
           const words = s.text.trim().split(/\s+/).length;
           const estimatedStudentMs = Math.max(1500, words * 380);
@@ -1424,12 +1441,14 @@ export function LiveRoom({
         speechDetectedRef.current = false;
         setIsTeacherSpeaking(false);
         setAudioLevel(0);
+        trackEvent("session_paused", { session_id: sessionId, reason: "teacher_muted" });
       } else {
         restartSpeechRecognitionRef.current?.();
+        trackEvent("session_resumed", { session_id: sessionId });
       }
       return next;
     });
-  }, []);
+  }, [sessionId]);
 
   // Clean up open mic on unmount
   useEffect(() => {
@@ -1473,6 +1492,14 @@ export function LiveRoom({
         body: JSON.stringify({ liveTeacherTalkRatio: teacherTalkRatio }),
       });
       if (res.ok) {
+        const durationSeconds = Math.round((Date.now() - startedAtMs) / 1000);
+        trackEvent("session_completed", {
+          session_id: sessionId,
+          duration_seconds: durationSeconds,
+          completion_status: "completed",
+          teacher_talk_ratio: teacherTalkRatio,
+          socratic_rate: socraticRate,
+        });
         router.push(`/report/${sessionId}`);
       } else {
         const json = await safeJson(res);
@@ -1490,6 +1517,12 @@ export function LiveRoom({
   async function handleEndWithoutSaving() {
     setCancelling(true);
     try {
+      const durationSeconds = Math.round((Date.now() - startedAtMs) / 1000);
+      trackEvent("session_abandoned", {
+        session_id: sessionId,
+        duration_seconds: durationSeconds,
+        reason: "teacher_cancelled_without_saving",
+      });
       const supabase = createClient();
       await supabase.from("sessions").update({ status: "abandoned" }).eq("id", sessionId);
       router.push("/dashboard/teacher");

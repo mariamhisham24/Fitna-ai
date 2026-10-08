@@ -14,6 +14,7 @@ import { Sparkles, HelpCircle, BookOpen } from "lucide-react";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { TelegramIcon } from "@/components/TelegramIcon";
 import { UserGuideButton } from "@/components/UserGuideButton";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 type Profile = {
   full_name: string | null;
@@ -146,14 +147,11 @@ export function TeacherDashboardClient({
 
             <div className="h-3.5 w-[1px] bg-white/20 mx-1 hidden sm:block" />
 
-            <form action={signOutAction} className="hover:scale-105 active:scale-95 transition-transform duration-150">
-              <button
-                type="submit"
-                className="text-[#D96B58] hover:text-[#D96B58]/80 font-medium px-2 py-1 transition cursor-pointer"
-              >
+            <div className="hover:scale-105 active:scale-95 transition-transform duration-150">
+              <LogoutButton className="text-[#D96B58] hover:text-[#D96B58]/80 font-medium px-2 py-1 transition cursor-pointer">
                 {t.nav.logout}
-              </button>
-            </form>
+              </LogoutButton>
+            </div>
           </div>
         </div>
       </nav>

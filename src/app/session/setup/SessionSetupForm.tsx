@@ -9,9 +9,11 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MarketSwitcher } from "@/components/MarketSwitcher";
 import { signOutAction } from "@/app/(auth)/login/actions";
 import { useTranslation } from "@/lib/i18n/context";
+import { trackEvent } from "@/lib/analytics";
 import { X, GraduationCap, UserCheck } from "lucide-react";
 import { TelegramIcon } from "@/components/TelegramIcon";
 import { UserGuideButton } from "@/components/UserGuideButton";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 type Topic = { id: string; title_ar: string; title_en: string | null };
 type Persona = {
@@ -289,6 +291,16 @@ export function SessionSetupForm({
         setStartError(json.error || t.common.error);
         return;
       }
+
+      trackEvent("session_started", {
+        session_id: json.sessionId,
+        scenario_id: selectedTopic?.id ?? "custom",
+        scenario_name: selectedTopic?.title_ar ?? (topicQuery.trim() || "جلسة مخصصة"),
+        classroom_mode: classroomStyle,
+        duration_minutes: duration,
+        voice_language: selectedDialect === "sa" ? "ar-SA" : "ar-EG",
+      });
+
       router.push(`/session/live/${json.sessionId}`);
     } catch {
       setStartError(t.common.error);
@@ -359,15 +371,12 @@ export function SessionSetupForm({
 
             <div className="h-3.5 w-[1px] bg-white/20 mx-1 hidden sm:block" />
 
-            <form action={signOutAction} className="hover:scale-105 active:scale-95 transition-transform duration-150">
-              <button
-                type="submit"
-                className="text-[#D96B58] hover:text-[#D96B58]/80 font-medium px-2 py-1 transition cursor-pointer"
-              >
+            <div className="hover:scale-105 active:scale-95 transition-transform duration-150">
+              <LogoutButton className="text-[#D96B58] hover:text-[#D96B58]/80 font-medium px-2 py-1 transition cursor-pointer">
                 <span className="hidden sm:inline">{isRtl ? "تسجيل الخروج" : "Logout"}</span>
                 <span className="sm:hidden">{isRtl ? "خروج" : "Exit"}</span>
-              </button>
-            </form>
+              </LogoutButton>
+            </div>
           </div>
         </div>
       </nav>
@@ -613,6 +622,10 @@ export function SessionSetupForm({
                     onClick={() => {
                       setSelectedTopic(topic);
                       setTopicQuery("");
+                      trackEvent("scenario_selected", {
+                        scenario_id: topic.id,
+                        scenario_name: lang === "en" && topic.title_en ? topic.title_en : topic.title_ar,
+                      });
                     }}
                     className="w-full text-start px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#071B3A] dark:text-white hover:bg-[#12B8C4]/10 transition cursor-pointer"
                   >

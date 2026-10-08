@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { signOutAction } from "@/app/(auth)/login/actions";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { type Language } from "@/lib/i18n";
 import { TelegramIcon } from "@/components/TelegramIcon";
 import { UserGuideButton } from "@/components/UserGuideButton";
@@ -137,14 +137,11 @@ export function HistoryClient({
 
             <div className="h-3.5 w-[1px] bg-white/20 mx-1 hidden sm:block" />
 
-            <form action={signOutAction} className="hover:scale-105 active:scale-95 transition-transform duration-150">
-              <button
-                type="submit"
-                className="text-[#D96B58] hover:text-[#D96B58]/80 font-medium px-2 py-1 transition cursor-pointer"
-              >
+            <div className="hover:scale-105 active:scale-95 transition-transform duration-150">
+              <LogoutButton className="text-[#D96B58] hover:text-[#D96B58]/80 font-medium px-2 py-1 transition cursor-pointer">
                 {isRtl ? "تسجيل الخروج" : "Logout"}
-              </button>
-            </form>
+              </LogoutButton>
+            </div>
           </div>
         </div>
       </nav>

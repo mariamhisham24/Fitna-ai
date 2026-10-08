@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { I18nProvider } from '@/lib/i18n/context';
+import { AnalyticsProvider } from '@/components/AnalyticsProvider';
 import type { Language } from '@/lib/i18n/types';
 import './globals.css';
 
@@ -27,7 +28,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={lang} dir={dir} className={theme === 'dark' ? 'dark' : ''}>
       <body>
         <I18nProvider initialLang={lang}>
-          {children}
+          <AnalyticsProvider>
+            {children}
+          </AnalyticsProvider>
         </I18nProvider>
       </body>
     </html>

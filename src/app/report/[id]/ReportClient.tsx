@@ -11,6 +11,7 @@ import { type FrameworkScoresProps } from "./FrameworkScorecard";
 import { Check, Lightbulb, Mic } from "lucide-react";
 import { TelegramIcon } from "@/components/TelegramIcon";
 import { UserGuideButton } from "@/components/UserGuideButton";
+import { trackEvent } from "@/lib/analytics";
 
 export type PlaybackTurn = {
   id: string;
@@ -75,6 +76,15 @@ export function ReportClient({
   const currentBlobUrlRef = useRef<string | null>(null);
   const isPlayingAllRef = useRef(false);
   const turnRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    trackEvent("debrief_viewed", {
+      session_id: session.id,
+      overall_score: session.overall_score,
+      duration_seconds: session.duration_minutes * 60,
+      has_report: Boolean(report),
+    });
+  }, [session.id, session.overall_score, session.duration_minutes, report]);
 
   useEffect(() => {
     isPlayingAllRef.current = isPlayingAll;

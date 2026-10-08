@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, UserRound, UsersRound, BookOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { UserGuideButton } from "@/components/UserGuideButton";
 import { signInAction, signUpAction, requestPasswordResetAction, loginAsDemoAction, type ActionState } from "./actions";
+import { trackEvent } from "@/lib/analytics";
 
 import { type Market } from "@/lib/i18n/types";
 
@@ -193,6 +193,7 @@ function LoginPageContent() {
     document.cookie = "fitna_demo=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     const match = document.cookie.match(/(?:^|;\s*)language=(ar|en)(?:;|$)/);
     if (match && (match[1] === "ar" || match[1] === "en")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLang(match[1]);
       document.documentElement.lang = match[1];
       document.documentElement.dir = match[1] === "en" ? "ltr" : "rtl";
@@ -245,15 +246,40 @@ function LoginPageContent() {
 
   useEffect(() => {
     if (signInState?.redirectTo) {
-      window.location.href = signInState.redirectTo;
+      try {
+        sessionStorage.setItem("fitna_pending_login", "email_password");
+      } catch {}
+      trackEvent(
+        "user_logged_in",
+        { login_method: "email_password" },
+        { send_instantly: true, transport: "sendBeacon" }
+      );
+      const timer = setTimeout(() => {
+        window.location.href = signInState.redirectTo!;
+      }, 80);
+      return () => clearTimeout(timer);
     }
   }, [signInState?.redirectTo]);
 
   useEffect(() => {
     if (signUpState?.redirectTo) {
-      window.location.href = signUpState.redirectTo;
+      try {
+        sessionStorage.setItem(
+          "fitna_pending_signup",
+          JSON.stringify({ role, nationality: market, signup_method: "email_password" })
+        );
+      } catch {}
+      trackEvent(
+        "user_signed_up",
+        { role, nationality: market, signup_method: "email_password" },
+        { send_instantly: true, transport: "sendBeacon" }
+      );
+      const timer = setTimeout(() => {
+        window.location.href = signUpState.redirectTo!;
+      }, 80);
+      return () => clearTimeout(timer);
     }
-  }, [signUpState?.redirectTo]);
+  }, [signUpState?.redirectTo, role, market]);
 
   return (
     <div className="auth-page" dir={t.dir}>
@@ -352,6 +378,19 @@ function LoginPageContent() {
               <form action={loginAsDemoAction} className="w-full mb-3">
                 <button
                   type="submit"
+                  onClick={() => {
+                    try {
+                      sessionStorage.setItem("fitna_pending_login", "demo_1click");
+                    } catch {}
+                    trackEvent(
+                      "user_logged_in",
+                      {
+                        login_method: "demo_1click",
+                        role: "teacher",
+                      },
+                      { send_instantly: true, transport: "sendBeacon" }
+                    );
+                  }}
                   className="demo-pop-btn w-full py-3 px-4 rounded-xl flex items-center justify-between bg-amber-500/[0.08] hover:bg-amber-500/[0.14] dark:bg-amber-400/10 dark:hover:bg-amber-400/15 border border-amber-400/40 hover:border-amber-400/80 group text-start cursor-pointer shadow-sm hover:shadow transition-all"
                 >
                   <div className="flex items-center gap-2.5">
