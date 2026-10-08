@@ -168,3 +168,22 @@ export function trackEvent<T extends BaseEventProperties = BaseEventProperties>(
     }
   }
 }
+
+export function trackPageview(pathname: string): void {
+  if (typeof window === 'undefined' || !POSTHOG_KEY) return;
+  if (!isInitialized) initAnalytics();
+
+  try {
+    const context = getClientAnalyticsContext();
+    posthog.capture('$pageview', {
+      $current_url: window.location.href,
+      path: pathname,
+      market: context.market,
+      language: context.language,
+    });
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[Analytics Debug] trackPageview error:', err);
+    }
+  }
+}

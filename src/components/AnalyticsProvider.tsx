@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { initAnalytics, trackEvent } from '@/lib/analytics';
+import { initAnalytics, trackEvent, trackPageview } from '@/lib/analytics';
 import { AuthTracker } from './AuthTracker';
 
 function AnalyticsPageViewTracker() {
@@ -20,6 +20,9 @@ function AnalyticsPageViewTracker() {
     const fullPath = searchParams?.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
     if (lastTrackedPathRef.current === fullPath) return;
     lastTrackedPathRef.current = fullPath;
+
+    // Track native PostHog $pageview for starter dashboard & Web Analytics
+    trackPageview(pathname);
 
     if (pathname === '/') {
       trackEvent('landing_page_viewed');
