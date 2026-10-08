@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, UserRound, U
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { signInAction, signUpAction, requestPasswordResetAction, loginAsDemoAction, type ActionState } from "./actions";
 import { trackEvent } from "@/lib/analytics";
+import { createClient } from "@/lib/supabase/client";
 
 import { type Market } from "@/lib/i18n/types";
 
@@ -180,13 +181,39 @@ function LoginPageContent() {
   const [showForgot, setShowForgot] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<"teacher" | "institution_admin">("teacher");
-  const [googleComingSoon, setGoogleComingSoon] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
-  const handleGoogleClick = () => {
-    setGoogleComingSoon(true);
-    setTimeout(() => {
-      setGoogleComingSoon(false);
-    }, 4000);
+  const handleGoogleClick = async () => {
+    try {
+      setGoogleLoading(true);
+      try {
+        sessionStorage.setItem("fitna_pending_login", "google");
+      } catch {}
+      trackEvent(
+        "user_logged_in",
+        { login_method: "google" },
+        { send_instantly: true, transport: "sendBeacon" }
+      );
+      const supabase = createClient();
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
+      });
+      if (error) {
+        console.error("Google sign in error:", error.message);
+        setGoogleLoading(false);
+      }
+    } catch (e) {
+      console.error("Google sign in exception:", e);
+      setGoogleLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -418,26 +445,20 @@ function LoginPageContent() {
 
               <button
                 className={`google-button relative overflow-hidden transition-all duration-300 ${
-                  googleComingSoon ? "!border-amber-400/60 !bg-amber-400/10 shadow-[0_0_15px_rgba(255,181,46,0.15)]" : ""
+                  googleLoading ? "opacity-70 cursor-wait" : "hover:shadow-md cursor-pointer"
                 }`}
                 type="button"
                 onClick={handleGoogleClick}
+                disabled={googleLoading}
               >
                 <span className="google-g">G</span>
-                <span>{t.google}</span>
-                {googleComingSoon && (
-                  <span className="ms-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-[#071B3A] animate-pulse">
-                    {t.comingSoonBadge}
+                <span>{googleLoading ? (lang === "ar" ? "جارٍ التوجيه إلى Google..." : "Redirecting to Google...") : t.google}</span>
+                {googleLoading && (
+                  <span className="ms-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-400 text-[#071B3A] animate-pulse">
+                    ...
                   </span>
                 )}
               </button>
-
-              {googleComingSoon && (
-                <div className="mt-2.5 p-3 bg-amber-50 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-400/30 rounded-xl text-xs text-amber-900 dark:text-amber-200 font-semibold text-center flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-ping shrink-0" />
-                  <span>{t.googleComingSoon}</span>
-                </div>
-              )}
 
               <div className="or-divider">
                 <span>{t.or}</span>
