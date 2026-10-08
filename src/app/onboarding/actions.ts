@@ -28,11 +28,12 @@ export async function completeOnboardingAction(role: "teacher" | "institution_ad
       console.error("upsert profile error:", dbErr);
     }
 
-    // Update auth user metadata as well
+    // Update auth user metadata with role, market, and onboarded flag
     await supabase.auth.updateUser({
       data: {
         role,
         market,
+        onboarded: true,
       },
     });
 

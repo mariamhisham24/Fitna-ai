@@ -21,14 +21,17 @@ export async function GET(request: NextRequest) {
           .eq("id", user.id)
           .maybeSingle();
 
-        if (profile?.role) {
+        // Check if user has explicitly completed onboarding
+        const isOnboarded = Boolean(user.user_metadata?.onboarded);
+
+        if (isOnboarded && profile?.role) {
           const targetDashboard = profile.role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher";
           const response = NextResponse.redirect(`${origin}${targetDashboard}`);
           response.cookies.delete("fitna_demo");
           return response;
         }
 
-        // New user! Send to onboarding to select role & market
+        // New or non-onboarded user! Send to onboarding to select role & market
         const response = NextResponse.redirect(`${origin}/onboarding`);
         response.cookies.delete("fitna_demo");
         return response;
