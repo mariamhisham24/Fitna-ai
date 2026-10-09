@@ -24,8 +24,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const cookieStore = await cookies();
   const theme = cookieStore.get('theme')?.value === 'dark' ? 'dark' : 'light';
   const lang = (cookieStore.get('language')?.value === 'en' ? 'en' : 'ar') as Language;
+  const dir = lang === 'en' ? 'ltr' : 'rtl';
   const rawMarket = cookieStore.get('fitna_market')?.value;
-  const market = (rawMarket === 'sa' || rawMarket === 'en') ? (rawMarket as Market) : 'eg';
+  const market = (rawMarket === 'sa' || rawMarket === 'en') ? rawMarket : 'eg';
 
   return (
     <html lang={lang} dir={dir} className={theme === 'dark' ? 'dark' : ''}>
