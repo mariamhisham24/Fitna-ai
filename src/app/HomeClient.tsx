@@ -296,9 +296,12 @@ export function HomeClient({
             {/* Quick Market Switcher Pill in Navbar */}
             <button
               type="button"
-              onClick={() => handleSelectMarket(market === "sa" ? "eg" : "sa")}
+              onClick={() => {
+                const next: Market = market === "eg" ? "sa" : market === "sa" ? "en" : "eg";
+                handleSelectMarket(next);
+              }}
               className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold border transition-all duration-200 flex items-center gap-1 cursor-pointer shadow-sm border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 dark:border-amber-400/40 hover:border-amber-500 shrink-0"
-              title={lang === "ar" ? "انقر للتبديل بين مصر والسعودية" : "Toggle Region"}
+              title={lang === "ar" ? "انقر لتبديل البيئة التعليمية (مصر / السعودية / English)" : "Toggle Region (EG / SA / EN)"}
             >
               <span>{market === "en" ? "EN 🇬🇧" : market === "sa" ? "السعودية 🇸🇦" : "مصر 🇪🇬"}</span>
             </button>

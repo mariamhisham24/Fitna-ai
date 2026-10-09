@@ -10,6 +10,7 @@ import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/client";
 
 import { type Market } from "@/lib/i18n/types";
+import { useTranslation } from "@/lib/i18n/context";
 
 const logo = "/manus-storage/fitna-logo-lockup-transparent_3e70d851.png";
 
@@ -175,6 +176,7 @@ export default function LoginPage() {
 }
 
 function LoginPageContent() {
+  const { setLanguage: ctxSetLanguage, setMarket: ctxSetMarket } = useTranslation();
   const [lang, setLang] = useState<Lang>("ar");
   const [market, setMarket] = useState<Market>("eg");
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -243,6 +245,9 @@ function LoginPageContent() {
     document.cookie = `language=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
     document.documentElement.lang = nextLang;
     document.documentElement.dir = nextLang === "en" ? "ltr" : "rtl";
+    try {
+      ctxSetLanguage(nextLang);
+    } catch {}
   };
 
   const handleSelectMarket = (nextMarket: Market) => {
@@ -251,10 +256,14 @@ function LoginPageContent() {
     if (typeof localStorage !== "undefined") {
       localStorage.setItem("fitna_market", nextMarket);
     }
+    try {
+      ctxSetMarket(nextMarket);
+    } catch {}
   };
 
   const toggleMarket = () => {
-    handleSelectMarket(market === "sa" ? "eg" : "sa");
+    const nextMarket: Market = market === "eg" ? "sa" : market === "sa" ? "en" : "eg";
+    handleSelectMarket(nextMarket);
   };
 
   const searchParams = useSearchParams();
@@ -333,9 +342,9 @@ function LoginPageContent() {
               type="button"
               onClick={toggleMarket}
               className="px-2.5 py-1 rounded-full text-xs font-semibold border transition-all duration-150 flex items-center gap-1 cursor-pointer border-amber-400/40 text-amber-300 hover:bg-amber-400/10 hover:border-amber-400"
-              title={lang === "ar" ? "انقر للتبديل بين مصر والسعودية" : "Toggle Region"}
+              title={lang === "ar" ? "انقر لتبديل بيئة التدريب (مصر / السعودية / English)" : "Toggle Region (EG / SA / EN)"}
             >
-              <span>{market === "sa" ? "السعودية" : "مصر"}</span>
+              <span>{market === "en" ? "English 🇬🇧" : market === "sa" ? "السعودية 🇸🇦" : "مصر 🇪🇬"}</span>
             </button>
             <button className="auth-lang" onClick={flipLang}>
               {t.language}
