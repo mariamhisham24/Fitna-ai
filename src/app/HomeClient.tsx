@@ -251,41 +251,85 @@ export function HomeClient({
             <button onClick={() => { scrollTo("how"); setMenu(false); }}>{t.nav[0]}</button>
             <button onClick={() => { scrollTo("features"); setMenu(false); }}>{t.nav[1]}</button>
             <button onClick={() => { scrollTo("pricing"); setMenu(false); }}>{t.nav[2]}</button>
+
+            {/* Mobile Drawer Quick Settings & Links */}
+            <div className="flex sm:hidden flex-col gap-3 pt-3 border-t border-white/10 mt-1">
+              <div className="flex items-center justify-between px-1">
+                <button
+                  type="button"
+                  onClick={flipLanguage}
+                  className="px-3 py-1.5 rounded-full text-xs font-bold border border-white/15 bg-white/5 text-white/90"
+                >
+                  {t.language === "EN" ? "English 🇬🇧" : "العربية 🇪🇬"}
+                </button>
+                <div className="flex items-center gap-2">
+                  <ThemeToggle />
+                  <a
+                    href="https://t.me/fitnaai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded-lg text-[#229ED9] hover:bg-white/10"
+                    title={lang === "ar" ? "الدعم عبر تيليجرام" : "Telegram Support"}
+                  >
+                    <TelegramIcon className="w-5 h-5 text-[#229ED9]" />
+                  </a>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  className="w-full py-2.5 rounded-xl border border-white/15 text-xs font-semibold text-white/90 hover:bg-white/5 text-center"
+                  onClick={() => { window.location.href = getTrainingEntryPath(); }}
+                >
+                  {t.login}
+                </button>
+                <button
+                  className="w-full py-2.5 rounded-xl bg-[#FFB52E] text-[#071B3A] text-xs font-bold hover:bg-[#E5A93C] text-center"
+                  onClick={() => { window.location.href = getTrainingEntryPath(); }}
+                >
+                  {t.start}
+                </button>
+              </div>
+            </div>
           </nav>
           <div className="header-actions">
             {/* Quick Market Switcher Pill in Navbar */}
             <button
               type="button"
               onClick={() => handleSelectMarket(market === "sa" ? "eg" : "sa")}
-              className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 cursor-pointer shadow-sm border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 dark:border-amber-400/40 hover:border-amber-500"
+              className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold border transition-all duration-200 flex items-center gap-1 cursor-pointer shadow-sm border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 dark:border-amber-400/40 hover:border-amber-500 shrink-0"
               title={lang === "ar" ? "انقر للتبديل بين مصر والسعودية" : "Toggle Region"}
             >
-              <span>{market === "sa" ? "السعودية" : "مصر"}</span>
+              <span>{market === "en" ? "EN 🇬🇧" : market === "sa" ? "السعودية 🇸🇦" : "مصر 🇪🇬"}</span>
             </button>
 
-            <ThemeToggle />
+            {/* Desktop Only Actions - hidden on phones to prevent crowding */}
+            <div className="hidden sm:flex items-center gap-2">
+              <ThemeToggle />
 
-            {/* Telegram Support Navbar Button */}
-            <a
-              href="https://t.me/fitnaai"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1.5 rounded-lg text-[#229ED9] hover:bg-white/10 transition-all duration-150 hover:scale-110 active:scale-95 inline-flex items-center justify-center cursor-pointer"
-              title={lang === "ar" ? "الدعم عبر تيليجرام" : "Telegram Support"}
-              aria-label="Telegram Support"
-            >
-              <TelegramIcon className="w-5 h-5 text-[#229ED9]" />
-            </a>
+              {/* Telegram Support Navbar Button */}
+              <a
+                href="https://t.me/fitnaai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 rounded-lg text-[#229ED9] hover:bg-white/10 transition-all duration-150 hover:scale-110 active:scale-95 inline-flex items-center justify-center cursor-pointer"
+                title={lang === "ar" ? "الدعم عبر تيليجرام" : "Telegram Support"}
+                aria-label="Telegram Support"
+              >
+                <TelegramIcon className="w-5 h-5 text-[#229ED9]" />
+              </a>
 
-            <button className="language-button" onClick={flipLanguage} title={lang === "ar" ? "Switch to English" : "التحويل إلى العربية"}>
-              {t.language}
-            </button>
-            <button className="ghost-button" onClick={() => { window.location.href = getTrainingEntryPath(); }}>
-              {t.login}
-            </button>
-            <button className="amber-button small cta-primary" onClick={() => { window.location.href = getTrainingEntryPath(); }}>
-              {t.start}
-              <NextArrow size={15} />
+              <button className="language-button" onClick={flipLanguage} title={lang === "ar" ? "Switch to English" : "التحويل إلى العربية"}>
+                {t.language}
+              </button>
+              <button className="ghost-button" onClick={() => { window.location.href = getTrainingEntryPath(); }}>
+                {t.login}
+              </button>
+            </div>
+
+            <button className="amber-button small cta-primary shrink-0 !text-[11px] sm:!text-xs !py-1.5 !px-3 sm:!py-2.5 sm:!px-4" onClick={() => { window.location.href = getTrainingEntryPath(); }}>
+              <span>{t.start}</span>
+              <NextArrow size={13} />
             </button>
           </div>
         </div>

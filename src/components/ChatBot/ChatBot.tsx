@@ -115,14 +115,14 @@ export function ChatBot({ context: propContext }: { context?: 'visitor' | 'teach
   };
 
   return (
-    <div className={`fixed z-50 transition-all duration-300 ${isRtl ? 'left-4' : 'right-4'} bottom-4 sm:bottom-6 flex flex-col items-end`}>
+    <div className={`fixed z-40 transition-all duration-300 ${isRtl ? 'left-3 sm:left-4' : 'right-3 sm:right-4'} bottom-3 sm:bottom-6 flex flex-col items-end`}>
       {/* Chat Window */}
       <div 
         className={`
-          mb-4 bg-[#071B3A] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden
+          mb-3 sm:mb-4 bg-[#071B3A] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden
           transition-all duration-300 origin-bottom-right
           ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}
-          w-[calc(100vw-2rem)] sm:w-[400px] h-[500px] max-h-[calc(100vh-6rem)]
+          w-[calc(100vw-1.5rem)] sm:w-[400px] h-[70vh] sm:h-[500px] max-h-[calc(100vh-5rem)]
         `}
       >
         {/* Header */}
@@ -215,12 +215,12 @@ export function ChatBot({ context: propContext }: { context?: 'visitor' | 'teach
       <button
         onClick={toggleChat}
         className={`
-          w-14 h-14 rounded-full flex items-center justify-center shadow-lg
+          w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow-lg
           transition-transform hover:scale-105 active:scale-95
           ${isOpen ? 'bg-slate-700 text-white' : 'bg-[#FFB52E] text-[#071B3A] hover:bg-[#E5A93C]'}
         `}
       >
-        {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
+        {isOpen ? <X size={20} className="sm:w-6 sm:h-6" /> : <MessageCircle size={20} className="sm:w-6 sm:h-6" />}
       </button>
     </div>
   );
