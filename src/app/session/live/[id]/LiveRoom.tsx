@@ -1633,18 +1633,14 @@ export function LiveRoom({
           <div className="h-7 w-px bg-white/10 hidden lg:block" />
 
           {/* Official Fitna Logo Lockup */}
-          <Link
-            href="/dashboard/teacher"
-            className="flex items-center group py-1"
-            title={isRtl ? "العودة إلى لوحة التحكم" : "Dashboard"}
-          >
+          <div className="flex items-center py-1 cursor-default select-none pointer-events-none">
             <div className="sm:hidden">
               <Logo variant="light" height={26} />
             </div>
             <div className="hidden sm:block">
-              <Logo variant="light" height={38} className="transition-transform duration-200 group-hover:scale-105" />
+              <Logo variant="light" height={38} />
             </div>
-          </Link>
+          </div>
         </div>
       </header>
 

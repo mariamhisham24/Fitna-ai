@@ -76,8 +76,8 @@ export default async function SessionComparePage({
       {/* Sticky Nile Top Navigation Bar */}
       <nav className="bg-[#071B3A]/95 backdrop-blur-md text-[#F6F0E4] border-b border-[#F6F0E4]/10 sticky top-0 z-30 shadow-md transition-all duration-300 relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:bg-gradient-to-r after:from-transparent after:via-[#12B8C4]/40 after:to-transparent">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/dashboard/teacher" className="flex items-center gap-3.5 py-2 group">
-            <Logo variant="light" height={38} className="transition-transform duration-200 group-hover:scale-105" />
+          <div className="flex items-center gap-3.5 py-2 cursor-default select-none pointer-events-none">
+            <Logo variant="light" height={38} />
             <div className="h-4 w-px bg-white/20 mx-1 hidden md:block" />
             <div className="hidden md:flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#12B8C4] animate-pulse" />
@@ -85,7 +85,7 @@ export default async function SessionComparePage({
                 {isRtl ? "نظام محاكاة الفصول الذكي" : "Classroom Simulation System"}
               </span>
             </div>
-          </Link>
+          </div>
 
           <div className="flex items-center gap-2.5 text-xs">
             <LanguageSwitcher className="hover:scale-105 active:scale-95 transition-transform duration-150" />

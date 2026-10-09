@@ -300,9 +300,9 @@ export function ReportClient({
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           {/* Brand Cluster */}
           <div className="flex items-center gap-3.5 sm:gap-5">
-            <Link href="/dashboard/teacher" className="flex items-center group py-1" title={isRtl ? "لوحة التحكم" : "Dashboard"}>
-              <Logo variant="light" height={38} className="transition-transform duration-200 group-hover:scale-105" />
-            </Link>
+            <div className="flex items-center py-1 cursor-default select-none pointer-events-none">
+              <Logo variant="light" height={38} />
+            </div>
             <div className="h-5 w-px bg-white/15 hidden sm:block" />
             <div className="hidden sm:block text-start">
               <div className="flex items-center gap-2">
