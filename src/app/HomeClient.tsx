@@ -241,9 +241,9 @@ export function HomeClient({
 
       <header className="site-header">
         <div className="header-inner">
-          <a className="brand" href="#top" aria-label="Fitna AI home">
+          <div className="brand cursor-default select-none pointer-events-none" aria-label="Fitna AI">
             <img src={logo} alt="Fitna AI" />
-          </a>
+          </div>
           <button className="mobile-menu" onClick={() => setMenu(!menu)} aria-label="Toggle navigation">
             <span /><span />
           </button>

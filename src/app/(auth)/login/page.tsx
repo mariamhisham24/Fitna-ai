@@ -361,9 +361,9 @@ function LoginPageContent() {
       <section className="auth-form-side">
         <div className="auth-form-top">
           <ThemeToggle className="auth-mode" />
-          <Link href="/" className="mobile-form-logo">
+          <div className="mobile-form-logo cursor-default select-none pointer-events-none">
             <img src={logo} alt="Fitna AI" />
-          </Link>
+          </div>
         </div>
 
         <div className="form-card">

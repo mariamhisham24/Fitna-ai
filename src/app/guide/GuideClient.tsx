@@ -125,10 +125,10 @@ export function GuideClient({ isAuthenticated }: GuideClientProps) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Brand & Breadcrumb */}
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 group">
-              <Logo variant="dark" height={32} className="dark:hidden transition-transform duration-200 group-hover:scale-105" />
-              <Logo variant="light" height={32} className="hidden dark:block transition-transform duration-200 group-hover:scale-105" />
-            </Link>
+            <div className="flex items-center gap-2 cursor-default select-none pointer-events-none">
+              <Logo variant="dark" height={32} className="dark:hidden" />
+              <Logo variant="light" height={32} className="hidden dark:block" />
+            </div>
             <span className="text-[#071B3A]/30 dark:text-white/30 text-sm">/</span>
             <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#12B8C4]">
               <BookOpen className="w-4 h-4 shrink-0" />

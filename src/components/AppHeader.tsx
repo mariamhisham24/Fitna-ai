@@ -16,10 +16,10 @@ export function AppHeader({ title }: { title?: string }) {
   return (
     <header className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 bg-white dark:bg-white/5 border-b border-[#071B3A]/10 dark:border-white/10 gap-2">
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-        <Link href="/" className="flex items-center shrink-0">
+        <div className="flex items-center shrink-0 cursor-default select-none pointer-events-none">
           <Logo variant="dark" height={26} className="dark:hidden" />
           <Logo variant="light" height={26} className="hidden dark:block" />
-        </Link>
+        </div>
         {title && <span className="text-[#071B3A]/40 dark:text-white/40">/</span>}
         {title && <span className="text-xs sm:text-sm text-[#071B3A]/70 dark:text-white/70 truncate">{title}</span>}
       </div>
