@@ -70,7 +70,8 @@ export interface DecisionResult {
 
 export const CLASSROOM_ROSTER = [
   "عمر", "سارة", "ياسين", "نور",
-  "ريم", "سلطان", "فهد", "جوري"
+  "ريم", "سلطان", "فهد", "جوري",
+  "Liam", "Emma", "Oliver", "Sophia"
 ] as const;
 export type ClassroomStudent = (typeof CLASSROOM_ROSTER)[number];
 
@@ -520,23 +521,12 @@ function _analyzeTeacherIntentInternal(
     };
   }
 
-  // 8. Greetings, Social Check-ins & Audio Checks (Pure greetings & audio tests)
+  // 8. Greetings, Social Check-ins & Audio Checks (Pure greetings & audio tests in Arabic and English)
   const isPureGreeting =
-    /(?<=^|[\s.,?!،؛:])(عاملين\s*(?:ايه|إيه|اي)|ازيكم|ازيكو|صباح\s*الخير|مساء\s*الخير|سلام\s*عليكم|السلام\s*عليكم|سلامو\s*عليكم|أهلاً|اهلا|مرحبا|سامعيني|صوتي\s*واضح)(?=[\s.,?!،؛:]|$)/i.test(clean) &&
+    /(?<=^|[\s.,?!،؛:])(عاملين\s*(?:ايه|إيه|اي)|ازيكم|ازيكو|صباح\s*الخير|مساء\s*الخير|سلام\s*عليكم|السلام\s*عليكم|سلامو\s*عليكم|أهلاً|اهلا|مرحبا|سامعيني|صوتي\s*واضح|\b(?:hello|hi|hey|good\s*morning|good\s*afternoon|good\s*evening|how\s*are\s*you|howdy|welcome|can\s*you\s*hear\s*me)\b)(?=[\s.,?!،؛:]|$)/i.test(clean) &&
     clean.split(/\s+/).length <= 15;
 
   if (isPureGreeting) {
-    if (context?.greetingCompleted) {
-      return {
-        intent: "casual_conversation",
-        calledStudents,
-        excludedStudents,
-        targetStudentName,
-        conceptTaught: null,
-        difficultyLevel: "easy",
-        tone: "encouraging",
-      };
-    }
     return {
       intent: "greeting",
       calledStudents,
@@ -889,10 +879,13 @@ export function decideClassroomReaction(
     return { candidateSpeakers, updatedStudents, classroomEvent: null };
   }
 
-  // 4. Greeting (First greeting only: exactly 1 student responds naturally to avoid echo)
+  // 4. Greeting (Exactly 1 student responds naturally to greet teacher)
   if (analysis.intent === "greeting") {
     const eligible = students.filter((s) => !analysis.excludedStudents.includes(s.name));
-    const greeter = eligible.find((s) => s.name === "سارة" || s.name === "ريم") || eligible[0];
+    const greeter =
+      eligible.find((s) => s.name === "Emma" || s.name === "Liam") ||
+      eligible.find((s) => s.name === "سارة" || s.name === "ريم") ||
+      eligible[0];
 
     for (const student of students) {
       const copy = { ...student, physicalAction: "attentive" as StudentPhysicalAction };
@@ -1008,6 +1001,10 @@ export function decideClassroomReaction(
       "سلطان": 35,
       "فهد": 20,
       "جوري": 5,
+      "Emma": 40,
+      "Liam": 35,
+      "Oliver": 20,
+      "Sophia": 5,
     };
     const totalWeight = pool.reduce((sum, s) => sum + (weights[s.name] || 20), 0);
     let rand = Math.random() * totalWeight;
@@ -1036,11 +1033,11 @@ export function decideClassroomReaction(
           name: copy.name,
           shouldSpeak: true,
           reasonToSpeak: "مشاركة فكرة أو قصة في النقاش المفتوح",
-          spokenEmotion: copy.name === "عمر" || copy.name === "سلطان" ? "excited" : copy.name === "ياسين" || copy.name === "فهد" ? "playful" : "confident",
+          spokenEmotion: copy.name === "عمر" || copy.name === "سلطان" || copy.name === "Liam" ? "excited" : copy.name === "ياسين" || copy.name === "فهد" || copy.name === "Oliver" ? "playful" : "confident",
         });
       } else {
-        if (copy.name === "سارة" || copy.name === "ريم") copy.physicalAction = "hand_raised";
-        else if (copy.name === "نور" || copy.name === "جوري") copy.physicalAction = "taking_notes";
+        if (copy.name === "سارة" || copy.name === "ريم" || copy.name === "Emma") copy.physicalAction = "hand_raised";
+        else if (copy.name === "نور" || copy.name === "جوري" || copy.name === "Sophia") copy.physicalAction = "taking_notes";
         else copy.physicalAction = "attentive";
       }
       copy.actionDescriptionAr = getActionDescription(copy.physicalAction, copy.name);
@@ -1066,6 +1063,7 @@ export function decideClassroomReaction(
 
     const chosen =
       handRaisedCandidate ||
+      eligiblePool.find((s) => s.name === "Emma" || s.name === "Liam") ||
       eligiblePool.find((s) => s.name === "سارة" || s.name === "ريم") ||
       eligiblePool.find((s) => s.name === "عمر" || s.name === "سلطان") ||
       eligiblePool[0];
@@ -1090,13 +1088,13 @@ export function decideClassroomReaction(
           reasonToSpeak: analysis.referencedStudentName
             ? `المعلم طلب البناء أو التعليق على ما قاله زميله (${analysis.referencedStudentName}). ${copy.name} يتفاعل ويؤيد أو يضيف على فكرة زميله.`
             : "التطوع والمشاركة بحماس في إجابة أو نقاش المعلم",
-          spokenEmotion: copy.name === "عمر" || copy.name === "سلطان" ? "excited" : "confident",
+          spokenEmotion: copy.name === "عمر" || copy.name === "سلطان" || copy.name === "Liam" ? "excited" : "confident",
           activeMisconception: copy.activeMisconception ?? null,
         });
       } else {
-        if ((copy.name === "سارة" || copy.name === "ريم") && !analysis.excludedStudents.includes(copy.name) && !isRecent(copy)) {
+        if ((copy.name === "سارة" || copy.name === "ريم" || copy.name === "Emma") && !analysis.excludedStudents.includes(copy.name) && !isRecent(copy)) {
           copy.physicalAction = "hand_raised";
-        } else if (copy.name === "نور" || copy.name === "جوري") {
+        } else if (copy.name === "نور" || copy.name === "جوري" || copy.name === "Sophia") {
           copy.physicalAction = "taking_notes";
         } else {
           copy.physicalAction = "attentive";

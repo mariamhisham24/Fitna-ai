@@ -94,11 +94,12 @@ export function extractTeacherTitleAndGender(
   voiceGender?: "male" | "female" | null,
   lockedTeacherTitle?: string | null,
   teacherFullName?: string,
-  market: "eg" | "sa" = "eg"
+  market: "eg" | "sa" | "en" = "eg"
 ): { title: string; isFemale: boolean } {
+  const isEn = market === "en";
   const isSa = market === "sa";
-  const defaultFemaleTitle = isSa ? "يا أستاذة" : "يا ميس";
-  const defaultMaleTitle = isSa ? "يا أستاذ" : "يا مستر";
+  const defaultFemaleTitle = isEn ? "Ms." : isSa ? "يا أستاذة" : "يا ميس";
+  const defaultMaleTitle = isEn ? "Mr." : isSa ? "يا أستاذ" : "يا مستر";
 
   const combined = `${recentHistory}\n${teacherUtterance}`;
 
@@ -125,7 +126,9 @@ export function extractTeacherTitleAndGender(
       `${effectiveTitle} ${teacherFullName || ""}`
     );
     if (isFemaleNameInTitle) {
-      if (isSa) {
+      if (isEn) {
+        effectiveTitle = effectiveTitle.replace(/Mr\.?/i, "Ms.");
+      } else if (isSa) {
         effectiveTitle = effectiveTitle.replace(/(?:يا\s*)?أستاذ\b/g, "يا أستاذة").replace(/(?:يا\s*)?مستر\b/g, "يا أستاذة");
       } else {
         effectiveTitle = effectiveTitle.replace(/(?:يا\s*)?مستر\b/g, "يا ميس").replace(/(?:يا\s*)?أستاذ\b/g, "يا ميس");
@@ -137,7 +140,8 @@ export function extractTeacherTitleAndGender(
       effectiveTitle.includes("أستاذة") ||
       effectiveTitle.includes("استاذة") ||
       effectiveTitle.includes("أبلة") ||
-      effectiveTitle.includes("ابلة");
+      effectiveTitle.includes("ابلة") ||
+      effectiveTitle.includes("Ms.");
     return { title: effectiveTitle, isFemale };
   }
 
@@ -495,7 +499,7 @@ export async function generateStudentReactions(params: {
   lockedTeacherTitle?: string | null;
   resolvedUnknownNames?: string[];
   teacherFullName?: string;
-  market?: "eg" | "sa";
+  market?: "eg" | "sa" | "en";
 }): Promise<StudentTurnResult[]> {
   const {
     personas,
@@ -580,7 +584,7 @@ export async function generateStudentReactions(params: {
   // 4. Single-Speaker Pipeline (Spec: Turn manager selects 0 or 1 speaker; only active candidate calls LLM, other 3 students silent in code)
   const teacherInfo = extractTeacherTitleAndGender(teacherUtterance, recentHistory, voiceGender, lockedTeacherTitle, teacherFullName, market);
   const title = teacherInfo.title;
-  const cleanTitle = title.startsWith("يا ") ? title : `يا ${title}`;
+  const cleanTitle = (market as any) === "en" ? (title.replace(/^يا\s*/, "") || "Teacher") : (title.startsWith("يا ") ? title : `يا ${title}`);
 
   const isRedirectOrCalling =
     /(?:عايز[ةه]?|عاوز[ةه]?|محتاج[ةه]?|دور|فين|لا\s*عايز|يا\s*\w+\s*(?:جاوب|قول)|اتفضل|اتفضلي|تفضل|تفضلي)/i.test(teacherUtterance) ||
@@ -626,7 +630,10 @@ export async function generateStudentReactions(params: {
         if (/afternoon/i.test(teacherUtterance)) {
           return `Good afternoon ${cleanTitle}!`;
         }
-        if (/hello|hi/i.test(teacherUtterance)) {
+        if (/evening/i.test(teacherUtterance)) {
+          return `Good evening ${cleanTitle}!`;
+        }
+        if (/hello|hi|hey/i.test(teacherUtterance)) {
           return `Hello ${cleanTitle}!`;
         }
         if (/how are/i.test(teacherUtterance)) {
@@ -982,7 +989,7 @@ export function generateFallbackReactions(params: {
   lessonContext?: string | null;
   fullLessonHistory?: string;
   teacherFullName?: string;
-  market?: "eg" | "sa";
+  market?: "eg" | "sa" | "en";
 }): StudentTurnResult[] {
   const {
     personas,

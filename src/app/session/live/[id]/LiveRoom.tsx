@@ -743,7 +743,7 @@ export function LiveRoom({
               const ttsRes = await fetch("/api/tts", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: s.text, personaName: s.name }),
+                body: JSON.stringify({ text: s.text, personaName: s.name, market: resolvedMarket }),
               });
               if (ttsRes.ok) {
                 const audioBlob = await ttsRes.blob();
