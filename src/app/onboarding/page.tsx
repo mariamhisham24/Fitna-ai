@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function OnboardingPage() {
   const [role, setRole] = useState<"teacher" | "institution_admin">("teacher");
-  const [market, setMarket] = useState<"eg" | "sa">("eg");
+  const [market, setMarket] = useState<"eg" | "sa" | "en">("eg");
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState("");
 
@@ -120,7 +120,7 @@ export default function OnboardingPage() {
             <label className="block text-xs font-bold text-slate-300 mb-3">
               2. اختر اللهجة والبيئة المدرسية:
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
                 type="button"
                 onClick={() => setMarket("eg")}
@@ -157,6 +157,25 @@ export default function OnboardingPage() {
                   </div>
                 </div>
                 {market === "sa" && <Check size={16} className="text-teal-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMarket("en")}
+                className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
+                  market === "en"
+                    ? "border-teal-400 bg-teal-500/15"
+                    : "border-slate-800 bg-slate-900/60 hover:bg-slate-800/60"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-lg">🇬🇧</span>
+                  <div className="text-start">
+                    <div className="font-bold text-sm text-white">English Classroom</div>
+                    <div className="text-[10px] text-slate-400">American English</div>
+                  </div>
+                </div>
+                {market === "en" && <Check size={16} className="text-teal-400" />}
               </button>
             </div>
           </div>

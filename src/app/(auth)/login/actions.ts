@@ -72,7 +72,7 @@ export async function signInAction(
       // Default to teacher if user profile query has any issue
     }
 
-    if (userMarket === "sa" || userMarket === "eg") {
+    if (userMarket === "sa" || userMarket === "eg" || userMarket === "en") {
       cookieStore.set("fitna_market", userMarket, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
     }
 
@@ -94,7 +94,8 @@ export async function signUpAction(
     const password = String(formData.get("password") || "");
     const fullName = String(formData.get("full_name") || "").trim();
     const role = String(formData.get("role") || "teacher");
-    const market = String(formData.get("market") || "eg") === "sa" ? "sa" : "eg";
+    const rawMarket = String(formData.get("market") || "eg");
+    const market: "eg" | "sa" | "en" = (rawMarket === "sa" || rawMarket === "en") ? rawMarket : "eg";
 
     if (!validateEmail(email)) return { error: "البريد الإلكتروني غير صالح" };
     if (password.length < 6) return { error: "كلمة المرور لازم تكون 6 أحرف على الأقل" };

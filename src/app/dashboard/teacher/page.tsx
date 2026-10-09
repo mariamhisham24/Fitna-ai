@@ -54,7 +54,8 @@ export default async function TeacherDashboardPage() {
     }
   } catch {}
 
-  const market = (cookieStore.get("fitna_market")?.value === "sa" ? "sa" : "eg");
+  const rawMarket = user.user_metadata?.market || cookieStore.get("fitna_market")?.value;
+  const market = (rawMarket === "sa" || rawMarket === "en") ? rawMarket : "eg";
   const isDemoUser = user.id === "d3300000-0000-4000-8000-000000000001" || user.email === "demo@fitna.ai";
 
   let completed: any[] = [];

@@ -24,7 +24,7 @@ export function AppHeader({ title }: { title?: string }) {
         {title && <span className="text-xs sm:text-sm text-[#071B3A]/70 dark:text-white/70 truncate hidden sm:inline">{title}</span>}
       </div>
       <div className="flex items-center gap-1 sm:gap-3 text-sm shrink-0">
-        <MarketSwitcher />
+        <MarketSwitcher locked={true} />
         <ThemeToggle />
         <LanguageSwitcher />
 

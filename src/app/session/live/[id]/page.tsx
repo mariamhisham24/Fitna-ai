@@ -54,7 +54,20 @@ export default async function LiveSessionPage({
     };
   });
 
-  const preferredOrder = ["ريم", "سلطان", "فهد", "جوري", "سارة", "ياسين", "عمر", "نور"];
+  const { data: configEvent } = await supabase
+    .from("session_events")
+    .select("metadata")
+    .eq("session_id", id)
+    .eq("event_type", "session_config")
+    .maybeSingle();
+
+  const isEnStudents = students.some((s) => ["Liam", "Emma", "Oliver", "Sophia"].some((enName) => s.name.includes(enName)));
+  const isSaStudents = students.some((s) => ["ريم", "سلطان", "فهد", "جوري"].some((saName) => s.name.includes(saName)));
+  const sessionMarket: "eg" | "sa" | "en" =
+    (configEvent?.metadata as any)?.market ||
+    (isEnStudents ? "en" : isSaStudents ? "sa" : "eg");
+
+  const preferredOrder = ["Liam", "Emma", "Oliver", "Sophia", "ريم", "سلطان", "فهد", "جوري", "سارة", "ياسين", "عمر", "نور"];
   students.sort((a, b) => {
     const ia = preferredOrder.findIndex((n) => (a.name || "").includes(n));
     const ib = preferredOrder.findIndex((n) => (b.name || "").includes(n));
@@ -71,6 +84,7 @@ export default async function LiveSessionPage({
       startedAt={session.started_at}
       initialStudents={students}
       teacherName={teacherName}
+      sessionMarket={sessionMarket}
     />
   );
 }

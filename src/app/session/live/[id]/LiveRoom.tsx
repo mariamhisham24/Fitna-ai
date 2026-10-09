@@ -76,11 +76,14 @@ export function LiveRoom({
   startedAt: string;
   initialStudents: { personaId: string; name: string; age: number; attention: number }[];
   teacherName?: string;
+  sessionMarket?: "eg" | "sa" | "en";
 }) {
   const router = useRouter();
   const { t, lang, market } = useTranslation();
-  const isSa = market === "sa";
-  const isRtl = lang === "ar";
+  const resolvedMarket = sessionMarket || (initialStudents.some((s) => ["Liam", "Emma", "Oliver", "Sophia"].includes(s.name)) ? "en" : market);
+  const isEn = resolvedMarket === "en";
+  const isSa = resolvedMarket === "sa";
+  const isRtl = isEn ? false : lang === "ar";
 
   const [students, setStudents] = useState<StudentUI[]>(
     initialStudents.map((s) => ({ ...s, state: "attentive" as StudentState }))
@@ -116,7 +119,32 @@ export function LiveRoom({
   const [liveTranscriptPreview, setLiveTranscriptPreview] = useState("");
   const [isTranscriptProcessing, setIsTranscriptProcessing] = useState(false);
 
+  const cleanEnglishText = useCallback((txt: string, isFinal = false) => {
+    let s = txt.trim().replace(/\s+/g, " ");
+    if (!s) return "";
+    s = s.charAt(0).toUpperCase() + s.slice(1);
+    if (isFinal && !/[.!?]$/.test(s)) {
+      if (/^(who|what|where|when|why|how|can|could|would|should|is|are|do|does|did|will|have|has)\b/i.test(s)) {
+        s += "?";
+      } else {
+        s += ".";
+      }
+    }
+    return s;
+  }, []);
+
+  const normalizeTranscriptLive = useCallback((raw: string) => {
+    if (isEn) return cleanEnglishText(raw, false);
+    return normalizeSpeechTranscription(raw, { addPunctuation: false });
+  }, [isEn, cleanEnglishText]);
+
+  const normalizeTranscriptFinal = useCallback((raw: string) => {
+    if (isEn) return cleanEnglishText(raw, true);
+    return normalizeSpeechTranscription(raw);
+  }, [isEn, cleanEnglishText]);
+
   const detectedSubjectLang = useMemo(() => {
+    if (isEn) return "en";
     if (!lessonContext) return "auto";
     const ctx = lessonContext.toLowerCase();
     if (/ألماني|الماني|deutsch|german|allemand/.test(ctx)) return "de";
@@ -126,20 +154,21 @@ export function LiveRoom({
     if (/إيطالي|ايطالي|italiano|italian/.test(ctx)) return "it";
     if (/صيني|chinese|mandarin|中文/.test(ctx)) return "zh";
     return "auto";
-  }, [lessonContext]);
+  }, [lessonContext, isEn]);
 
-  const [selectedSubjectLang, setSelectedSubjectLang] = useState<string>(detectedSubjectLang);
-  const selectedSubjectLangRef = useRef<string>(detectedSubjectLang);
+  const [selectedSubjectLang, setSelectedSubjectLang] = useState<string>(isEn ? "en" : detectedSubjectLang);
+  const selectedSubjectLangRef = useRef<string>(isEn ? "en" : detectedSubjectLang);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const langDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const initialBcp47 = useMemo(() => {
+    if (isEn) return "en-US";
     const found = SUBJECT_LANGUAGES.find((l) => l.id === detectedSubjectLang);
     if (!found || found.id === "auto" || found.id === "ar") {
       return isSa ? "ar-SA" : "ar-EG";
     }
     return found.bcp47;
-  }, [detectedSubjectLang, isSa]);
+  }, [detectedSubjectLang, isSa, isEn]);
 
   const [micLanguage, setMicLanguage] = useState<string>(initialBcp47);
   const micLanguageRef = useRef<string>(initialBcp47);
@@ -440,7 +469,7 @@ export function LiveRoom({
         const directTranscript = nativeTranscriptAccumulatorRef.current.trim();
         nativeTranscriptAccumulatorRef.current = "";
         if (directTranscript) {
-          const normalized = normalizeSpeechTranscription(directTranscript);
+          const normalized = normalizeTranscriptFinal(directTranscript);
           setLiveTranscriptPreview(normalized);
           setIsTranscriptProcessing(true);
         }
@@ -474,7 +503,7 @@ export function LiveRoom({
               }
               const combined = text.trim();
               if (combined) {
-                const normalized = normalizeSpeechTranscription(combined, { addPunctuation: false });
+                const normalized = normalizeTranscriptLive(combined);
                 nativeTranscriptAccumulatorRef.current = normalized;
                 setLiveTranscriptPreview(normalized);
                 setIsTranscriptProcessing(false);
@@ -536,7 +565,7 @@ export function LiveRoom({
       // 1. Primary STT: Use the exact live transcript accumulated by SpeechRecognition in the browser.
       // This guarantees 100% WYSIWYG parity: what the teacher sees live in the banner is EXACTLY what goes to the chat!
       if (clientFallbackTranscript && clientFallbackTranscript.trim().length >= 2) {
-        teacherText = normalizeSpeechTranscription(clientFallbackTranscript.trim());
+        teacherText = normalizeTranscriptFinal(clientFallbackTranscript.trim());
       }
 
       // Diagnose teacher voice pitch and gender if audio blob is available
@@ -564,13 +593,15 @@ export function LiveRoom({
             if (lessonContext) {
               sttForm.append("lessonContext", lessonContext);
             }
-            if (selectedSubjectLangRef.current && selectedSubjectLangRef.current !== "auto") {
+            if (isEn) {
+              sttForm.append("language", "en");
+            } else if (selectedSubjectLangRef.current && selectedSubjectLangRef.current !== "auto") {
               sttForm.append("language", selectedSubjectLangRef.current);
             }
             const sttRes = await fetch("/api/stt", { method: "POST", body: sttForm });
             const sttJson = await safeJson(sttRes);
             if (sttRes.ok && sttJson.text && typeof sttJson.text === "string" && sttJson.text.trim().length >= 1) {
-              teacherText = normalizeSpeechTranscription(sttJson.text.trim());
+              teacherText = normalizeTranscriptFinal(sttJson.text.trim());
             } else if (sttJson.error && (sttJson.error.includes("صمت") || sttJson.error.includes("ضوضاء"))) {
               isProcessingRef.current = false;
               setProcessing(false);
@@ -899,7 +930,7 @@ export function LiveRoom({
 
         const combined = (fullAccumulated + interim).trim();
         if (combined) {
-          const normalized = normalizeSpeechTranscription(combined, { addPunctuation: false });
+          const normalized = normalizeTranscriptLive(combined);
           nativeTranscriptAccumulatorRef.current = normalized;
           setLiveTranscriptPreview(normalized);
           setIsTranscriptProcessing(false);
@@ -997,12 +1028,13 @@ export function LiveRoom({
   }, [initSpeechRecognition]);
 
   const getBcp47ForSubject = useCallback((langId: string) => {
+    if (isEn) return "en-US";
     const found = SUBJECT_LANGUAGES.find((l) => l.id === langId);
     if (!found || found.id === "auto" || found.id === "ar") {
       return isSa ? "ar-SA" : "ar-EG";
     }
     return found.bcp47;
-  }, [isSa]);
+  }, [isSa, isEn]);
 
   const changeSubjectLanguage = useCallback((newLangId: string) => {
     setSelectedSubjectLang(newLangId);
@@ -1050,7 +1082,7 @@ export function LiveRoom({
     nativeTranscriptAccumulatorRef.current = "";
 
     if (directTranscript) {
-      const normalized = normalizeSpeechTranscription(directTranscript);
+      const normalized = normalizeTranscriptFinal(directTranscript);
       setLiveTranscriptPreview(normalized);
       setIsTranscriptProcessing(true);
     }
@@ -1081,8 +1113,8 @@ export function LiveRoom({
 
       if (hasDirect || canFallbackToAudio) {
         const preview = directTranscript
-          ? normalizeSpeechTranscription(directTranscript)
-          : (isRtl ? "جارِ التعرف على صوتك بدقة..." : "Transcribing audio...");
+          ? normalizeTranscriptFinal(directTranscript)
+          : (isEn ? "Transcribing audio..." : isRtl ? "جارِ التعرف على صوتك بدقة..." : "Transcribing audio...");
         setLiveTranscriptPreview(preview);
         setIsTranscriptProcessing(true);
         await handleRecordingComplete(blob, Math.max(durationMs, 600), directTranscript);

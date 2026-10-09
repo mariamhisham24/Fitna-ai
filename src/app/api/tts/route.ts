@@ -1011,14 +1011,19 @@ export async function POST(request: NextRequest) {
       text?: string;
       personaName?: string;
       voiceOverride?: string;
-      market?: "eg" | "sa";
+      market?: "eg" | "sa" | "en";
     };
     const { text, personaName, voiceOverride, market: requestedMarket } = body;
 
     const cookieMarket = request.cookies.get("fitna_market")?.value;
-    const market: "eg" | "sa" = (requestedMarket === "sa" || requestedMarket === "eg")
-      ? requestedMarket
-      : (cookieMarket === "sa" ? "sa" : "eg");
+    const isEnPersona = ["liam", "emma", "oliver", "sophia"].some((n) => personaName?.toLowerCase().includes(n));
+    const market: "eg" | "sa" | "en" = requestedMarket === "en" || isEnPersona
+      ? "en"
+      : requestedMarket === "sa"
+      ? "sa"
+      : requestedMarket === "eg"
+      ? "eg"
+      : (cookieMarket === "en" ? "en" : cookieMarket === "sa" ? "sa" : "eg");
 
     if (!text || !text.trim()) {
       return NextResponse.json({ error: "No text provided for audio synthesis" }, { status: 400 });

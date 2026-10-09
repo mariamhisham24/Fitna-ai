@@ -3,9 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "@/lib/i18n/context";
 import { type Market } from "@/lib/i18n/types";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Lock } from "lucide-react";
 
-export function MarketSwitcher({ className = "" }: { className?: string }) {
+export function MarketSwitcher({ className = "", locked = false }: { className?: string; locked?: boolean }) {
   const { market, setMarket, lang } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -21,9 +21,27 @@ export function MarketSwitcher({ className = "" }: { className?: string }) {
   }, []);
 
   const selectMarket = (m: Market) => {
+    if (locked) return;
     setMarket(m);
     setOpen(false);
   };
+
+  const label = market === "en" ? "English 🇬🇧" : market === "sa" ? "السعودية 🇸🇦" : "مصر 🇪🇬";
+
+  if (locked) {
+    return (
+      <div
+        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 select-none opacity-90 cursor-default shadow-sm ${
+          className ||
+          "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 dark:border-amber-400/40"
+        }`}
+        title={lang === "ar" ? `البيئة المدرسية مقفلة لحسابك (${label})` : `Classroom region is locked to your account (${label})`}
+      >
+        <span>{label}</span>
+        <Lock className="w-3 h-3 opacity-60 shrink-0" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative inline-block text-start" ref={ref}>
@@ -37,7 +55,7 @@ export function MarketSwitcher({ className = "" }: { className?: string }) {
         title={lang === "ar" ? "تغيير الدولة / السوق" : "Switch Region"}
         aria-expanded={open}
       >
-        <span>{market === "en" ? "English 🇬🇧" : market === "sa" ? "السعودية 🇸🇦" : "مصر 🇪🇬"}</span>
+        <span>{label}</span>
         <ChevronDown className={`w-3.5 h-3.5 opacity-70 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
 

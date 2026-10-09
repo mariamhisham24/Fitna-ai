@@ -76,20 +76,23 @@ function getStudentPreviewAvatar(name: string): { key: string; image: string; ri
 export function SessionSetupForm({
   topics: initialTopics,
   personas,
+  accountMarket,
 }: {
   topics: Topic[];
   personas: Persona[];
+  accountMarket?: "eg" | "sa" | "en";
 }) {
   const router = useRouter();
   const { t, lang, market } = useTranslation();
   const isRtl = lang === "ar";
-  const isSa = market === "sa";
 
   type TeacherTitle = "يا مستر" | "يا ميس" | "يا أستاذ" | "يا أستاذة" | "Mr." | "Ms.";
 
-  const selectedDialect: "sa" | "eg" | "en" = market === "en" ? "en" : market === "sa" ? "sa" : "eg";
-  const isDialectSa = market === "sa";
-  const isDialectEn = market === "en";
+  const effectiveMarket: "eg" | "sa" | "en" = accountMarket || (market === "en" ? "en" : market === "sa" ? "sa" : "eg");
+  const selectedDialect: "sa" | "eg" | "en" = effectiveMarket;
+  const isDialectSa = effectiveMarket === "sa";
+  const isDialectEn = effectiveMarket === "en";
+  const isSa = isDialectSa;
 
   const [topics, setTopics] = useState<Topic[]>(initialTopics);
   const [topicQuery, setTopicQuery] = useState("");
@@ -333,7 +336,7 @@ export function SessionSetupForm({
         scenario_name: selectedTopic?.title_ar ?? (topicQuery.trim() || "جلسة مخصصة"),
         classroom_mode: classroomStyle,
         duration_minutes: duration,
-        voice_language: selectedDialect === "sa" ? "ar-SA" : "ar-EG",
+        voice_language: selectedDialect === "en" ? "en-US" : selectedDialect === "sa" ? "ar-SA" : "ar-EG",
       });
 
       router.push(`/session/live/${json.sessionId}`);
@@ -364,7 +367,7 @@ export function SessionSetupForm({
           </div>
 
           <div className="flex items-center gap-2.5 text-xs">
-            <MarketSwitcher />
+            <MarketSwitcher locked={true} />
             <LanguageSwitcher className="hover:scale-105 active:scale-95 transition-transform duration-150" />
             <div className="hover:scale-105 active:scale-95 transition-transform duration-150">
               <ThemeToggle />
@@ -1247,13 +1250,13 @@ export function SessionSetupForm({
                   <span className="w-2.5 h-2.5 rounded-full bg-[#12B8C4]" />
                   <span>
                     {isRtl
-                      ? `معاينة طلاب الفصل ${isDialectSa ? "السعودي" : "المصري"} الافتراضي (${activePersonas.length} طلاب)`
+                      ? `معاينة طلاب الفصل ${isDialectEn ? "الإنجليزي" : isDialectSa ? "السعودي" : "المصري"} الافتراضي (${activePersonas.length} طلاب)`
                       : `Virtual Classroom Students (${activePersonas.length} Personas)`}
                   </span>
                 </h2>
                 <p className="text-xs text-[#071B3A]/50 dark:text-white/50 mt-0.5">
                   {isRtl
-                    ? `الشخصيات ${isDialectSa ? "السعودية" : "المصرية"} التي ستتفاعل معك بالصوت والنص خلال الجلسة`
+                    ? `الشخصيات ${isDialectEn ? "الإنجليزية" : isDialectSa ? "السعودية" : "المصرية"} التي ستتفاعل معك بالصوت والنص خلال الجلسة`
                     : "Real-time AI personas responding to voice and pedagogical cues"}
                 </p>
               </div>

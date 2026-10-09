@@ -1,4 +1,5 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SessionSetupForm } from "./SessionSetupForm";
 
@@ -46,6 +47,11 @@ export default async function SessionSetupPage() {
   const role = profileRes.data?.role ?? "teacher";
   if (role !== "teacher") redirect("/unauthorized");
 
+  const cookieStore = await cookies();
+  const cookieMarket = cookieStore.get("fitna_market")?.value;
+  const rawUserMarket = user.user_metadata?.market || cookieMarket;
+  const accountMarket: "eg" | "sa" | "en" = (rawUserMarket === "sa" || rawUserMarket === "en") ? rawUserMarket : "eg";
+
   const topicsRes = await withTimeout(
     db.from("lesson_topics").select("id, title_ar, title_en").order("created_at", { ascending: true }),
     10000,
@@ -63,5 +69,5 @@ export default async function SessionSetupPage() {
   );
   const personas = personasRes.data && personasRes.data.length > 0 ? personasRes.data : FALLBACK_PERSONAS;
 
-  return <SessionSetupForm topics={topics} personas={personas} />;
+  return <SessionSetupForm topics={topics} personas={personas} accountMarket={accountMarket} />;
 }

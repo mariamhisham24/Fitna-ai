@@ -123,7 +123,7 @@ export function TeacherDashboardClient({
           </div>
 
           <div className="flex items-center gap-2.5 text-xs">
-            <MarketSwitcher />
+            <MarketSwitcher locked={true} />
             <LanguageSwitcher className="hover:scale-105 active:scale-95 transition-transform duration-150" />
             <div className="hover:scale-105 active:scale-95 transition-transform duration-150">
               <ThemeToggle />

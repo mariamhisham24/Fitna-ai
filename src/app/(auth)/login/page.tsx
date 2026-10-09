@@ -226,12 +226,12 @@ function LoginPageContent() {
       document.documentElement.dir = match[1] === "en" ? "ltr" : "rtl";
     }
 
-    const matchMarket = document.cookie.match(/(?:^|;\s*)fitna_market=(eg|sa)(?:;|$)/);
-    if (matchMarket && (matchMarket[1] === "eg" || matchMarket[1] === "sa")) {
+    const matchMarket = document.cookie.match(/(?:^|;\s*)fitna_market=(eg|sa|en)(?:;|$)/);
+    if (matchMarket && (matchMarket[1] === "eg" || matchMarket[1] === "sa" || matchMarket[1] === "en")) {
       setMarket(matchMarket[1]);
     } else {
       const local = localStorage.getItem("fitna_market") as Market | null;
-      if (local === "eg" || local === "sa") {
+      if (local === "eg" || local === "sa" || local === "en") {
         setMarket(local);
       }
     }

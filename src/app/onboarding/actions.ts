@@ -2,7 +2,7 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 
-export async function completeOnboardingAction(role: "teacher" | "institution_admin", market: "eg" | "sa") {
+export async function completeOnboardingAction(role: "teacher" | "institution_admin", market: "eg" | "sa" | "en") {
   try {
     const supabase = await createClient();
     const { data: { user }, error: userErr } = await supabase.auth.getUser();

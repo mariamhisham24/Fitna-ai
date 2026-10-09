@@ -371,7 +371,7 @@ export function ReportClient({
 
             <div className="h-5 w-px bg-white/15 hidden md:block" />
             <div className="hidden md:flex items-center gap-2">
-              <MarketSwitcher />
+              <MarketSwitcher locked={true} />
               <LanguageSwitcher />
               <ThemeToggle />
               {/* User Guide Pinned Navbar Button */}

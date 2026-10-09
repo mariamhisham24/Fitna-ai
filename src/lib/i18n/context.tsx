@@ -49,13 +49,13 @@ export function I18nProvider({
   // Client-side cookie / localStorage check on mount
   useEffect(() => {
     if (typeof document !== "undefined") {
-      const match = document.cookie.match(/(?:^|;\s*)fitna_market=(eg|sa)(?:;|$)/);
-      if (match && (match[1] === "eg" || match[1] === "sa")) {
-        setMarketState(match[1]);
+      const match = document.cookie.match(/(?:^|;\s*)fitna_market=(eg|sa|en)(?:;|$)/);
+      if (match && (match[1] === "eg" || match[1] === "sa" || match[1] === "en")) {
+        setMarketState(match[1] as Market);
       } else {
         const local = localStorage.getItem("fitna_market");
-        if (local === "eg" || local === "sa") {
-          setMarketState(local);
+        if (local === "eg" || local === "sa" || local === "en") {
+          setMarketState(local as Market);
           document.cookie = `fitna_market=${local}; path=/; max-age=31536000; SameSite=Lax`;
         }
       }

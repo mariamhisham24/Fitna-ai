@@ -79,8 +79,6 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
     return NextResponse.json({ error: "مفيش نص اتقال" }, { status: 400 });
   }
 
-  const teacherText = normalizeSpeechTranscription(inputTeacherText.trim());
-
   // Load current per-student state.
   const { data: sessionStudents } = await supabase
     .from("session_students")
@@ -91,6 +89,16 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
   const { data: personas } = personaIds.length
     ? await supabase.from("student_personas").select("*").in("id", personaIds)
     : { data: [] };
+
+  const isEnSession = personas && personas.some(
+    (p: any) =>
+      p.dialect === "english" ||
+      ["Liam", "Emma", "Oliver", "Sophia"].some((n: string) => p.name?.toLowerCase().includes(n.toLowerCase()))
+  );
+
+  const teacherText = isEnSession
+    ? inputTeacherText.trim()
+    : normalizeSpeechTranscription(inputTeacherText.trim());
 
   const currentAttention: Record<string, number> = {};
   for (const s of sessionStudents ?? []) {

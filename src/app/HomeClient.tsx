@@ -171,13 +171,13 @@ export function HomeClient({
     }
 
     // 2. Market cookie & localStorage check
-    const marketMatch = document.cookie.match(/(?:^|;\s*)fitna_market=(eg|sa)(?:;|$)/);
-    if (marketMatch && (marketMatch[1] === "eg" || marketMatch[1] === "sa")) {
+    const marketMatch = document.cookie.match(/(?:^|;\s*)fitna_market=(eg|sa|en)(?:;|$)/);
+    if (marketMatch && (marketMatch[1] === "eg" || marketMatch[1] === "sa" || marketMatch[1] === "en")) {
       setMarket(marketMatch[1]);
       setShowMarketModal(false);
     } else {
       const localMarket = localStorage.getItem("fitna_market") as Market | null;
-      if (localMarket === "eg" || localMarket === "sa") {
+      if (localMarket === "eg" || localMarket === "sa" || localMarket === "en") {
         setMarket(localMarket);
         setShowMarketModal(false);
         document.cookie = `fitna_market=${localMarket}; path=/; max-age=31536000; SameSite=Lax`;
