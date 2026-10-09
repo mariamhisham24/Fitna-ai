@@ -67,6 +67,7 @@ export function LiveRoom({
   startedAt,
   initialStudents,
   teacherName,
+  sessionMarket,
 }: {
   sessionId: string;
   durationMinutes: number;
