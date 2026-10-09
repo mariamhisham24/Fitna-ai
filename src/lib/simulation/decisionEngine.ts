@@ -79,7 +79,8 @@ export const COLLECTIVE_CLASS_TERMS = [
   "شطار", "ابطال", "أبطال", "حلوين", "فصل", "ناس", "الناس", "باقيين", "الباقيين", "باقي", "الباقي",
   "كلكم", "كلنا", "الكل", "الجميع", "جميعا", "جميعاً", "معا", "سوا", "حد", "واحد", "أحد", "احد",
   "طلاب", "طلبة", "تلاميذ", "فريق", "مجموعة", "مجموعه",
-  "طلابي", "يا طلابي", "ياطلابي", "طلبتي", "تلاميذي", "حبايبي", "ولادي", "بناتي"
+  "طلابي", "يا طلابي", "ياطلابي", "طلبتي", "تلاميذي", "حبايبي", "ولادي", "بناتي",
+  "guys", "class", "everyone", "everybody", "all of you", "students", "team", "anyone", "somebody"
 ];
 
 function normalizeForComparison(s: string): string {
@@ -108,8 +109,8 @@ function _analyzeTeacherIntentInternal(
 ): TeacherAnalysis {
   const clean = (teacherText || "").replace(/[إأآا]/g, "ا").trim();
 
-  const hasQuestionWord = /(?:مين|إيه|ايه|ليه|إزاي|ازاي|كام|كم|فين|منين|هل|قول|قولي|جاوب|جاوبي|حل|وش|ليش)/i.test(clean);
-  const hasStudentName = /(?:عمر|عمار|سار[ةه]|ياسين|نور|ريم|سلطان|فهد|جور[ية])/i.test(clean);
+  const hasQuestionWord = /(?:مين|إيه|ايه|ليه|إزاي|ازاي|كام|كم|فين|منين|هل|قول|قولي|جاوب|جاوبي|حل|وش|ليش|\b(?:who|what|why|how|can|could|would|will|is|are|do|does|did|tell|speak|answer|explain|anyone|everybody|please)\b)/i.test(clean);
+  const hasStudentName = /(?:عمر|عمار|سار[ةه]|ياسين|نور|ريم|سلطان|فهد|جور[ية]|\b(?:liam|emma|oliver|sophia|reem|sultan|fahd|jouri|omar|sara|yassin|nour)\b)/i.test(clean);
 
   // 1. Check Repeated Utterance (Teacher said virtually the same statement again, without naming a student or asking a question)
   if (!hasStudentName && !hasQuestionWord && isRepeatedUtterance(teacherText, context?.lastTeacherUtterance)) {
