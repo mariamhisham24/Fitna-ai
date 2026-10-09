@@ -31,6 +31,19 @@ type TrainingObjective = "socratic_focus" | "talk_time_reduction" | "inclusive_e
 
 function getStudentPreviewAvatar(name: string): { key: string; image: string; ringColor: string } {
   const trimmed = name.trim().toLowerCase();
+  // English students
+  if (trimmed.includes("liam")) {
+    return { key: "omar", image: "/students/omar/neutral.jpg", ringColor: "border-teal-400 ring-2 ring-teal-400/30" };
+  }
+  if (trimmed.includes("emma")) {
+    return { key: "reem", image: "/students/reem/neutral.jpg", ringColor: "border-purple-400 ring-2 ring-purple-400/30" };
+  }
+  if (trimmed.includes("oliver")) {
+    return { key: "yassin", image: "/students/yassin/neutral.jpg", ringColor: "border-blue-400 ring-2 ring-blue-400/30" };
+  }
+  if (trimmed.includes("sophia")) {
+    return { key: "nour", image: "/students/nour/neutral.jpg", ringColor: "border-rose-400 ring-2 ring-rose-400/30" };
+  }
   // Saudi students
   if (trimmed.includes("ريم") || trimmed.includes("reem")) {
     return { key: "reem", image: "/students/reem/neutral.jpg", ringColor: "border-purple-400 ring-2 ring-purple-400/30" };

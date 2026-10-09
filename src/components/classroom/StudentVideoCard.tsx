@@ -37,8 +37,11 @@ export function StudentVideoCard({
   className = "",
 }: StudentVideoCardProps) {
   // Normalize name to persona key
-  const personaKey: StudentPersonaId = useMemo(() => {
-    const trimmed = name.trim().toLowerCase();
+    // English personas
+    if (trimmed.includes("liam")) return "omar";
+    if (trimmed.includes("emma")) return "reem";
+    if (trimmed.includes("oliver")) return "yassin";
+    if (trimmed.includes("sophia")) return "nour";
     // Saudi personas
     if (trimmed.includes("ريم") || trimmed.includes("reem")) return "reem";
     if (trimmed.includes("سلطان") || trimmed.includes("sultan")) return "sultan";

@@ -216,10 +216,19 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
 
   // 1. Primary Source of Truth: Session personas dialect and session_config metadata
   let lockedTeacherTitle: string | null = null;
-  let sessionMarket: "eg" | "sa" = "eg";
+  let sessionMarket: "eg" | "sa" | "en" = "eg";
 
-  // Authoritative check: If session students are Saudi personas, session is definitively Saudi
-  if (personas && personas.some((p: any) => p.dialect === "saudi_arabic")) {
+  // Authoritative check: If session students are English personas, session is definitively English
+  if (
+    personas &&
+    personas.some(
+      (p: any) =>
+        p.dialect === "english" ||
+        ["Liam", "Emma", "Oliver", "Sophia"].some((n: string) => p.name?.toLowerCase().includes(n.toLowerCase()))
+    )
+  ) {
+    sessionMarket = "en";
+  } else if (personas && personas.some((p: any) => p.dialect === "saudi_arabic")) {
     sessionMarket = "sa";
   } else if (personas && personas.some((p: any) => p.dialect === "egyptian_arabic")) {
     sessionMarket = "eg";
@@ -230,9 +239,9 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
       const meta = e.metadata as {
         teacher_title?: string;
         full_teacher_title?: string;
-        market?: "eg" | "sa";
+        market?: "eg" | "sa" | "en";
       };
-      if (meta.market === "sa" || meta.market === "eg") {
+      if (meta.market === "sa" || meta.market === "eg" || meta.market === "en") {
         sessionMarket = meta.market;
       }
       if (meta.full_teacher_title) {
@@ -245,9 +254,10 @@ async function handleTurn(request: NextRequest, params: Promise<{ id: string }>)
     }
   }
 
+  const isEn = sessionMarket === "en";
   const isSa = sessionMarket === "sa";
-  const defaultFemaleTitle = isSa ? "يا أستاذة" : "يا ميس";
-  const defaultMaleTitle = isSa ? "يا أستاذ" : "يا مستر";
+  const defaultFemaleTitle = isEn ? "Ms." : isSa ? "يا أستاذة" : "يا ميس";
+  const defaultMaleTitle = isEn ? "Mr." : isSa ? "يا أستاذ" : "يا مستر";
 
   // If not found in session_config, check past events metadata
   if (!lockedTeacherTitle) {
