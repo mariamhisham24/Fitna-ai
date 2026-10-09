@@ -15,6 +15,7 @@ import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { TelegramIcon } from "@/components/TelegramIcon";
 import { UserGuideButton } from "@/components/UserGuideButton";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { useChatBot } from "@/components/ChatBot/ChatBotProvider";
 
 type Profile = {
   full_name: string | null;
@@ -58,6 +59,13 @@ export function TeacherDashboardClient({
   const activeLang = ctxLang || lang;
   const isRtl = activeLang === "ar";
   const isSa = market === "sa";
+  
+  const { setDefaultContext } = useChatBot();
+
+  useEffect(() => {
+    setDefaultContext('teacher');
+    return () => setDefaultContext('visitor');
+  }, [setDefaultContext]);
 
   // Auto-launch onboarding tour for first-time users or if URL query ?tour=1
   useEffect(() => {

@@ -72,10 +72,11 @@ export function SessionSetupForm({
   const isRtl = lang === "ar";
   const isSa = market === "sa";
 
-  type TeacherTitle = "يا مستر" | "يا ميس" | "يا أستاذ" | "يا أستاذة";
+  type TeacherTitle = "يا مستر" | "يا ميس" | "يا أستاذ" | "يا أستاذة" | "Mr." | "Ms.";
 
-  const selectedDialect: "sa" | "eg" = isSa ? "sa" : "eg";
-  const isDialectSa = isSa;
+  const selectedDialect: "sa" | "eg" | "en" = market === "en" ? "en" : market === "sa" ? "sa" : "eg";
+  const isDialectSa = market === "sa";
+  const isDialectEn = market === "en";
 
   const [topics, setTopics] = useState<Topic[]>(initialTopics);
   const [topicQuery, setTopicQuery] = useState("");
@@ -96,19 +97,40 @@ export function SessionSetupForm({
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
-  const [teacherTitle, setTeacherTitle] = useState<TeacherTitle>(market === "sa" ? "يا أستاذ" : "يا مستر");
+  const [teacherTitle, setTeacherTitle] = useState<TeacherTitle>(market === "en" ? "Mr." : market === "sa" ? "يا أستاذ" : "يا مستر");
   const [teacherName, setTeacherName] = useState("");
 
   // Sync title when market changes
   useEffect(() => {
-    if (isSa) {
-      setTeacherTitle((prev) => (prev === "يا ميس" || prev === "يا أستاذة" ? "يا أستاذة" : "يا أستاذ"));
+    if (market === "en") {
+      setTeacherTitle((prev) => (prev === "يا ميس" || prev === "يا أستاذة" || prev === "Ms." ? "Ms." : "Mr."));
+    } else if (market === "sa") {
+      setTeacherTitle((prev) => (prev === "يا ميس" || prev === "يا أستاذة" || prev === "Ms." ? "يا أستاذة" : "يا أستاذ"));
     } else {
-      setTeacherTitle((prev) => (prev === "يا ميس" || prev === "يا أستاذة" ? "يا ميس" : "يا مستر"));
+      setTeacherTitle((prev) => (prev === "يا ميس" || prev === "يا أستاذة" || prev === "Ms." ? "يا ميس" : "يا مستر"));
     }
-  }, [isSa]);
+  }, [market]);
 
   const activePersonas = useMemo(() => {
+    if (selectedDialect === "en") {
+      const enFromProps = personas.filter(
+        (p) => p.dialect === "english" || ["Liam", "Emma", "Oliver", "Sophia"].some((n) => p.name.includes(n))
+      );
+      if (enFromProps.length >= 4) {
+        const order = ["Liam", "Emma", "Oliver", "Sophia"];
+        return [...enFromProps].sort((a, b) => {
+          const ia = order.findIndex((o) => a.name.includes(o));
+          const ib = order.findIndex((o) => b.name.includes(o));
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        });
+      }
+      return [
+        { id: "en-liam", name: "Liam", age: 10, dialect: "english", personality_prompt: "Curious, active", base_attention: 75, strengths: ["curiosity"], weaknesses: ["staying focused"] },
+        { id: "en-emma", name: "Emma", age: 11, dialect: "english", personality_prompt: "Diligent, polite", base_attention: 85, strengths: ["accuracy"], weaknesses: ["spontaneous participation"] },
+        { id: "en-oliver", name: "Oliver", age: 9, dialect: "english", personality_prompt: "Playful, energetic", base_attention: 60, strengths: ["energy"], weaknesses: ["attention"] },
+        { id: "en-sophia", name: "Sophia", age: 10, dialect: "english", personality_prompt: "Quiet, thoughtful", base_attention: 50, strengths: ["deep thinking"], weaknesses: ["confidence"] },
+      ];
+    }
     if (selectedDialect === "sa") {
       const saFromProps = personas.filter(
         (p) => p.dialect === "saudi_arabic" || ["ريم", "سلطان", "فهد", "جوري"].some((n) => p.name.includes(n))
@@ -175,13 +197,13 @@ export function SessionSetupForm({
     const isFemale = /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(val);
     const isMale = /(?:أحمد|احمد|محمد|محمود|علي|عمرو|خالد|يوسف|طارق|سلطان|فهد|عبدالله|عبد\s*الله|عمر|ahmed|mohamed)/i.test(val);
     if (isFemale) {
-      const femaleTitle = selectedDialect === "sa" ? "يا أستاذة" : "يا ميس";
+      const femaleTitle = selectedDialect === "en" ? "Ms." : selectedDialect === "sa" ? "يا أستاذة" : "يا ميس";
       setTeacherTitle(femaleTitle);
       if (typeof window !== "undefined") {
         localStorage.setItem("fitna_teacher_title", femaleTitle);
       }
     } else if (isMale) {
-      const maleTitle = selectedDialect === "sa" ? "يا أستاذ" : "يا مستر";
+      const maleTitle = selectedDialect === "en" ? "Mr." : selectedDialect === "sa" ? "يا أستاذ" : "يا مستر";
       setTeacherTitle(maleTitle);
       if (typeof window !== "undefined") {
         localStorage.setItem("fitna_teacher_title", maleTitle);
@@ -431,16 +453,16 @@ export function SessionSetupForm({
               {/* Option 1: Male Teacher */}
               <button
                 type="button"
-                onClick={() => handleTitleSelect(isDialectSa ? "يا أستاذ" : "يا مستر")}
+                onClick={() => handleTitleSelect(isDialectEn ? "Mr." : isDialectSa ? "يا أستاذ" : "يا مستر")}
                 className={`flex items-center gap-3.5 p-4 rounded-2xl border text-start transition-all cursor-pointer ${
-                  (teacherTitle === "يا مستر" || teacherTitle === "يا أستاذ")
+                  (teacherTitle === "يا مستر" || teacherTitle === "يا أستاذ" || teacherTitle === "Mr.")
                     ? "bg-[#12B8C4]/10 border-[#12B8C4] shadow-sm text-[#071B3A] dark:text-white ring-2 ring-[#12B8C4]/30"
                     : "bg-[#F6F0E4]/30 dark:bg-white/5 border-[#071B3A]/10 dark:border-white/10 text-[#071B3A]/70 dark:text-white/70 hover:border-[#12B8C4]/40"
                 }`}
               >
                 <div
                   className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition ${
-                    (teacherTitle === "يا مستر" || teacherTitle === "يا أستاذ")
+                    (teacherTitle === "يا مستر" || teacherTitle === "يا أستاذ" || teacherTitle === "Mr.")
                       ? "bg-[#071B3A] text-[#12B8C4] shadow-sm"
                       : "bg-[#071B3A]/10 dark:bg-white/10 text-[#071B3A]/60 dark:text-white/60"
                   }`}
@@ -450,20 +472,22 @@ export function SessionSetupForm({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-[#071B3A] dark:text-white">
-                      {isDialectSa ? (isRtl ? "أستاذ (معلم)" : "Mr. (Male Teacher)") : (isRtl ? "مستر (معلم)" : "Mr. (Male Teacher)")}
+                      {isDialectEn ? "Mr. (Male Teacher)" : isDialectSa ? (isRtl ? "أستاذ (معلم)" : "Mr. (Male Teacher)") : (isRtl ? "مستر (معلم)" : "Mr. (Male Teacher)")}
                     </span>
                     <span
                       className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                        (teacherTitle === "يا مستر" || teacherTitle === "يا أستاذ")
+                        (teacherTitle === "يا مستر" || teacherTitle === "يا أستاذ" || teacherTitle === "Mr.")
                           ? "border-[#12B8C4] bg-[#12B8C4]"
                           : "border-[#071B3A]/20 dark:border-white/20"
                       }`}
                     >
-                      {(teacherTitle === "يا مستر" || teacherTitle === "يا أستاذ") && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      {(teacherTitle === "يا مستر" || teacherTitle === "يا أستاذ" || teacherTitle === "Mr.") && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </span>
                   </div>
                   <p className="text-xs text-[#071B3A]/50 dark:text-white/50 mt-0.5">
-                    {isDialectSa
+                    {isDialectEn
+                      ? "Students address you: «Mr.»"
+                      : isDialectSa
                       ? (isRtl ? "يناديك الطلاب: «يا أستاذ»" : "Students address you: «Mr.»")
                       : (isRtl ? "يناديك الطلاب: «يا مستر»" : "Students address you: «Mr.»")}
                   </p>
@@ -473,16 +497,16 @@ export function SessionSetupForm({
               {/* Option 2: Female Teacher */}
               <button
                 type="button"
-                onClick={() => handleTitleSelect(isDialectSa ? "يا أستاذة" : "يا ميس")}
+                onClick={() => handleTitleSelect(isDialectEn ? "Ms." : isDialectSa ? "يا أستاذة" : "يا ميس")}
                 className={`flex items-center gap-3.5 p-4 rounded-2xl border text-start transition-all cursor-pointer ${
-                  (teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة")
+                  (teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة" || teacherTitle === "Ms.")
                     ? "bg-[#FFB52E]/15 border-[#FFB52E] shadow-sm text-[#071B3A] dark:text-white ring-2 ring-[#FFB52E]/30"
                     : "bg-[#F6F0E4]/30 dark:bg-white/5 border-[#071B3A]/10 dark:border-white/10 text-[#071B3A]/70 dark:text-white/70 hover:border-[#FFB52E]/40"
                 }`}
               >
                 <div
                   className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition ${
-                    (teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة")
+                    (teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة" || teacherTitle === "Ms.")
                       ? "bg-[#071B3A] text-[#FFB52E] shadow-sm"
                       : "bg-[#071B3A]/10 dark:bg-white/10 text-[#071B3A]/60 dark:text-white/60"
                   }`}
@@ -492,20 +516,22 @@ export function SessionSetupForm({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-[#071B3A] dark:text-white">
-                      {isDialectSa ? (isRtl ? "أستاذة (معلمة)" : "Ms. (Female Teacher)") : (isRtl ? "ميس (معلمة)" : "Ms. (Female Teacher)")}
+                      {isDialectEn ? "Ms. (Female Teacher)" : isDialectSa ? (isRtl ? "أستاذة (معلمة)" : "Ms. (Female Teacher)") : (isRtl ? "ميس (معلمة)" : "Ms. (Female Teacher)")}
                     </span>
                     <span
                       className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                        (teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة")
+                        (teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة" || teacherTitle === "Ms.")
                           ? "border-[#FFB52E] bg-[#FFB52E]"
                           : "border-[#071B3A]/20 dark:border-white/20"
                       }`}
                     >
-                      {(teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة") && <span className="w-1.5 h-1.5 rounded-full bg-[#071B3A]" />}
+                      {(teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة" || teacherTitle === "Ms.") && <span className="w-1.5 h-1.5 rounded-full bg-[#071B3A]" />}
                     </span>
                   </div>
                   <p className="text-xs text-[#071B3A]/50 dark:text-white/50 mt-0.5">
-                    {isDialectSa
+                    {isDialectEn
+                      ? "Students address you: «Ms.»"
+                      : isDialectSa
                       ? (isRtl ? "يناديك الطلاب: «يا أستاذة»" : "Students address you: «Ms.»")
                       : (isRtl ? "يناديك الطلاب: «يا ميس»" : "Students address you: «Ms.»")}
                   </p>
@@ -529,11 +555,15 @@ export function SessionSetupForm({
                 value={teacherName}
                 onChange={(e) => handleNameChange(e.target.value)}
                 placeholder={
-                  (teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة")
-                    ? (isSa
+                  (teacherTitle === "يا ميس" || teacherTitle === "يا أستاذة" || teacherTitle === "Ms.")
+                    ? (isDialectEn
+                        ? "e.g. Mariam, Sara..."
+                        : isSa
                         ? (isRtl ? "مثال: مريم، سارة، هدى... (لينادوك: يا أستاذة مريم)" : "e.g. Mariam, Sara...")
                         : (isRtl ? "مثال: مريم، سارة، هدى... (لينادوك: يا ميس مريم)" : "e.g. Mariam, Sara..."))
-                    : (isSa
+                    : (isDialectEn
+                        ? "e.g. Ahmed, Mohamed..."
+                        : isSa
                         ? (isRtl ? "مثال: أحمد، محمد، طارق... (لينادوك: يا أستاذ أحمد)" : "e.g. Ahmed, Mohamed...")
                         : (isRtl ? "مثال: أحمد، محمد، طارق... (لينادوك: يا مستر أحمد)" : "e.g. Ahmed, Mohamed..."))
                 }

@@ -1,5 +1,5 @@
 export type Language = "ar" | "en";
-export type Market = "eg" | "sa";
+export type Market = "eg" | "sa" | "en";
 export type Direction = "rtl" | "ltr";
 
 export interface Dictionary {
@@ -309,5 +309,11 @@ export interface Dictionary {
     step5MetricPatterns: string;
     step6Title: string;
     step6Desc: string;
+  };
+  chatbot: {
+    chatbot_title: string;
+    chatbot_welcome: string;
+    chatbot_placeholder: string;
+    chatbot_clear: string;
   };
 }

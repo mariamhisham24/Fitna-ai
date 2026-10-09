@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { I18nProvider } from '@/lib/i18n/context';
 import { AnalyticsProvider } from '@/components/AnalyticsProvider';
+import { ChatBotProvider } from '@/components/ChatBot/ChatBotProvider';
+import { ChatBot } from '@/components/ChatBot/ChatBot';
 import type { Language } from '@/lib/i18n/types';
 import './globals.css';
 
@@ -29,7 +31,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <I18nProvider initialLang={lang}>
           <AnalyticsProvider>
-            {children}
+            <ChatBotProvider>
+              {children}
+              <ChatBot context="visitor" />
+            </ChatBotProvider>
           </AnalyticsProvider>
         </I18nProvider>
       </body>

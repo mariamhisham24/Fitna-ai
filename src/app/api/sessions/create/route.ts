@@ -68,13 +68,13 @@ async function handleCreate(request: NextRequest) {
     lessonContext?: string;
     teacherTitle?: "يا مستر" | "يا ميس" | "يا أستاذ" | "يا أستاذة";
     teacherName?: string;
-    market?: "eg" | "sa";
+    market?: "eg" | "sa" | "en";
   };
 
   const cookieStore = await cookies();
   const cookieMarket = cookieStore.get("fitna_market")?.value;
   const rawMarket = requestedMarket || cookieMarket;
-  const market: "eg" | "sa" = rawMarket === "sa" ? "sa" : "eg";
+  const market: "eg" | "sa" | "en" = rawMarket === "en" ? "en" : rawMarket === "sa" ? "sa" : "eg";
 
   if (!durationMinutes || durationMinutes < 10 || durationMinutes > 30) {
     return NextResponse.json({ error: "مدة الجلسة لازم تكون بين 10 و30 دقيقة" }, { status: 400 });
@@ -125,7 +125,9 @@ async function handleCreate(request: NextRequest) {
     /(?:مريم|سارة|فاطمة|نور|منى|هدى|رنا|ياسمين|اية|آية|اماني|أماني|ايمان|إيمان|سلمى|ندى|ريم|شهد|حنين|ملك|ملاك|هاجر|إسراء|اسراء|دعاء|سمر|وفاء|زينب|عائشة|خديجة|maryam|mariam|sara|sarah|fatima|nour)/i.test(cleanName);
 
   let cleanTitle: string;
-  if (market === "sa") {
+  if (market === "en") {
+    cleanTitle = isFemaleTeacher ? "Ms." : "Mr.";
+  } else if (market === "sa") {
     cleanTitle = isFemaleTeacher ? "يا أستاذة" : "يا أستاذ";
   } else {
     cleanTitle = isFemaleTeacher ? "يا ميس" : "يا مستر";
@@ -151,22 +153,33 @@ async function handleCreate(request: NextRequest) {
   // real base_attention adjusted for the chosen classroom style —
   // this is what the live room (Milestone 3) will animate in real time
   // based on teacher behavior.
-  const targetDialect = market === "sa" ? "saudi_arabic" : "egyptian_arabic";
+  const targetDialect = market === "en" ? "english" : market === "sa" ? "saudi_arabic" : "egyptian_arabic";
   let { data: personas } = await supabase
     .from("student_personas")
     .select("id, name, base_attention, dialect")
     .eq("dialect", targetDialect);
 
   if (!personas || personas.length === 0) {
-    const { data: fallbackPersonas } = await supabase
-      .from("student_personas")
-      .select("id, name, base_attention, dialect")
-      .limit(4);
-    personas = fallbackPersonas;
+    if (market === "en") {
+      personas = [
+        { id: "en-liam", name: "Liam", base_attention: 75, dialect: "english" },
+        { id: "en-emma", name: "Emma", base_attention: 85, dialect: "english" },
+        { id: "en-oliver", name: "Oliver", base_attention: 60, dialect: "english" },
+        { id: "en-sophia", name: "Sophia", base_attention: 50, dialect: "english" }
+      ];
+    } else {
+      const { data: fallbackPersonas } = await supabase
+        .from("student_personas")
+        .select("id, name, base_attention, dialect")
+        .limit(4);
+      personas = fallbackPersonas;
+    }
   }
 
   if (personas && personas.length > 0) {
-    const preferredOrder = market === "sa"
+    const preferredOrder = market === "en"
+      ? ["Liam", "Emma", "Oliver", "Sophia"]
+      : market === "sa"
       ? ["ريم", "سلطان", "فهد", "جوري"]
       : ["سارة", "ياسين", "عمر", "نور"];
 

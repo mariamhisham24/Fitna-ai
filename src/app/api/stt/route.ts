@@ -59,20 +59,28 @@ export async function POST(request: NextRequest) {
     // Whisper large-v3 natively supports multilingual audio and code-switching.
     // Leaving language undefined enables auto-detection so Whisper seamlessly outputs
     // German (Deutsch), French (Français), English, Chinese, and Arabic in their native alphabets.
+    const cookieStore = await cookies();
+    const cookieMarket = cookieStore.get("fitna_market")?.value;
     const requestedLang = formData.get("language") as string | null;
-    // When language is auto or not specified, lock to Arabic (ar) so Whisper transcribes Egyptian Arabic flawlessly,
-    // captures English loan words naturally in English, and NEVER hallucinates Chinese or French YouTube subtitles!
-    const targetLanguage = requestedLang && requestedLang !== "auto" ? requestedLang : "ar";
+    let targetLanguage = requestedLang && requestedLang !== "auto" ? requestedLang : "ar";
+    if (requestedLang === "auto" && cookieMarket === "en") {
+      targetLanguage = "en";
+    }
 
     let prompt =
       "السلام عليكم ورحمة الله وبركاته، أهلاً بكم يا شطار في حصة اليوم. شرح تفاعلي بالعامية المصرية مع مصطلحات إنجليزية وتعليمية: Past Simple, regular verbs, play, watch, give me an example, grammar, homework, hello, thank you.";
+    
+    if (cookieMarket === "sa") {
+      prompt =
+        "السلام عليكم ورحمة الله وبركاته، أهلاً بكم يا أبطال في حصة اليوم. شرح تفاعلي باللهجة السعودية المدرسية مع مصطلحات تعليمية: رياضيات، علوم، لغتي، كيف الحال، ممتاز، بارك الله فيك، واجب، اختبار.";
+    }
 
     if (targetLanguage === "de") {
       prompt = "حصة وشرح تفاعلي للغة الألمانية Deutsch بالعامية المصرية: Guten Tag, wie geht's, danke, bitte, Tschüss, ich heiße, der Tisch, Verben, Grammatik, Hausaufgaben.";
     } else if (targetLanguage === "fr") {
       prompt = "حصة وشرح تفاعلي للغة الفرنسية Français بالعامية المصرية: Bonjour, salut, merci, comment ça va, au revoir, s'il vous plaît, les verbes, la grammaire.";
-    } else if (targetLanguage === "en") {
-      prompt = "Interactive English lesson: Past Simple, regular verbs, play, watch, give me an example, grammar, homework, questions and answers.";
+    } else if (targetLanguage === "en" || cookieMarket === "en") {
+      prompt = "Hello everyone, welcome to class today. Interactive teaching with natural American English, pedagogy terms, grammar, history, math, reading comprehension, and student engagement.";
     } else if (targetLanguage === "zh") {
       prompt = "中文互动课堂: 你好, 谢谢, 再见, 老师, 学生, 词汇, 语法.";
     }

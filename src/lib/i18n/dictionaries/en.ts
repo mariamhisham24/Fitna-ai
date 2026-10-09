@@ -308,4 +308,10 @@ export const en: Dictionary = {
     step6Title: "You're Ready to Begin",
     step6Desc: "You are now ready to begin your first Fitna simulation. You can revisit this user guide at any time by clicking the 'User Guide' button in the top navigation bar.",
   },
+  chatbot: {
+    chatbot_title: "Fitna Assistant",
+    chatbot_welcome: "Hi there! I'm your Fitna AI Assistant. How can I help you today?",
+    chatbot_placeholder: "Ask me anything...",
+    chatbot_clear: "Clear chat"
+  }
 };

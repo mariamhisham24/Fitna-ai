@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 import { normalizeEgyptianSpeech } from "@/lib/ai/egyptianSpeechNormalizer";
+import { normalizeEnglishSpeech } from "@/lib/ai/englishSpeechNormalizer";
 
 export const runtime = "nodejs";
 
@@ -94,12 +95,22 @@ const SA_DEFAULT_MALE_PROFILE: StudentVoiceProfile = {
   rate: "+4%",
 };
 
-const FEMALE_NAMES = new Set(["سارة", "نور", "ريم", "جوري", "فاطمة", "مريم", "سلمى", "sara", "sarah", "nour", "reem", "jouri", "fatima", "maryam"]);
+const EN_STUDENT_PROFILES: Record<string, StudentVoiceProfile> = {
+  'liam':   { voice: 'en-US-AndrewNeural',  pitch: '+24Hz', rate: '+8%' },
+  'emma':   { voice: 'en-US-AvaNeural',      pitch: '+20Hz', rate: '+4%' },
+  'oliver': { voice: 'en-US-BrianNeural',     pitch: '+30Hz', rate: '+12%' },
+  'sophia': { voice: 'en-US-JennyNeural',     pitch: '+24Hz', rate: '-2%' },
+};
+
+const EN_DEFAULT_FEMALE_PROFILE: StudentVoiceProfile = { voice: 'en-US-AvaNeural', pitch: '+16Hz', rate: '+2%' };
+const EN_DEFAULT_MALE_PROFILE: StudentVoiceProfile = { voice: 'en-US-AndrewNeural', pitch: '+20Hz', rate: '+6%' };
+
+const FEMALE_NAMES = new Set(["سارة", "نور", "ريم", "جوري", "فاطمة", "مريم", "سلمى", "sara", "sarah", "nour", "reem", "jouri", "fatima", "maryam", "emma", "sophia"]);
 
 function resolveVoiceProfile(
   personaName?: string,
   voiceOverride?: string,
-  market: "eg" | "sa" = "eg"
+  market: "eg" | "sa" | "en" = "eg"
 ): StudentVoiceProfile {
   if (voiceOverride) {
     return { voice: voiceOverride, pitch: "+0Hz", rate: "+0%" };
@@ -112,6 +123,11 @@ function resolveVoiceProfile(
       return SA_STUDENT_PROFILES[normalizedName];
     }
     return FEMALE_NAMES.has(normalizedName) ? SA_DEFAULT_FEMALE_PROFILE : SA_DEFAULT_MALE_PROFILE;
+  } else if (market === "en") {
+    if (EN_STUDENT_PROFILES[normalizedName]) {
+      return EN_STUDENT_PROFILES[normalizedName];
+    }
+    return FEMALE_NAMES.has(normalizedName) ? EN_DEFAULT_FEMALE_PROFILE : EN_DEFAULT_MALE_PROFILE;
   }
 
   if (STUDENT_PROFILES[normalizedName]) {
@@ -604,6 +620,13 @@ const SA_GEMINI_STUDENT_CONFIGS: Record<string, { voice: string; promptPrefix: s
   },
 };
 
+const EN_GEMINI_STUDENT_CONFIGS: Record<string, { voice: string; promptPrefix: string }> = {
+  'liam':   { voice: 'Puck',   promptPrefix: 'Speak as Liam, an enthusiastic 10-year-old American school boy. Tone: curious, energetic, natural child inflection. Deliver the following text: ' },
+  'emma':   { voice: 'Kore',   promptPrefix: 'Speak as Emma, a polite and articulate 11-year-old American school girl. Tone: confident, warm, natural child inflection. Deliver the following text: ' },
+  'oliver': { voice: 'Zephyr', promptPrefix: 'Speak as Oliver, a playful and energetic 9-year-old American school boy. Tone: lively, sometimes cheeky, natural child inflection. Deliver the following text: ' },
+  'sophia': { voice: 'Aoede',  promptPrefix: 'Speak as Sophia, a quiet and thoughtful 10-year-old American school girl. Tone: gentle, hesitant, soft child inflection. Deliver the following text: ' },
+};
+
 /**
  * Prepend standard 44-byte RIFF/WAVE header to raw 16-bit linear PCM audio.
  */
@@ -647,22 +670,24 @@ function getGeminiKeys(): string[] {
 async function synthesizeGeminiTTS(
   text: string,
   personaName?: string,
-  market: "eg" | "sa" = "eg"
+  market: "eg" | "sa" | "en" = "eg"
 ): Promise<{ buffer: Buffer; contentType: string } | null> {
   const keys = getGeminiKeys();
   if (keys.length === 0) return null;
 
   const normalizedName = (personaName ?? "").trim().toLowerCase();
-  const configs = market === "sa" ? SA_GEMINI_STUDENT_CONFIGS : GEMINI_STUDENT_CONFIGS;
+  const configs = market === "en" ? EN_GEMINI_STUDENT_CONFIGS : market === "sa" ? SA_GEMINI_STUDENT_CONFIGS : GEMINI_STUDENT_CONFIGS;
   const config =
     configs[normalizedName] || {
       voice: FEMALE_NAMES.has(normalizedName) ? "Kore" : "Puck",
-      promptPrefix: market === "sa"
+      promptPrefix: market === "en"
+        ? "Speak as an authentic American student with natural school inflection."
+        : market === "sa"
         ? "Speak as an authentic Saudi student with natural school inflection."
         : "Speak as an authentic Egyptian student with natural Cairo inflection.",
     };
 
-  const fullPrompt = `${config.promptPrefix} Deliver the following text: ${text}`;
+  const fullPrompt = market === "en" ? `${config.promptPrefix}${text}` : `${config.promptPrefix} Deliver the following text: ${text}`;
 
   const modelsToTry = [
     "gemini-2.5-flash-preview-tts",
@@ -891,12 +916,16 @@ export async function synthesizeStudentSpeech(
   text: string,
   personaName?: string,
   voiceOverride?: string,
-  market: "eg" | "sa" = "eg"
+  market: "eg" | "sa" | "en" = "eg"
 ): Promise<{ buffer: Buffer; contentType: string } | null> {
   if (!text || !text.trim()) return null;
 
   const profile = resolveVoiceProfile(personaName, voiceOverride, market);
-  const normalizedText = market === "sa" ? text.trim() : normalizeEgyptianSpeech(text.trim());
+  const normalizedText = market === 'en' 
+    ? normalizeEnglishSpeech(text.trim())
+    : market === 'sa' 
+    ? text.trim() 
+    : normalizeEgyptianSpeech(text.trim());
   if (!normalizedText) return null;
 
   const cacheKey = `v5::${market}::${profile.voice}::${profile.pitch}::${profile.rate}:::${normalizedText}`;

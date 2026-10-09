@@ -682,6 +682,28 @@ function LoginPageContent() {
                       {t.nationalitySaDesc}
                     </p>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectMarket("en")}
+                    style={{
+                      textAlign: "inherit",
+                      padding: "12px 14px",
+                      borderRadius: "12px",
+                      border: market === "en" ? "2px solid var(--teal)" : "1px solid var(--border)",
+                      background: market === "en" ? "color-mix(in srgb, var(--teal) 14%, transparent)" : "color-mix(in srgb, var(--background) 40%, transparent)",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      boxShadow: market === "en" ? "0 0 14px rgba(18,184,196,0.18)" : "none",
+                    }}
+                  >
+                    <span style={{ fontSize: "12px", fontWeight: "700", display: "block", marginBottom: "4px", color: "var(--foreground)" }}>
+                      🇬🇧 English
+                    </span>
+                    <p style={{ margin: 0, fontSize: "11px", color: "var(--muted)", lineHeight: "1.5" }}>
+                      American English simulation
+                    </p>
+                  </button>
                 </div>
               </div>
 

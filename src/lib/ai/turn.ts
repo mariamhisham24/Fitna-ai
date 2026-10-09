@@ -247,15 +247,24 @@ export function sanitizeStudentResponse(
     hasUnlikeDenominators?: boolean;
     isCommonDenominatorTaught?: boolean;
     activeMisconception?: any;
+    market?: "eg" | "sa" | "en";
   }
 ): string {
   let titleFormatted = (teacherTitle || "").trim();
-  titleFormatted = titleFormatted.replace(/(?:يا\s*)?(?:ميس|مس)\s+(?:ميس|مس)\b/gi, "يا ميس");
-  titleFormatted = titleFormatted.replace(/(?:يا\s*)?(?:مستر|استاذ|أستاذ)\s+(?:مستر|استاذ|أستاذ)\b/gi, "يا مستر");
-  const cleanTitle = titleFormatted.startsWith("يا ") ? titleFormatted : `يا ${titleFormatted}`;
+  if (context?.market === "en") {
+    titleFormatted = titleFormatted.replace(/Mr\.\s*Mr\./gi, "Mr.");
+    titleFormatted = titleFormatted.replace(/Ms\.\s*Ms\./gi, "Ms.");
+  } else {
+    titleFormatted = titleFormatted.replace(/(?:يا\s*)?(?:ميس|مس)\s+(?:ميس|مس)\b/gi, "يا ميس");
+    titleFormatted = titleFormatted.replace(/(?:يا\s*)?(?:مستر|استاذ|أستاذ)\s+(?:مستر|استاذ|أستاذ)\b/gi, "يا مستر");
+  }
+  const cleanTitle = (context?.market === "en") ? titleFormatted : (titleFormatted.startsWith("يا ") ? titleFormatted : `يا ${titleFormatted}`);
 
   // If student was distracted when called, they must be confused and ask to repeat:
   if (context?.isDistracted) {
+    if (context?.market === "en") {
+      return `Huh? Sorry ${cleanTitle} I wasn't paying attention.. could you repeat the question?`;
+    }
     return `ها؟ معلش ${cleanTitle} مكنتش مركز.. ممكن تعيد السؤال؟`;
   }
 
@@ -264,10 +273,23 @@ export function sanitizeStudentResponse(
   // 1. Remove surrounding quotes and brackets
   text = text.replace(/^["'«“]+|["'»”]+$/g, "").trim();
 
-  // 2. Remove AI roleplay prefixes ("بصفتي طالب", "رد نور:", etc.)
+  // 2. Remove AI roleplay prefixes
   text = text
     .replace(/^(?:بصفتي\s*طالب[ةه]?|وفقاً\s*لدوري|أنا\s*كطالب[ةه]?|رد\s*\w+:\s*|الطالب\s*\w+:\s*)/i, "")
     .trim();
+
+  if (context?.market === "en") {
+    // English-specific cleanup: remove service phrases
+    text = text
+      .replace(/(?:I'd\s*be\s*happy\s*to\s*help[^.!?\n]*)/gi, "")
+      .replace(/(?:As\s*an\s*AI[^.!?\n]*)/gi, "")
+      .replace(/(?:Sure![^.!?\n]*)/gi, "")
+      .replace(/(?:Let\s*me\s*explain[^.!?\n]*)/gi, "")
+      .trim();
+    // Ensure English ends with punctuation
+    if (text && !/[.!?]$/.test(text)) text += ".";
+    return text;
+  }
 
   // 3. Strip unsolicited service offers and assistant tropes
   text = text
@@ -597,6 +619,25 @@ export async function generateStudentReactions(params: {
   async function generateSpeechForCandidate(candidate: (typeof decision.candidateSpeakers)[0]): Promise<string | null> {
     // 1. Direct, instant, natural responses for classroom conversational rituals (Zero hallucination):
     if (isGreeting) {
+      if (market === "en") {
+        if (/morning/i.test(teacherUtterance)) {
+          return `Good morning ${cleanTitle}!`;
+        }
+        if (/afternoon/i.test(teacherUtterance)) {
+          return `Good afternoon ${cleanTitle}!`;
+        }
+        if (/hello|hi/i.test(teacherUtterance)) {
+          return `Hello ${cleanTitle}!`;
+        }
+        if (/how are/i.test(teacherUtterance)) {
+          return `We're doing well, thanks! How are you ${cleanTitle}?`;
+        }
+        if (/hear me|can you hear/i.test(teacherUtterance)) {
+          return `Yes ${cleanTitle}, we can hear you!`;
+        }
+        return `Hello ${cleanTitle}!`;
+      }
+
       if (/صباح\s*الخير/i.test(teacherUtterance)) {
         return market === "sa"
           ? `صباح النور ${cleanTitle}! الحمد لله طيبين.`
@@ -758,8 +799,16 @@ export async function generateStudentReactions(params: {
     const hasActiveMisconception = candidate.activeMisconception && !candidate.activeMisconception.isResolved;
     const hasResolvedMisconception = candidate.activeMisconception && candidate.activeMisconception.isResolved;
 
-    const defaultFallback =
-      intentAnalysis.intent === "session_farewell"
+    const isEn = market === "en";
+
+    const defaultFallback = isEn 
+      ? (intentAnalysis.intent === "session_farewell" ? `Bye ${cleanTitle}!` :
+         intentAnalysis.intent === "clarification_request" ? `Sorry ${cleanTitle}, could you clarify that?` :
+         intentAnalysis.intent === "teacher_apology" ? `No worries ${cleanTitle}!` :
+         candidate.isDistracted ? `Huh? Sorry ${cleanTitle} I wasn't paying attention..` :
+         intentAnalysis.intent === "attention_check" ? `We're listening ${cleanTitle}!` :
+         `I'm not sure ${cleanTitle}.`)
+      : intentAnalysis.intent === "session_farewell"
         ? (p.name === "سارة" || p.name === "نور" ? `مع السلامة ${cleanTitle}!` : `باي ${cleanTitle} مع السلامة!`)
         : intentAnalysis.intent === "clarification_request"
         ? (p.name === "عمر"
@@ -895,6 +944,7 @@ export async function generateStudentReactions(params: {
           activeMisconception: candidate.activeMisconception,
           isGreeting,
           teacherUtterance,
+          market,
         })
       : null;
     const finalText = sanitized || defaultFallback;
