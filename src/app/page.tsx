@@ -6,7 +6,7 @@ export default async function Home() {
   const cookieStore = await cookies();
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as "ar" | "en";
   const marketCookie = cookieStore.get("fitna_market")?.value;
-  const market = (marketCookie === "sa" ? "sa" : marketCookie === "eg" ? "eg" : null) as Market | null;
+  const market = (marketCookie === "sa" || marketCookie === "eg" || marketCookie === "en") ? (marketCookie as Market) : null;
 
   return <HomeClient initialLang={lang} initialMarket={market} />;
 }
