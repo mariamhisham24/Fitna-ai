@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
+import Script from 'next/script';
 import { I18nProvider } from '@/lib/i18n/context';
 import { AnalyticsProvider } from '@/components/AnalyticsProvider';
 import { ChatBotProvider } from '@/components/ChatBot/ChatBotProvider';
@@ -27,9 +28,30 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const dir = lang === 'en' ? 'ltr' : 'rtl';
   const rawMarket = cookieStore.get('fitna_market')?.value;
   const market = (rawMarket === 'sa' || rawMarket === 'en') ? rawMarket : 'eg';
+  const gaId = process.env.NEXT_PUBLIC_GA_ID || "G-F4NTT7HKQP";
 
   return (
     <html lang={lang} dir={dir} className={theme === 'dark' ? 'dark' : ''}>
+      <head>
+        {gaId && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${gaId}', {
+                  page_path: window.location.pathname,
+                });
+              `}
+            </Script>
+          </>
+        )}
+      </head>
       <body>
         <I18nProvider initialLang={lang} initialMarket={market}>
           <AnalyticsProvider>
