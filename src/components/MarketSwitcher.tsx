@@ -31,32 +31,32 @@ export function MarketSwitcher({ className = "", locked = false }: { className?:
   if (locked) {
     return (
       <div
-        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 select-none opacity-90 cursor-default shadow-sm ${
+        className={`px-3 h-8 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 select-none opacity-90 cursor-default shadow-sm whitespace-nowrap shrink-0 ${
           className ||
           "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 dark:border-amber-400/40"
         }`}
         title={lang === "ar" ? `البيئة المدرسية مقفلة لحسابك (${label})` : `Classroom region is locked to your account (${label})`}
       >
-        <span>{label}</span>
+        <span className="whitespace-nowrap">{label}</span>
         <Lock className="w-3 h-3 opacity-60 shrink-0" />
       </div>
     );
   }
 
   return (
-    <div className="relative inline-block text-start" ref={ref}>
+    <div className="relative inline-block text-start shrink-0" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-2 cursor-pointer shadow-sm ${
+        className={`px-3 h-8 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-2 cursor-pointer shadow-sm whitespace-nowrap shrink-0 ${
           className ||
           "border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/15 text-amber-700 dark:text-amber-300 dark:border-amber-400/40 hover:border-amber-500"
         }`}
         title={lang === "ar" ? "تغيير الدولة / السوق" : "Switch Region"}
         aria-expanded={open}
       >
-        <span>{label}</span>
-        <ChevronDown className={`w-3.5 h-3.5 opacity-70 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        <span className="whitespace-nowrap">{label}</span>
+        <ChevronDown className={`w-3.5 h-3.5 opacity-70 transition-transform duration-200 shrink-0 ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
