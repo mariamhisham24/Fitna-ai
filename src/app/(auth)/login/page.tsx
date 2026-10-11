@@ -252,12 +252,19 @@ function LoginPageContent() {
 
   const handleSelectMarket = (nextMarket: Market) => {
     setMarket(nextMarket);
+    const nextLang = nextMarket === "en" ? "en" : "ar";
+    setLang(nextLang);
     document.cookie = `fitna_market=${nextMarket}; path=/; max-age=31536000; SameSite=Lax`;
+    document.cookie = `language=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
     if (typeof localStorage !== "undefined") {
       localStorage.setItem("fitna_market", nextMarket);
+      localStorage.setItem("language", nextLang);
     }
+    document.documentElement.lang = nextLang;
+    document.documentElement.dir = nextLang === "en" ? "ltr" : "rtl";
     try {
       ctxSetMarket(nextMarket);
+      ctxSetLanguage(nextLang);
     } catch {}
   };
 

@@ -72,9 +72,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    let dialectInstruction = "Respond in natural, warm Egyptian Arabic (لهجة مصرية مهذبة ومألوفة للمعلمين).";
+    let dialectInstruction = "Respond in natural, warm Egyptian Arabic (لهجة مصرية مهذبة ومألوفة للمعلمين في مصر).";
     if (market === 'sa') {
-      dialectInstruction = "Respond in fluent, professional Modern Standard Arabic / formal Arabic (لغة عربية فصحى نقية وراقية تليق بالبيئة التعليمية السعودية وتخاطب المعلمين بأسلوب تربوي رصين ومحترم). Avoid colloquial Egyptian slang.";
+      dialectInstruction = "CRITICAL REQUIREMENT: You MUST respond in pure Modern Standard Arabic / formal Arabic (لغة عربية فصحى نقية وفصيحة ورصينة تليق بالبيئة التعليمية والمدارس بالمملكة العربية السعودية). Strictly DO NOT use Egyptian slang or colloquial words under any circumstances (ممنوع منعاً باتاً استخدام أي كلمات أو مفردات عامية مصرية مثل: إزاي، عشان، كدا، النهاردة، بيك، دي، ده، حضرتك، وغيرها). خاطب المعلم بأسلوب تربوي رصين وفصحى سليمة (مثل: أهلاً بك، حياك الله، يسعدني مساندتك تربوياً).";
     } else if (market === 'en') {
       dialectInstruction = "Respond in clear, encouraging, and professional American English tailored for educators.";
     }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpLeft, ArrowUpRight, Check, CirclePlay, Languages, ShieldCheck, Sparkles, Users, Waves, Zap, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { type Market } from "@/lib/i18n/types";
+import { useTranslation } from "@/lib/i18n/context";
 import { MarketSelectorModal } from "@/components/MarketSelectorModal";
 import { TelegramIcon } from "@/components/TelegramIcon";
 import { UserGuideButton } from "@/components/UserGuideButton";
@@ -154,6 +155,7 @@ export function HomeClient({
   initialLang?: "ar" | "en";
   initialMarket?: Market | null;
 }) {
+  const { setMarket: ctxSetMarket, setLanguage: ctxSetLanguage } = useTranslation();
   const [lang, setLang] = useState<"ar" | "en">(initialLang);
   const [market, setMarket] = useState<Market>(initialMarket || "eg");
   const [showMarketModal, setShowMarketModal] = useState<boolean>(initialMarket === null);
@@ -190,10 +192,20 @@ export function HomeClient({
   const handleSelectMarket = (m: Market) => {
     setMarket(m);
     setShowMarketModal(false);
+    const nextLang = m === "en" ? "en" : "ar";
+    setLang(nextLang);
     document.cookie = `fitna_market=${m}; path=/; max-age=31536000; SameSite=Lax`;
+    document.cookie = `language=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
     if (typeof localStorage !== "undefined") {
       localStorage.setItem("fitna_market", m);
+      localStorage.setItem("language", nextLang);
     }
+    document.documentElement.lang = nextLang;
+    document.documentElement.dir = nextLang === "en" ? "ltr" : "rtl";
+    try {
+      ctxSetMarket(m);
+      ctxSetLanguage(nextLang);
+    } catch {}
   };
 
   const currentCopy = lang === "en" ? copy.en : market === "sa" ? copy.sa : copy.eg;

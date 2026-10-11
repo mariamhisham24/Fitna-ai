@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 export async function completeOnboardingAction(role: "teacher" | "institution_admin", market: "eg" | "sa" | "en") {
@@ -36,6 +37,12 @@ export async function completeOnboardingAction(role: "teacher" | "institution_ad
         onboarded: true,
       },
     });
+
+    // Explicitly set cookies in server headers for subsequent requests
+    const cookieStore = await cookies();
+    const targetLang = market === "en" ? "en" : "ar";
+    cookieStore.set("fitna_market", market, { path: "/", maxAge: 31536000, sameSite: "lax" });
+    cookieStore.set("language", targetLang, { path: "/", maxAge: 31536000, sameSite: "lax" });
 
     const target = role === "institution_admin" ? "/dashboard/institution" : "/dashboard/teacher?tour=1";
     return { success: true, redirectTo: target };

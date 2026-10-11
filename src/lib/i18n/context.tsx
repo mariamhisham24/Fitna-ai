@@ -59,22 +59,50 @@ export function I18nProvider({
           document.cookie = `fitna_market=${local}; path=/; max-age=31536000; SameSite=Lax`;
         }
       }
+
+      const matchLang = document.cookie.match(/(?:^|;\s*)language=(ar|en)(?:;|$)/);
+      if (matchLang && (matchLang[1] === "ar" || matchLang[1] === "en")) {
+        setLangState(matchLang[1] as Language);
+        document.documentElement.lang = matchLang[1];
+        document.documentElement.dir = matchLang[1] === "en" ? "ltr" : "rtl";
+      } else {
+        const localLang = localStorage.getItem("language");
+        if (localLang === "ar" || localLang === "en") {
+          setLangState(localLang as Language);
+          document.cookie = `language=${localLang}; path=/; max-age=31536000; SameSite=Lax`;
+          document.documentElement.lang = localLang;
+          document.documentElement.dir = localLang === "en" ? "ltr" : "rtl";
+        }
+      }
     }
   }, []);
 
   function setLanguage(newLang: Language) {
     setLangState(newLang);
     document.cookie = `language=${newLang}; path=/; max-age=31536000; SameSite=Lax`;
-    document.documentElement.lang = newLang;
-    document.documentElement.dir = newLang === "en" ? "ltr" : "rtl";
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("language", newLang);
+    }
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = newLang;
+      document.documentElement.dir = newLang === "en" ? "ltr" : "rtl";
+    }
     router.refresh();
   }
 
   function setMarket(newMarket: Market) {
+    const nextLang: Language = newMarket === "en" ? "en" : "ar";
     setMarketState(newMarket);
+    setLangState(nextLang);
     document.cookie = `fitna_market=${newMarket}; path=/; max-age=31536000; SameSite=Lax`;
+    document.cookie = `language=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
     if (typeof localStorage !== "undefined") {
       localStorage.setItem("fitna_market", newMarket);
+      localStorage.setItem("language", nextLang);
+    }
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = nextLang;
+      document.documentElement.dir = nextLang === "en" ? "ltr" : "rtl";
     }
     router.refresh();
   }

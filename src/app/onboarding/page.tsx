@@ -10,51 +10,51 @@ import { useTranslation } from "@/lib/i18n/context";
 const onboardingTexts = {
   eg: {
     dir: "rtl",
-    welcomeBadge: "مرحباً بك في فِطْنة",
-    greeting: (name: string) => name ? `أهلاً بيك، ${name}` : "أهلاً بيك في فِطنة",
-    subtitle: "خطوة أخيرة عشان نجهّزلك مساحة التدريب ونخصصلك المعمل الصفي المناسب.",
-    step1Title: "١. كيف ستستخدم المنصة؟",
+    welcomeBadge: "🇪🇬 التجربة المصرية",
+    greeting: (name: string) => name ? `أهلاً بيك يا ${name}` : "أهلاً بيك في فِطنة",
+    subtitle: "خطوة أخيرة عشان نجهّزلك مساحة تدريبك ونخصصلك الفصل والطلاب باللهجة المصرية.",
+    step1Title: "١. هتستخدم المنصة كـ إيه؟",
     roleTeacherTitle: "معلم (تدريب فردي)",
-    roleTeacherDesc: "تدريب تفاعلي ومحاكاة لمواقف الفصل لتنمية ردود أفعالك المهنية.",
-    roleAdminTitle: "مشرف تربوي / مؤسسة",
-    roleAdminDesc: "متابعة واختبار المعلمين والحصول على تقارير تفصيلية بمستوياتهم.",
-    step2Title: "٢. اختر اللهجة والبيئة المدرسية:",
+    roleTeacherDesc: "تدريب تفاعلي ومحاكاة لمواقف الفصل عشان تطوّر ردود أفعالك وطريقتك مع الطلاب.",
+    roleAdminTitle: "مشرف تربوي / مدرسة ومؤسسة",
+    roleAdminDesc: "متابعة وتقييم المعلمين مع تقارير وإحصائيات تفصيلية للأداء.",
+    step2Title: "٢. اختر البيئة واللهجة الصفية:",
     marketEgTitle: "التجربة المصرية",
     marketEgDesc: "لهجة وفصول مصرية",
     marketSaTitle: "التجربة السعودية",
     marketSaDesc: "لغة فصحى وبيئة سعودية",
     marketEnTitle: "English Classroom",
     marketEnDesc: "American English",
-    loadingBtn: "جارٍ تجهيز مساحة التدريب...",
-    submitBtn: "ابدأ التدريب الآن",
+    loadingBtn: "ثواني بنجهّزلك الفصل...",
+    submitBtn: "ابدأ التدريب دلوقتي",
   },
   sa: {
     dir: "rtl",
-    welcomeBadge: "مرحباً بك في فِطْنة",
-    greeting: (name: string) => name ? `أهلاً بك، ${name}` : "أهلاً بك في فِطنة",
-    subtitle: "خطوة أخيرة لنجهز لك مساحة التدريب ونخصص لك البيئة الصفية المناسبة.",
-    step1Title: "١. كيف ستستخدم المنصة؟",
-    roleTeacherTitle: "معلم / معلمة (تدريب فردي)",
-    roleTeacherDesc: "تدريب تفاعلي ومحاكاة لمواقف الصف لتنمية استجاباتك المهنية الرصينة.",
-    roleAdminTitle: "مشرف تربوي / مؤسسة تعليمية",
-    roleAdminDesc: "متابعة وتدريب فريق المعلمين والحصول على تقارير كفاءة تفصيلية.",
-    step2Title: "٢. اختر البيئة واللهجة الصفية:",
+    welcomeBadge: "🇸🇦 التجربة السعودية",
+    greeting: (name: string) => name ? `أهلاً بك، أستاذ ${name}` : "أهلاً وسهلاً بك في فِطنة",
+    subtitle: "خطوة أخيرة لنجهز لك مساحة التدريب ونخصص لك البيئة الصفية المعتمدة وفق معايير وزارة التعليم.",
+    step1Title: "١. بصفتك ماذا ستستخدم المنصة؟",
+    roleTeacherTitle: "معلم / معلمة (تدريب مهني فردي)",
+    roleTeacherDesc: "محاكاة صوتية تفاعلية للمواقف الصفية لصقل الكفايات التدريسية والاستجابات التربوية الرصينة.",
+    roleAdminTitle: "مشرف تربوي / قيادة مدرسية ومؤسسية",
+    roleAdminDesc: "متابعة أداء المعلمين وتمكين التطوير المهني الجماعي عبر تقارير كفاءة تفصيلية.",
+    step2Title: "٢. اختر البيئة واللهجة الصفية المعتمدة:",
     marketEgTitle: "التجربة المصرية",
     marketEgDesc: "لهجة وفصول مصرية",
     marketSaTitle: "التجربة السعودية",
     marketSaDesc: "لغة عربية فصحى وبيئة سعودية",
     marketEnTitle: "English Classroom",
     marketEnDesc: "American English",
-    loadingBtn: "جارٍ إعداد مساحة التدريب...",
+    loadingBtn: "جارٍ تهيئة البيئة الصفية...",
     submitBtn: "ابدأ التدريب الآن",
   },
   en: {
     dir: "ltr",
-    welcomeBadge: "Welcome to Fitna AI",
-    greeting: (name: string) => name ? `Welcome, ${name}` : "Welcome to Fitna AI",
-    subtitle: "One last step to set up your training space and prepare your classroom simulator.",
+    welcomeBadge: "🇬🇧 English Classroom",
+    greeting: (name: string) => name ? `Welcome, ${name}!` : "Welcome to Fitna AI",
+    subtitle: "One last step to set up your simulator space and prepare your classroom.",
     step1Title: "1. How will you use the platform?",
-    roleTeacherTitle: "Teacher (Individual)",
+    roleTeacherTitle: "Teacher (Individual Practice)",
     roleTeacherDesc: "Interactive simulation of classroom situations to sharpen pedagogical reactions.",
     roleAdminTitle: "Supervisor / Institution",
     roleAdminDesc: "Monitor and assess teacher cohorts with deep performance analytics.",
@@ -71,13 +71,19 @@ const onboardingTexts = {
 };
 
 export default function OnboardingPage() {
-  const { setMarket: setCtxMarket, setLanguage: setCtxLanguage } = useTranslation();
+  const { market: ctxMarket, setMarket: setCtxMarket } = useTranslation();
   const [role, setRole] = useState<"teacher" | "institution_admin">("teacher");
-  const [market, setMarketState] = useState<"eg" | "sa" | "en">("eg");
+  const [market, setMarketState] = useState<"eg" | "sa" | "en">(ctxMarket || "eg");
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState("");
 
   const t = onboardingTexts[market] || onboardingTexts.eg;
+
+  useEffect(() => {
+    if (ctxMarket) {
+      setMarketState(ctxMarket);
+    }
+  }, [ctxMarket]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -92,18 +98,6 @@ export default function OnboardingPage() {
   const handleSelectMarket = (selectedMarket: "eg" | "sa" | "en") => {
     setMarketState(selectedMarket);
     setCtxMarket(selectedMarket);
-    
-    // Auto switch interface language based on market selection
-    const targetLang = selectedMarket === "en" ? "en" : "ar";
-    setCtxLanguage(targetLang);
-
-    // Save cookies and storage immediately
-    document.cookie = `fitna_market=${selectedMarket}; path=/; max-age=31536000; SameSite=Lax`;
-    document.cookie = `language=${targetLang}; path=/; max-age=31536000; SameSite=Lax`;
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem("fitna_market", selectedMarket);
-      localStorage.setItem("language", targetLang);
-    }
   };
 
   const handleSubmit = async () => {

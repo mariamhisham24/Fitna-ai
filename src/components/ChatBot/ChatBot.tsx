@@ -22,32 +22,54 @@ export function ChatBot({ context: propContext }: { context?: 'visitor' | 'teach
   const activeContext = propContext || defaultContext;
 
   useEffect(() => {
-    // Load from sessionStorage
-    const saved = sessionStorage.getItem(`fitna_chat_${activeContext}`);
-    if (saved) {
-      try {
-        setMessages(JSON.parse(saved));
-      } catch (e) {
-        setMessages([]);
-      }
-    } else {
-      // Set welcome message according to market / locale
-      const defaultWelcome = market === 'sa'
-        ? "مرحباً بك! أنا مساعد فِطنة الذكي. كيف يمكنني مساعدتك اليوم؟"
-        : market === 'en'
-        ? "Hi there! I'm your Fitna AI Assistant. How can I help you today?"
-        : "أهلاً بك! أنا مساعد فِطنة الذكي. إزاي أقدر أساعدك النهاردة؟";
+    // Clean up any legacy unpartitioned chat session
+    try {
+      sessionStorage.removeItem(`fitna_chat_${activeContext}`);
+    } catch {}
 
-      setMessages([{ role: 'bot', content: t.chatbot?.chatbot_welcome || defaultWelcome }]);
+    const storageKey = `fitna_chat_${activeContext}_${market}`;
+    const defaultWelcome = market === 'sa'
+      ? "مرحباً بك! أنا مساعد فِطنة الذكي. كيف يمكنني مساندتك اليوم؟"
+      : market === 'en'
+      ? "Hi there! I'm your Fitna AI Assistant. How can I help you today?"
+      : "أهلاً بيك! أنا مساعد فِطنة الذكي. إزاي أقدر أساعدك النهاردة؟";
+
+    const welcomeText = t.chatbot?.chatbot_welcome || defaultWelcome;
+
+    try {
+      const saved = sessionStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // If only greeting exists, update it to the active market's greeting
+          if (parsed.length === 1 && parsed[0].role === 'bot') {
+            setMessages([{ role: 'bot', content: welcomeText }]);
+            sessionStorage.setItem(storageKey, JSON.stringify([{ role: 'bot', content: welcomeText }]));
+          } else {
+            setMessages(parsed);
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      // Ignore json parse error
     }
-  }, [activeContext, t.chatbot, isRtl, market]);
+
+    // Default welcome message for this market
+    setMessages([{ role: 'bot', content: welcomeText }]);
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify([{ role: 'bot', content: welcomeText }]));
+    } catch {}
+  }, [activeContext, market, t.chatbot]);
 
   useEffect(() => {
-    // Save to sessionStorage
+    // Save to partitioned sessionStorage
     if (messages.length > 0) {
-      sessionStorage.setItem(`fitna_chat_${activeContext}`, JSON.stringify(messages));
+      try {
+        sessionStorage.setItem(`fitna_chat_${activeContext}_${market}`, JSON.stringify(messages));
+      } catch {}
     }
-  }, [messages, activeContext]);
+  }, [messages, activeContext, market]);
 
   useEffect(() => {
     if (isOpen) {
@@ -56,13 +78,20 @@ export function ChatBot({ context: propContext }: { context?: 'visitor' | 'teach
   }, [isOpen, messages]);
 
   const handleClear = () => {
-    sessionStorage.removeItem(`fitna_chat_${activeContext}`);
+    const storageKey = `fitna_chat_${activeContext}_${market}`;
+    try {
+      sessionStorage.removeItem(storageKey);
+    } catch {}
     const defaultWelcome = market === 'sa'
-      ? "مرحباً بك! أنا مساعد فِطنة الذكي. كيف يمكنني مساعدتك اليوم؟"
+      ? "مرحباً بك! أنا مساعد فِطنة الذكي. كيف يمكنني مساندتك اليوم؟"
       : market === 'en'
       ? "Hi there! I'm your Fitna AI Assistant. How can I help you today?"
-      : "أهلاً بك! أنا مساعد فِطنة الذكي. إزاي أقدر أساعدك النهاردة؟";
-    setMessages([{ role: 'bot', content: t.chatbot?.chatbot_welcome || defaultWelcome }]);
+      : "أهلاً بيك! أنا مساعد فِطنة الذكي. إزاي أقدر أساعدك النهاردة؟";
+    const welcomeText = t.chatbot?.chatbot_welcome || defaultWelcome;
+    setMessages([{ role: 'bot', content: welcomeText }]);
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify([{ role: 'bot', content: welcomeText }]));
+    } catch {}
   };
 
   const handleSend = async (e?: React.FormEvent) => {
