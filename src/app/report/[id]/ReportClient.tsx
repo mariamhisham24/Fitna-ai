@@ -79,10 +79,10 @@ export function ReportClient({
   market?: "eg" | "sa" | "en";
 }) {
   const { lang: ctxLang, market: ctxMarket } = useTranslation();
-  const activeLang = ctxLang || propLang || "ar";
-  const activeMarket = ctxMarket || propMarket || "eg";
-  const isRtl = activeLang === "ar";
-  const isEn = activeLang === "en";
+  const lang = ctxLang || propLang || "ar";
+  const market = ctxMarket || propMarket || "eg";
+  const isRtl = lang === "ar";
+  const isEn = lang === "en";
 
   const [copied, setCopied] = useState(false);
 
