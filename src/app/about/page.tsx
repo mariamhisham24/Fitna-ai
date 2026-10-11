@@ -11,6 +11,8 @@ export const metadata: Metadata = {
 
 export default async function AboutPage() {
   const cookieStore = await cookies();
+  const rawMarket = cookieStore.get("fitna_market")?.value;
+  const market = (rawMarket === "sa" || rawMarket === "en") ? rawMarket : "eg";
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
 
   const supabase = await createClient();
@@ -22,5 +24,5 @@ export default async function AboutPage() {
     isAuthenticated = !!user;
   } catch {}
 
-  return <AboutClient initialLang={lang} isAuthenticated={isAuthenticated} />;
+  return <AboutClient initialLang={lang} initialMarket={market} isAuthenticated={isAuthenticated} />;
 }

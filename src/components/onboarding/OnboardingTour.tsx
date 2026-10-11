@@ -45,8 +45,10 @@ export function OnboardingTour({
   storageKey = "fitna_has_seen_onboarding",
 }: OnboardingTourProps) {
   const router = useRouter();
-  const { t, lang } = useTranslation();
+  const { t, lang, market } = useTranslation();
   const isRtl = lang === "ar";
+  const isEn = lang === "en";
+  const isSa = market === "sa";
 
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
@@ -493,11 +495,15 @@ export function OnboardingTour({
               {currentStep === 2 && (
                 <div>
                   <h3 className="text-sm sm:text-base font-bold text-[#071B3A] dark:text-white mb-1.5">
-                    {t.onboarding?.step3Title || "بدء محاكاة جديدة"}
+                    {t.onboarding?.step3Title || (isEn ? "Start a New Simulation" : "بدء محاكاة جديدة")}
                   </h3>
                   <p className="text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed">
                     {t.onboarding?.step3Desc ||
-                      "ابدأ جلسة جديدة واختار إعدادات الفصل والهدف التدريبي والموضوع اللي عايز تركز عليه، مع إمكانية تجربة الفصل المصري أو السعودي."}
+                      (isEn
+                        ? "Start a new classroom session and configure your classroom environment (American English, Saudi, or Egyptian) and your training objective."
+                        : isSa
+                        ? "ابدأ جلسة تدريبية جديدة وحدد أهداف التعلم والموضوع المطلوب، مع حرية الاختيار بين البيئة الصفية السعودية أو المصرية أو الإنجليزية."
+                        : "ابدأ جلسة جديدة واختار إعدادات الفصل والهدف التدريبي والموضوع اللي عايز تركز عليه، مع إمكانية تجربة الفصل المصري أو السعودي أو الإنجليزي.")}
                   </p>
                 </div>
               )}
@@ -505,11 +511,15 @@ export function OnboardingTour({
               {currentStep === 3 && (
                 <div>
                   <h3 className="text-sm sm:text-base font-bold text-[#071B3A] dark:text-white mb-1.5">
-                    {t.onboarding?.step4Title || "محاكاة الفصل والطلاب بالذكاء الاصطناعي"}
+                    {t.onboarding?.step4Title || (isEn ? "Classroom Simulation & AI Students" : "محاكاة الفصل والطلاب بالذكاء الاصطناعي")}
                   </h3>
                   <p className="text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed">
                     {t.onboarding?.step4Desc ||
-                      "هنا هتدخل الفصل وتتعامل مع طلاب بالذكاء الاصطناعي، وكل طالب له شخصيته وطريقة تفاعله المختلفة. تقدر تتكلم معاهم بالصوت عبر المايكروفون، وكل طالب هيرد عليك بصوته الطبيعي وتفاعلاته اللحظية."}
+                      (isEn
+                        ? "Interact with AI students (Liam, Emma, Oliver, Sophia) with distinct learning paces and personalities. Speak naturally with your microphone and hear real-time voice responses."
+                        : isSa
+                        ? "هنا ستدخل فصلاً افتراضياً متكاملاً يضم طلاباً بذكاء اصطناعي (ريم، وفهد، وسلطان، وجوري)، يتفاعلون معك صوتياً في الوقت الفعلي."
+                        : "هنا هتدخل الفصل وتتعامل مع طلاب بالذكاء الاصطناعي (سارة، عمر، يوسف، نور)، وكل طالب هيرد عليك بصوته الطبيعي وتفاعلاته اللحظية.")}
                   </p>
                 </div>
               )}
@@ -517,11 +527,15 @@ export function OnboardingTour({
               {currentStep === 4 && (
                 <div>
                   <h3 className="text-sm sm:text-base font-bold text-[#071B3A] dark:text-white mb-1">
-                    {t.onboarding?.step5Title || "التحليلات ومؤشرات الأداء"}
+                    {t.onboarding?.step5Title || (isEn ? "Performance & Analytics" : "التحليلات ومؤشرات الأداء")}
                   </h3>
                   <p className="text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed mb-2">
                     {t.onboarding?.step5Desc ||
-                      "بعد الجلسة، فِطنة بتحلل أداءك وتديك ملاحظات تساعدك تعرف نقاط قوتك وإيه اللي محتاج تطوره، بناءً على مقاييس تربوية حقيقية."}
+                      (isEn
+                        ? "After your session, Fitna analyzes your performance and provides rubric-aligned pedagogical feedback."
+                        : isSa
+                        ? "عقب انتهاء الجلسة، تحلل فِطنة أداءك التدريسي بدقة لتحديد نقاط القوة وفرص التحسين وفق معايير تربوية موثوقة."
+                        : "بعد الجلسة، فِطنة بتحلل أداءك وتديك ملاحظات تساعدك تعرف نقاط قوتك وإيه اللي محتاج تطوره، بناءً على مقاييس تربوية حقيقية.")}
                   </p>
 
                   {/* Real Metrics Highlight Pill List */}
