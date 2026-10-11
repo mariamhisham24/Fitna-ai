@@ -60,8 +60,8 @@ export default async function TeacherDashboardPage() {
 
   let completed: any[] = [];
   try {
-    // For Saudi demo experience, the dashboard starts completely fresh and empty
-    if (!(isDemoUser && market === "sa")) {
+    // For Saudi and Foreign/English demo experiences, the dashboard starts completely fresh and empty
+    if (!(isDemoUser && (market === "sa" || market === "en"))) {
       const sessionsRes = await withTimeout(
         db
           .from("sessions")

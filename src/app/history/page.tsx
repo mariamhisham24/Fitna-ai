@@ -39,7 +39,7 @@ export default async function HistoryPage({
   const {
     data: sessions,
     count,
-  } = (isDemoUser && market === "sa")
+  } = (isDemoUser && (market === "sa" || market === "en"))
     ? { data: [], count: 0 }
     : await Promise.race([
         db

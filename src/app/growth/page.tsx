@@ -34,7 +34,7 @@ export default async function GrowthPage() {
   const market = (rawMarket === "sa" || rawMarket === "en") ? rawMarket : "eg";
   const isDemoUser = user.id === "d3300000-0000-4000-8000-000000000001" || user.email === "demo@fitna.ai";
 
-  const sessionsRes = (isDemoUser && market === "sa")
+  const sessionsRes = (isDemoUser && (market === "sa" || market === "en"))
     ? { data: [] }
     : await Promise.race([
         db
@@ -83,7 +83,7 @@ export default async function GrowthPage() {
     };
   });
 
-  const badgesRes = (isDemoUser && market === "sa")
+  const badgesRes = (isDemoUser && (market === "sa" || market === "en"))
     ? { data: [] }
     : await Promise.race([
         db
