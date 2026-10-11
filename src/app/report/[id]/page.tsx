@@ -8,6 +8,8 @@ import { type Language } from "@/lib/i18n";
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const cookieStore = await cookies();
+  const rawMarket = cookieStore.get("fitna_market")?.value;
+  const market = (rawMarket === "sa" || rawMarket === "en") ? rawMarket : "eg";
   const lang = (cookieStore.get("language")?.value === "en" ? "en" : "ar") as Language;
 
   const supabase = await createClient();
@@ -137,6 +139,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       transcript={transcript}
       evidenceMoments={evidenceMoments}
       lang={lang}
+      market={market}
     />
   );
 }

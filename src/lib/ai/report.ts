@@ -45,7 +45,7 @@ export async function generateSessionReport(params: {
     classroomPattern: string;
   };
   lessonContext: string | null;
-  market?: "eg" | "sa";
+  market?: "eg" | "sa" | "en";
 }): Promise<GeneratedReport> {
   const { events, personaNameById, metrics, lessonContext, market = "eg" } = params;
 
@@ -61,16 +61,30 @@ export async function generateSessionReport(params: {
     return 0;
   });
 
+  const isEn = market === "en";
+  const isSa = market === "sa";
+
   const transcriptLines = sortedEvents
     .filter((e) => e.event_type === "teacher_utterance" || e.event_type === "student_response")
     .map((e) => {
-      const speaker = e.actor === "teacher" ? "المعلم" : personaNameById.get(e.actor) ?? e.actor;
+      const speaker = e.actor === "teacher" ? (isEn ? "Teacher" : "المعلم") : personaNameById.get(e.actor) ?? e.actor;
       return `[${e.id}] (${e.occurred_at_ms}ms) ${speaker}: ${e.content}`;
     })
     .join("\n");
 
   if (!transcriptLines) {
-    if (market === "sa") {
+    if (isEn) {
+      return {
+        summaryAr: "This session ended without recorded dialogue between the teacher and students.",
+        sessionSignalAr: "Please speak with students through your microphone so the system can evaluate your teaching performance.",
+        strengths: [],
+        weaknesses: [],
+        recommendations: ["Start a new session and use the microphone to interact with students via live voice."],
+        evidenceMoments: [],
+        frameworkScores: null,
+      };
+    }
+    if (isSa) {
       return {
         summaryAr: "انتهت هذه الجلسة دون تسجيل أي حوار بين المعلم والطلاب.",
         sessionSignalAr: "يُرجى التحدث مع الطلاب عبر الميكروفون ليتمكن النظام من تحليل أدائك التدريسي.",
@@ -92,13 +106,20 @@ export async function generateSessionReport(params: {
     };
   }
 
-  const isSa = market === "sa";
-
-  const systemIntro = isSa
+  const systemIntro = isEn
+    ? `You are an expert instructional coach and certified master pedagogical evaluator analyzing a teacher's performance in a classroom simulation according to international frameworks (Danielson Framework & CLASS Framework). Analyze the complete transcript and performance metrics with pedagogical rigor in clear, professional American English.`
+    : isSa
     ? `أنت خبير تدريب معلمين ومُقيّم تربوي معتمد تحلل أداء معلم في محاكاة فصل دراسي في المملكة العربية السعودية وفقًا لأطر التقييم التربوي العالمية (Danielson Framework & CLASS Framework). اقرأ النص الكامل للجلسة التي تمت فعليًا وحلله تحليلاً بيداغوجياً دقيقاً باللغة العربية الفصحى المهنية الرصينة.`
     : `انت خبير تدريب معلمين ومقيم تربوي معتمد بتحلل أداء معلم في محاكاة فصل دراسي مصري وفقًا لأطر التقييم التربوي العالمية (Danielson Framework & CLASS Framework). اقرا النص الكامل للجلسة اللي حصلت فعليًا وحلله.`;
 
-  const calculatedNumbersIntro = isSa
+  const calculatedNumbersIntro = isEn
+    ? `Real calculated metrics for this session:
+- Overall Score: ${metrics.overallScore}/100
+- Teacher Talk Time (TTT): ${metrics.teacherTalkRatio}% (Target: 20-35%, max acceptable 50%)
+- Socratic Questioning Rate: ${metrics.socraticQuestionRate}%
+- Inclusivity Index: ${metrics.inclusivityIndex}%
+- Classroom Dynamic Pattern: ${metrics.classroomPattern}`
+    : isSa
     ? `البيانات والمؤشرات المحسوبة فعليًا لهذه الجلسة:
 - الدرجة الكلية: ${metrics.overallScore}/100
 - نسبة حديث المعلم (TTT): ${metrics.teacherTalkRatio}% (المعيار المستهدف: 20-35%، وأقصى حد مقبول 50%)
@@ -112,7 +133,27 @@ export async function generateSessionReport(params: {
 - مؤشر الشمولية وعدالة المشاركة: ${metrics.inclusivityIndex}%
 - نمط الفصل: ${metrics.classroomPattern}`;
 
-  const rulesConsistencyIntro = isSa
+  const rulesConsistencyIntro = isEn
+    ? `Strict Metric Consistency Rules:
+1. Teacher Talk Time (${metrics.teacherTalkRatio}%):
+${
+  metrics.teacherTalkRatio > 50
+    ? `   [CRITICAL WARNING]: High Teacher Talk Time (${metrics.teacherTalkRatio}%). The teacher exceeded the 50% threshold and dominated class dialogue! You MUST explicitly criticize high talk time in summary_ar and session_signal_ar, list high teacher monologue in weaknesses, and recommend Wait Time (3-5 seconds) in recommendations.`
+    : `   - Balanced Teacher Talk Time (${metrics.teacherTalkRatio}%).`
+}
+2. Socratic Questions (${metrics.socraticQuestionRate}%):
+${
+  metrics.socraticQuestionRate < 50
+    ? `   - Socratic questioning rate is low (${metrics.socraticQuestionRate}%). Advise the teacher to replace rapid direct questions with higher-order inquiry ("why", "how do you explain", "what if").`
+    : `   - Socratic questioning rate is good (${metrics.socraticQuestionRate}%).`
+}
+3. Inclusivity (${metrics.inclusivityIndex}%):
+${
+  metrics.inclusivityIndex < 70
+    ? `   - Inclusivity index is low (${metrics.inclusivityIndex}%). Highlight that participation was clustered on one or two students while others were passive.`
+    : `   - Inclusivity index is solid (${metrics.inclusivityIndex}%).`
+}`
+    : isSa
     ? `قواعد الاتساق البيداغوجي الإلزامية (Strict Metric Consistency):
 1. وقت حديث المعلم (${metrics.teacherTalkRatio}%):
 ${
@@ -160,7 +201,38 @@ ${
     : `   - مؤشر الشمولية جيد (${metrics.inclusivityIndex}%).`
 }`;
 
-  const jsonInstructions = isSa
+  const jsonInstructions = isEn
+    ? `Write a genuine pedagogical assessment strictly in American English, and return valid JSON with this exact schema:
+{
+  "summary_ar": "Concise 2-4 sentence diagnostic summary of the teacher's classroom performance in professional English, tightly grounded in actual metrics and dialogue",
+  "session_signal_ar": "One impactful, single-sentence diagnostic headline in English summarizing the primary growth area or core strength aligned with the metrics",
+  "strengths": ["Specific strength 1 with evidence from dialogue in English", "Specific strength 2 in English"],
+  "weaknesses": ["Specific area for growth 1 with evidence from dialogue in English", "Specific area for growth 2 in English"],
+  "recommendations": ["Actionable recommendation 1 for next session in English", "Recommendation 2 in English", "Recommendation 3 in English"],
+  "evidence_moments": [
+    {"event_id": "exact event_id from transcript above", "label": "Short description in English of why this moment matters"}
+  ],
+  "framework_scores": {
+    "danielson": {
+      "questioning_discussion": {"score": 3, "label": "Proficient", "feedback": "Specific feedback in English"},
+      "student_engagement": {"score": 3, "label": "Proficient", "feedback": "Specific feedback in English"},
+      "managing_behavior": {"score": 3, "label": "Proficient", "feedback": "Specific feedback in English"}
+    },
+    "class_framework": {
+      "instructional_support": {"score": 5, "label": "Mid-High", "feedback": "Specific feedback in English"},
+      "classroom_organization": {"score": 5, "label": "Mid-High", "feedback": "Specific feedback in English"},
+      "emotional_support": {"score": 6, "label": "High", "feedback": "Specific feedback in English"}
+    }
+  }
+}
+
+CRITICAL RULES:
+- Write ALL text values in clear, professional American English.
+- NEVER write 'event_id' or UUID strings inside summary, signal, strengths, weaknesses, recommendations, or feedback.
+- Danielson scales 1 to 4 (1: Unsatisfactory, 2: Basic, 3: Proficient, 4: Distinguished).
+- CLASS scales 1 to 7 (1-2: Low, 3-5: Mid, 6-7: High).
+- Return ONLY the raw JSON object without markdown fences.`
+    : isSa
     ? `اكتب تحليلاً حقيقياً ومبنياً على هذا النص تحديداً والأرقام أعلاه بدقة تامة باللغة العربية الفصحى الرصينة (دون أي عامية)، ورجّع JSON بالشكل التالي تحديداً:
 {
   "summary_ar": "ملخص أداء المعلم في هذه الجلسة في 2-4 جمل فصحى رصينة، مبني على الأرقام الحقيقية وما جرى فعلياً في النص",
@@ -315,8 +387,15 @@ ${jsonInstructions}`;
   const defaultClassOScore = Math.max(1, Math.min(7, Math.round((metrics.inclusivityIndex / 100) * 6 + 1)));
   const defaultClassEScore = Math.max(1, Math.min(7, Math.round((metrics.overallScore / 100) * 6 + 1)));
 
-  const getDanielsonLabel = (s: number) => s >= 4 ? "متميز" : s >= 3 ? "كفء" : s >= 2 ? "أساسي" : "غير مرضٍ";
-  const getClassLabel = (s: number) => s >= 6 ? "مرتفع" : s >= 3 ? "متوسط" : "منخفض";
+  const getDanielsonLabel = (s: number) =>
+    isEn
+      ? (s >= 4 ? "Distinguished" : s >= 3 ? "Proficient" : s >= 2 ? "Basic" : "Unsatisfactory")
+      : (s >= 4 ? "متميز" : s >= 3 ? "كفء" : s >= 2 ? "أساسي" : "غير مرضٍ");
+
+  const getClassLabel = (s: number) =>
+    isEn
+      ? (s >= 6 ? "High" : s >= 3 ? "Mid" : "Low")
+      : (s >= 6 ? "مرتفع" : s >= 3 ? "متوسط" : "منخفض");
 
   const frameworkScores: FrameworkScores = {
     danielson: {
@@ -324,23 +403,31 @@ ${jsonInstructions}`;
         score: rawFramework?.danielson?.questioning_discussion?.score ?? defaultDanielsonQScore,
         label: rawFramework?.danielson?.questioning_discussion?.label ?? getDanielsonLabel(defaultDanielsonQScore),
         feedback: cleanPedagogicalText(rawFramework?.danielson?.questioning_discussion?.feedback ?? (
-          isLowSocratic
-            ? `نسبة الأسئلة السقراطية (${metrics.socraticQuestionRate}%) تتطلب تركيزاً أكبر على أسئلة التفكير العليا.`
-            : `طرح متوازن للأسئلة مع نسبة سقراطية بلغت ${metrics.socraticQuestionRate}%.`
+          isEn
+            ? (isLowSocratic
+                ? `Socratic questioning rate (${metrics.socraticQuestionRate}%) requires greater emphasis on higher-order thinking inquiry.`
+                : `Balanced questioning techniques with a ${metrics.socraticQuestionRate}% Socratic questioning rate.`)
+            : (isLowSocratic
+                ? `نسبة الأسئلة السقراطية (${metrics.socraticQuestionRate}%) تتطلب تركيزاً أكبر على أسئلة التفكير العليا.`
+                : `طرح متوازن للأسئلة مع نسبة سقراطية بلغت ${metrics.socraticQuestionRate}%.`)
         )),
       },
       studentEngagement: {
         score: rawFramework?.danielson?.student_engagement?.score ?? defaultDanielsonEScore,
         label: rawFramework?.danielson?.student_engagement?.label ?? getDanielsonLabel(defaultDanielsonEScore),
         feedback: cleanPedagogicalText(rawFramework?.danielson?.student_engagement?.feedback ?? (
-          `مؤشر شمولية بمعدل ${metrics.inclusivityIndex}% يعكس مستوى مشاركة الطلاب وتفاعلهم.`
+          isEn
+            ? `Inclusivity index of ${metrics.inclusivityIndex}% reflects student engagement and active participation level.`
+            : `مؤشر شمولية بمعدل ${metrics.inclusivityIndex}% يعكس مستوى مشاركة الطلاب وتفاعلهم.`
         )),
       },
       managingBehavior: {
         score: rawFramework?.danielson?.managing_behavior?.score ?? defaultDanielsonBScore,
         label: rawFramework?.danielson?.managing_behavior?.label ?? getDanielsonLabel(defaultDanielsonBScore),
         feedback: cleanPedagogicalText(rawFramework?.danielson?.managing_behavior?.feedback ?? (
-          `إدارة الفصل والسلوك بنمط ${metrics.classroomPattern} وتوزيع الأدوار.`
+          isEn
+            ? `Classroom management handled with a ${metrics.classroomPattern} pattern and active facilitation.`
+            : `إدارة الفصل والسلوك بنمط ${metrics.classroomPattern} وتوزيع الأدوار.`
         )),
       },
     },
@@ -349,21 +436,27 @@ ${jsonInstructions}`;
         score: rawFramework?.class_framework?.instructional_support?.score ?? defaultClassIScore,
         label: rawFramework?.class_framework?.instructional_support?.label ?? getClassLabel(defaultClassIScore),
         feedback: cleanPedagogicalText(rawFramework?.class_framework?.instructional_support?.feedback ?? (
-          `الدعم التعليمي وبناء المفاهيم ارتبط بنسبة حديث بلغت ${metrics.teacherTalkRatio}%.`
+          isEn
+            ? `Instructional support and concept scaffolding correlated with a Teacher Talk Time of ${metrics.teacherTalkRatio}%.`
+            : `الدعم التعليمي وبناء المفاهيم ارتبط بنسبة حديث بلغت ${metrics.teacherTalkRatio}%.`
         )),
       },
       classroomOrganization: {
         score: rawFramework?.class_framework?.classroom_organization?.score ?? defaultClassOScore,
         label: rawFramework?.class_framework?.classroom_organization?.label ?? getClassLabel(defaultClassOScore),
         feedback: cleanPedagogicalText(rawFramework?.class_framework?.classroom_organization?.feedback ?? (
-          `تنظيم بيئة التعلم وإتاحة الفرص بالتساوي بين الطلاب بمؤشر شمولية ${metrics.inclusivityIndex}%.`
+          isEn
+            ? `Learning environment structure and equal participation opportunities achieved an inclusivity score of ${metrics.inclusivityIndex}%.`
+            : `تنظيم بيئة التعلم وإتاحة الفرص بالتساوي بين الطلاب بمؤشر شمولية ${metrics.inclusivityIndex}%.`
         )),
       },
       emotionalSupport: {
         score: rawFramework?.class_framework?.emotional_support?.score ?? defaultClassEScore,
         label: rawFramework?.class_framework?.emotional_support?.label ?? getClassLabel(defaultClassEScore),
         feedback: cleanPedagogicalText(rawFramework?.class_framework?.emotional_support?.feedback ?? (
-          `المناخ الصفي الإيجابي والتواصل الفعّال مع الطلاب.`
+          isEn
+            ? "Positive classroom climate and responsive verbal connection maintained with students."
+            : "المناخ الصفي الإيجابي والتواصل الفعّال مع الطلاب."
         )),
       },
     },
@@ -371,16 +464,28 @@ ${jsonInstructions}`;
 
   let summaryAr = cleanPedagogicalText(
     parsed.summary_ar ||
-      `شهدت هذه الجلسة تفاعلاً تعليمياً بمؤشر شمولية بلغ ${metrics.inclusivityIndex}%، ونسبة حديث معلّم ${metrics.teacherTalkRatio}% مع نسبة أسئلة سقراطية ${metrics.socraticQuestionRate}%. ${
-        isHighTtt
-          ? "يُلاحظ استحواذ المعلم على مساحة الحديث معظم وقت الحصة مما قلل من فرص استنتاج الطلاب."
-          : "أظهرت الحصة توازناً جيداً في توزيع الأدوار والمشاركات الصفية."
-      }`
+      (isEn
+        ? `This session demonstrated classroom instruction with an inclusivity index of ${metrics.inclusivityIndex}%, Teacher Talk Time of ${metrics.teacherTalkRatio}%, and a Socratic questioning rate of ${metrics.socraticQuestionRate}%. ${
+            isHighTtt
+              ? "The teacher dominated talk time for most of the lesson, limiting students' inquiry and reasoning opportunities."
+              : "The session maintained a balanced instructional exchange across students."
+          }`
+        : `شهدت هذه الجلسة تفاعلاً تعليمياً بمؤشر شمولية بلغ ${metrics.inclusivityIndex}%، ونسبة حديث معلّم ${metrics.teacherTalkRatio}% مع نسبة أسئلة سقراطية ${metrics.socraticQuestionRate}%. ${
+            isHighTtt
+              ? "يُلاحظ استحواذ المعلم على مساحة الحديث معظم وقت الحصة مما قلل من فرص استنتاج الطلاب."
+              : "أظهرت الحصة توازناً جيداً في توزيع الأدوار والمشاركات الصفية."
+          }`)
   );
 
   let sessionSignalAr = cleanPedagogicalText(
     parsed.session_signal_ar ||
-      (isHighTtt
+      (isEn
+        ? (isHighTtt
+            ? `High Teacher Talk Time (${metrics.teacherTalkRatio}%) exceeded the benchmark (20-35%); focus on giving students sufficient wait time to formulate answers independently.`
+            : isLowSocratic
+            ? `Increase higher-order Socratic questioning (current rate: ${metrics.socraticQuestionRate}%) to promote analytical reasoning.`
+            : "Balanced pedagogical management and consistent student engagement across the classroom.")
+        : isHighTtt
         ? `وقت حديث المعلم مرتفع (${metrics.teacherTalkRatio}%) مقارنة بالمستهدف (20-35%)؛ ركّز على منح الطلاب وقتاً أطول للتفكير والإجابة بشكل مستقل.`
         : isLowSocratic
         ? `احرص على زيادة وتيرة الأسئلة السقراطية الاستنتاجية (المعدل الحالي: ${metrics.socraticQuestionRate}%) لتحفيز التفكير التحليلي.`
@@ -389,6 +494,11 @@ ${jsonInstructions}`;
 
   let strengths = Array.isArray(parsed.strengths) && parsed.strengths.length > 0
     ? parsed.strengths.filter(Boolean).map(cleanPedagogicalText).filter(Boolean)
+    : isEn
+    ? [
+        `Achieved a classroom inclusivity index of ${metrics.inclusivityIndex}% with equitable participation.`,
+        "Maintained positive classroom momentum and direct communication throughout the session.",
+      ]
     : [
         `تحقيق مؤشر شمولية صفية ومشاركة عادلة بنسبة ${metrics.inclusivityIndex}% بين الطلاب.`,
         "الحفاظ على وتيرة التفاعل والتواصل المباشر مع أفراد الفصل طوال الجلسة.",
@@ -396,6 +506,15 @@ ${jsonInstructions}`;
 
   let weaknesses = Array.isArray(parsed.weaknesses) && parsed.weaknesses.length > 0
     ? parsed.weaknesses.filter(Boolean).map(cleanPedagogicalText).filter(Boolean)
+    : isEn
+    ? (isHighTtt
+        ? [
+            `Teacher Talk Time (${metrics.teacherTalkRatio}%) exceeded balanced target benchmark (20-35%).`,
+            "Limited wait time provided for students before teacher intervention or answers.",
+          ]
+        : [
+            "Incorporate more varied, open-ended questions to deepen student inquiry.",
+          ])
     : isHighTtt
     ? [
         `ارتفاع نسبة حديث المعلم (${metrics.teacherTalkRatio}%) عن النطاق المتوازن (20-35%).`,
@@ -407,6 +526,11 @@ ${jsonInstructions}`;
 
   let recommendations = Array.isArray(parsed.recommendations) && parsed.recommendations.length > 0
     ? parsed.recommendations.filter(Boolean).map(cleanPedagogicalText).filter(Boolean)
+    : isEn
+    ? [
+        "Pose an open-ended inquiry question starting with 'Why' or 'How' and pause for 3-5 seconds (Wait Time).",
+        "Encourage students to build upon each other's responses to foster a collaborative discourse.",
+      ]
     : [
         "اطرح سؤالاً استنتاجياً يبدأ بـ 'ماذا لو' أو 'كيف تفسر' وانتظر 3-5 ثوانٍ قبل التحدث.",
         "شجع الطلاب على البناء على إجابات بعضهم البعض لخلق حوار صفي تشاركي.",
@@ -414,16 +538,26 @@ ${jsonInstructions}`;
 
   // Deterministic Safeguard: When TTT > 50%, ensure sessionSignal, weaknesses, and recommendations strictly reflect high TTT
   if (isHighTtt) {
-    if (!sessionSignalAr || /ممتاز|أداء\s*استثنائي|رائع\s*جداً/i.test(sessionSignalAr)) {
-      sessionSignalAr = `وقت حديث المعلم مرتفع (${metrics.teacherTalkRatio}%) مقارنة بالمستهدف (20-35%)؛ ركّز على منح الطلاب مساحة أطول للتفكير والإجابة.`;
+    if (!sessionSignalAr || /ممتاز|أداء\s*استثنائي|رائع\s*جداً|excellent|outstanding/i.test(sessionSignalAr)) {
+      sessionSignalAr = isEn
+        ? `High Teacher Talk Time (${metrics.teacherTalkRatio}%) exceeded the benchmark (20-35%); prioritize giving students more room to think and respond.`
+        : `وقت حديث المعلم مرتفع (${metrics.teacherTalkRatio}%) مقارنة بالمستهدف (20-35%)؛ ركّز على منح الطلاب مساحة أطول للتفكير والإجابة.`;
     }
-    const hasTttWeakness = weaknesses.some((w) => /حديث\s*المعلم|وقت|الكلام|monologue|ttt/i.test(w));
+    const hasTttWeakness = weaknesses.some((w) => /حديث\s*المعلم|وقت|الكلام|monologue|talk time|ttt/i.test(w));
     if (!hasTttWeakness) {
-      weaknesses.unshift(`ارتفاع نسبة حديث المعلم (${metrics.teacherTalkRatio}%) عن النطاق المتوازن (20-35%)، مما حدّ من فرص الطلاب في التعبير والشرح.`);
+      weaknesses.unshift(
+        isEn
+          ? `High Teacher Talk Time (${metrics.teacherTalkRatio}%) exceeded target range (20-35%), reducing student explanation time.`
+          : `ارتفاع نسبة حديث المعلم (${metrics.teacherTalkRatio}%) عن النطاق المتوازن (20-35%)، مما حدّ من فرص الطلاب في التعبير والشرح.`
+      );
     }
     const hasWaitTimeRec = recommendations.some((r) => /انتظار|وقفة|ثوان|wait/i.test(r));
     if (!hasWaitTimeRec) {
-      recommendations.unshift("امنح الطلاب وقفة تفكير (Wait Time) لمدة 3-5 ثوانٍ بعد طرح السؤال قبل التدخل أو إعادة الشرح.");
+      recommendations.unshift(
+        isEn
+          ? "Provide 3-5 seconds of deliberate Wait Time after asking questions before intervening."
+          : "امنح الطلاب وقفة تفكير (Wait Time) لمدة 3-5 ثوانٍ بعد طرح السؤال قبل التدخل أو إعادة الشرح."
+      );
     }
   }
 

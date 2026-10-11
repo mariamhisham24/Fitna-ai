@@ -40,6 +40,8 @@ export default async function SharedReportPage({
 
   if (!session) notFound();
 
+  const isArabicText = (text: string) => /[\u0600-\u06FF]/.test(text || "");
+
   return (
     <div className="min-h-screen bg-[#F5F1E8] dark:bg-[#071B3A] p-6 md:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
@@ -69,7 +71,12 @@ export default async function SharedReportPage({
             {t.report.classroomPatternLabel}: {patternLabel(session.classroom_pattern, t)}
           </p>
           {report?.session_signal_ar && (
-            <p className="text-teal-700 dark:text-teal-300 font-bold text-sm mt-4 text-center">{cleanPedagogicalText(report.session_signal_ar)}</p>
+            <p 
+              dir={isArabicText(report.session_signal_ar) ? "rtl" : "ltr"}
+              className="text-teal-700 dark:text-teal-300 font-bold text-sm mt-4 text-center"
+            >
+              {cleanPedagogicalText(report.session_signal_ar)}
+            </p>
           )}
         </div>
 
@@ -81,7 +88,14 @@ export default async function SharedReportPage({
 
         <div className="bg-white dark:bg-white/5 rounded-2xl p-6 shadow-sm">
           <h2 className="font-bold text-sm text-[#071B3A] dark:text-white mb-2">{t.report.performanceSummary}</h2>
-          <p className="text-xs text-[#071B3A]/80 dark:text-white/80 leading-relaxed">{cleanPedagogicalText(report.summary_ar)}</p>
+          <p 
+            dir={isArabicText(report.summary_ar) ? "rtl" : "ltr"}
+            className={`text-xs text-[#071B3A]/80 dark:text-white/80 leading-relaxed ${
+              isArabicText(report.summary_ar) ? "text-right" : "text-left"
+            }`}
+          >
+            {cleanPedagogicalText(report.summary_ar)}
+          </p>
         </div>
 
         {(report.strengths?.length > 0 || report.weaknesses?.length > 0) && (
@@ -93,7 +107,12 @@ export default async function SharedReportPage({
                   {report.strengths.map((s, i) => (
                     <li key={i} className="flex gap-2 text-xs text-[#071B3A]/80 dark:text-white/80">
                       <Check className="w-3.5 h-3.5 text-teal-600 shrink-0 mt-0.5" />
-                      <span>{cleanPedagogicalText(s)}</span>
+                      <span 
+                        dir={isArabicText(s) ? "rtl" : "ltr"}
+                        className={isArabicText(s) ? "text-right flex-1" : "text-left flex-1"}
+                      >
+                        {cleanPedagogicalText(s)}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -105,8 +124,13 @@ export default async function SharedReportPage({
                 <ul className="space-y-2">
                   {report.weaknesses.map((w, i) => (
                     <li key={i} className="flex gap-2 text-xs text-[#071B3A]/80 dark:text-white/80">
-                      <span className="text-yellow-500 font-bold">!</span>
-                      <span>{cleanPedagogicalText(w)}</span>
+                      <span className="text-yellow-500 font-bold shrink-0">!</span>
+                      <span 
+                        dir={isArabicText(w) ? "rtl" : "ltr"}
+                        className={isArabicText(w) ? "text-right flex-1" : "text-left flex-1"}
+                      >
+                        {cleanPedagogicalText(w)}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -123,8 +147,13 @@ export default async function SharedReportPage({
             <ul className="space-y-2">
               {report.recommendations.map((rec, i) => (
                 <li key={i} className="flex gap-2 text-xs text-[#071B3A]/80 dark:text-white/80">
-                  <span className="text-teal-600 font-bold">•</span>
-                  <span>{cleanPedagogicalText(rec)}</span>
+                  <span className="text-teal-600 font-bold shrink-0">•</span>
+                  <span 
+                    dir={isArabicText(rec) ? "rtl" : "ltr"}
+                    className={isArabicText(rec) ? "text-right flex-1" : "text-left flex-1"}
+                  >
+                    {cleanPedagogicalText(rec)}
+                  </span>
                 </li>
               ))}
             </ul>

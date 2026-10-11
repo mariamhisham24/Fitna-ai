@@ -162,21 +162,19 @@ async function handleEnd(request: NextRequest, params: Promise<{ id: string }>) 
   const { data: personaRows } = await supabase.from("student_personas").select("id, name");
   const personaNameById = new Map((personaRows ?? []).map((p) => [p.id, p.name]));
 
-  let sessionMarket: "eg" | "sa" = "eg";
+  let sessionMarket: "eg" | "sa" | "en" = "eg";
   for (const e of allEvents) {
     if (e.event_type === "session_config" && e.metadata) {
-      const meta = e.metadata as { market?: "eg" | "sa" };
-      if (meta.market === "sa" || meta.market === "eg") {
+      const meta = e.metadata as { market?: "eg" | "sa" | "en" };
+      if (meta.market === "sa" || meta.market === "eg" || meta.market === "en") {
         sessionMarket = meta.market;
         break;
       }
     }
   }
-  if (sessionMarket === "eg") {
-    const cookieMarket = request.cookies.get("fitna_market")?.value;
-    if (cookieMarket === "sa") {
-      sessionMarket = "sa";
-    }
+  const cookieMarket = request.cookies.get("fitna_market")?.value;
+  if (cookieMarket === "sa" || cookieMarket === "en" || cookieMarket === "eg") {
+    sessionMarket = cookieMarket as "eg" | "sa" | "en";
   }
 
   try {

@@ -380,7 +380,12 @@ export function SessionPlayback({
                     </span>
                   </div>
 
-                  <p className="text-xs text-[#071B3A]/90 dark:text-white/90 leading-relaxed">
+                  <p 
+                    dir={/[\u0600-\u06FF]/.test(turn.content) ? "rtl" : "ltr"}
+                    className={`text-xs text-[#071B3A]/90 dark:text-white/90 leading-relaxed ${
+                      /[\u0600-\u06FF]/.test(turn.content) ? "text-right" : "text-left"
+                    }`}
+                  >
                     {turn.content}
                   </p>
                 </div>

@@ -122,6 +122,17 @@ export function FrameworkScorecard({ scores }: { scores: FrameworkScoresProps | 
   );
 }
 
+const labelTranslations: Record<string, string> = {
+  "متميز": "Distinguished",
+  "كفء": "Proficient",
+  "مبتدئ": "Basic",
+  "غير مرضٍ": "Unsatisfactory",
+  "غير مرض": "Unsatisfactory",
+  "مرتفع": "High",
+  "متوسط": "Mid",
+  "منخفض": "Low",
+};
+
 function FrameworkCard({
   title,
   score,
@@ -138,6 +149,9 @@ function FrameworkCard({
   levelText: string;
 }) {
   const percentage = Math.min(100, Math.round((score / maxScore) * 100));
+  const isArabicFeedback = /[\u0600-\u06FF]/.test(feedback || "");
+  const { lang } = useTranslation();
+  const displayLabel = lang === "en" ? (labelTranslations[label] || label) : label;
 
   return (
     <div className="border border-[#071B3A]/10 dark:border-white/10 rounded-xl p-3.5 bg-[#071B3A]/[0.01] dark:bg-white/[0.02] space-y-2">
@@ -159,11 +173,16 @@ function FrameworkCard({
 
       <div className="flex items-center justify-between text-[11px]">
         <span className="text-[#071B3A]/50 dark:text-white/50">{levelText}:</span>
-        <span className="font-bold text-[#071B3A] dark:text-white">{label}</span>
+        <span className="font-bold text-[#071B3A] dark:text-white">{displayLabel}</span>
       </div>
 
       {feedback && (
-        <p className="text-[11px] text-[#071B3A]/75 dark:text-white/70 leading-relaxed pt-1 border-t border-[#071B3A]/5 dark:border-white/5">
+        <p 
+          dir={isArabicFeedback ? "rtl" : "ltr"}
+          className={`text-[11px] text-[#071B3A]/75 dark:text-white/70 leading-relaxed pt-1 border-t border-[#071B3A]/5 dark:border-white/5 ${
+            isArabicFeedback ? "text-right" : "text-left"
+          }`}
+        >
           {feedback}
         </p>
       )}

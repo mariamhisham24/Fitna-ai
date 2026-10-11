@@ -43,22 +43,34 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const personaNameById = new Map((personaRows ?? []).map((p) => [p.id, p.name]));
 
     const sessionEvents = events ?? [];
-    let sessionMarket: "eg" | "sa" = "eg";
+    let sessionMarket: "eg" | "sa" | "en" = "eg";
     for (const e of sessionEvents) {
       if (e.event_type === "session_config" && e.metadata) {
-        const meta = e.metadata as { market?: "eg" | "sa" };
-        if (meta.market === "sa" || meta.market === "eg") {
+        const meta = e.metadata as { market?: "eg" | "sa" | "en" };
+        if (meta.market === "sa" || meta.market === "eg" || meta.market === "en") {
           sessionMarket = meta.market;
           break;
         }
       }
     }
-    if (sessionMarket === "eg") {
-      const cookieMarket = request.cookies.get("fitna_market")?.value;
-      if (cookieMarket === "sa") {
-        sessionMarket = "sa";
+
+    // Allow market override from JSON body, URL query param, or cookies
+    try {
+      const body = await request.clone().json().catch(() => ({}));
+      if (body?.market === "sa" || body?.market === "en" || body?.market === "eg") {
+        sessionMarket = body.market;
+      } else {
+        const queryMarket = request.nextUrl.searchParams.get("market");
+        if (queryMarket === "sa" || queryMarket === "en" || queryMarket === "eg") {
+          sessionMarket = queryMarket;
+        } else {
+          const cookieMarket = request.cookies.get("fitna_market")?.value;
+          if (cookieMarket === "sa" || cookieMarket === "en" || cookieMarket === "eg") {
+            sessionMarket = cookieMarket as "eg" | "sa" | "en";
+          }
+        }
       }
-    }
+    } catch {}
 
     const report = await generateSessionReport({
       events: sessionEvents,

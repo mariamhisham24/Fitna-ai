@@ -8,7 +8,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MarketSwitcher } from "@/components/MarketSwitcher";
 import { type Language, useTranslation } from "@/lib/i18n";
 import { type FrameworkScoresProps } from "./FrameworkScorecard";
-import { Check, Lightbulb, Mic } from "lucide-react";
+import { Check, Lightbulb, Mic, Sparkles, RotateCcw } from "lucide-react";
 import { TelegramIcon } from "@/components/TelegramIcon";
 import { UserGuideButton } from "@/components/UserGuideButton";
 import { trackEvent } from "@/lib/analytics";
@@ -30,12 +30,28 @@ export type EvidenceMoment = {
 
 import { cleanPedagogicalText } from "@/lib/utils/pedagogy";
 
+function isArabicText(text?: string | null): boolean {
+  return Boolean(text && /[\u0600-\u06FF]/.test(text));
+}
+
+const labelTranslations: Record<string, string> = {
+  "متميز": "Distinguished",
+  "كفء": "Proficient",
+  "أساسي": "Basic",
+  "غير مرضٍ": "Unsatisfactory",
+  "مرتفع": "High",
+  "متوسط-مرتفع": "Mid-High",
+  "متوسط": "Mid",
+  "منخفض": "Low",
+};
+
 export function ReportClient({
   session,
   report,
   transcript,
   evidenceMoments,
-  lang,
+  lang: propLang,
+  market: propMarket,
 }: {
   session: {
     id: string;
@@ -60,10 +76,37 @@ export function ReportClient({
   transcript: PlaybackTurn[];
   evidenceMoments: EvidenceMoment[];
   lang: Language;
+  market?: "eg" | "sa" | "en";
 }) {
-  const { market } = useTranslation();
-  const isRtl = lang === "ar";
+  const { lang: ctxLang, market: ctxMarket } = useTranslation();
+  const activeLang = ctxLang || propLang || "ar";
+  const activeMarket = ctxMarket || propMarket || "eg";
+  const isRtl = activeLang === "ar";
+  const isEn = activeLang === "en";
+
   const [copied, setCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  const handleRegenerateReport = async () => {
+    setIsRegenerating(true);
+    try {
+      const res = await fetch(`/api/sessions/${session.id}/report/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ market: activeMarket }),
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        alert(isRtl ? "تعذر تحديث التحليل. حاول مرة أخرى." : "Failed to regenerate report. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert(isRtl ? "حدث خطأ في الاتصال" : "Network error occurred");
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
 
   // Audio Playback Engine
   const [isPlayingAll, setIsPlayingAll] = useState(false);
@@ -369,9 +412,25 @@ export function ReportClient({
               <span className="sm:hidden">PDF</span>
             </button>
 
+            {/* Regenerate Analysis for Current Market */}
+            <button
+              type="button"
+              onClick={handleRegenerateReport}
+              disabled={isRegenerating}
+              className="px-2.5 sm:px-3.5 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 text-xs font-bold transition flex items-center gap-1.5 border border-teal-500/40 active:scale-95 cursor-pointer disabled:opacity-50"
+              title={isRtl ? "إعادة توليد التحليل للهجة/الدولة المختارة" : "Regenerate Analysis for Selected Region"}
+            >
+              <RotateCcw className={`w-3.5 h-3.5 text-teal-400 ${isRegenerating ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">
+                {isRegenerating
+                  ? (isRtl ? "جارٍ التحليل..." : "Analyzing...")
+                  : (activeMarket === "en" ? "Regenerate (EN)" : activeMarket === "sa" ? "تحديث التقرير (🇸🇦 فصحى)" : "تحديث التقرير (🇪🇬)")}
+              </span>
+            </button>
+
             <div className="h-5 w-px bg-white/15 hidden md:block" />
             <div className="hidden md:flex items-center gap-2">
-              <MarketSwitcher locked={true} />
+              <MarketSwitcher locked={false} />
               <LanguageSwitcher />
               <ThemeToggle />
               {/* User Guide Pinned Navbar Button */}
@@ -488,11 +547,21 @@ export function ReportClient({
           </div>
 
           {/* Diagnostic Statement Box */}
-          <div className="max-w-2xl w-full bg-[#F6F0E4]/50 dark:bg-white/[0.03] p-5 rounded-2xl border border-[#071B3A]/5 dark:border-white/5 space-y-2">
-            <h2 className="text-base sm:text-lg font-black text-[#D96B58] leading-snug">
+          <div className="max-w-2xl w-full bg-[#F6F0E4]/50 dark:bg-white/[0.03] p-5 sm:p-6 rounded-2xl border border-[#071B3A]/5 dark:border-white/5 space-y-2.5">
+            <h2 
+              className={`text-base sm:text-lg font-black text-[#D96B58] leading-snug ${
+                isArabicText(report?.session_signal_ar) ? "text-right" : isRtl ? "text-right" : "text-left"
+              }`}
+              dir={isArabicText(report?.session_signal_ar) ? "rtl" : isRtl ? "rtl" : "ltr"}
+            >
               {cleanPedagogicalText(report?.session_signal_ar || (isRtl ? "تقرير التقييم البيداغوجي المعتمد" : "Pedagogical Assessment Summary"))}
             </h2>
-            <p className="text-xs sm:text-sm text-[#071B3A]/80 dark:text-white/80 leading-relaxed font-medium">
+            <p 
+              className={`text-xs sm:text-sm text-[#071B3A]/80 dark:text-white/80 leading-relaxed font-medium ${
+                isArabicText(report?.summary_ar) ? "text-right" : isRtl ? "text-right" : "text-left"
+              }`}
+              dir={isArabicText(report?.summary_ar) ? "rtl" : isRtl ? "rtl" : "ltr"}
+            >
               {cleanPedagogicalText(report?.summary_ar || (isRtl ? "أظهرت الجلسة تفاعلاً عاماً في الفصل، ويمكن تحسين الأداء بالتركيز على الأسئلة السقراطية المفتوحة." : "Session performance evaluated across key pedagogical indicators."))}
             </p>
           </div>
@@ -594,7 +663,12 @@ export function ReportClient({
                   <span className="w-2 h-2 rounded-full bg-[#071B3A]/40 dark:bg-white/40" />
                   <span>{isRtl ? "ملخص الأداء العام" : "Performance Summary"}</span>
                 </h3>
-                <p className="text-xs sm:text-sm text-[#071B3A]/85 dark:text-white/85 leading-relaxed bg-[#F6F0E4]/40 dark:bg-white/5 p-4 rounded-2xl border border-[#071B3A]/5 dark:border-white/5">
+                <p 
+                  className={`text-xs sm:text-sm text-[#071B3A]/85 dark:text-white/85 leading-relaxed bg-[#F6F0E4]/40 dark:bg-white/5 p-4 rounded-2xl border border-[#071B3A]/5 dark:border-white/5 ${
+                    isArabicText(report?.summary_ar) ? "text-right" : isRtl ? "text-right" : "text-left"
+                  }`}
+                  dir={isArabicText(report?.summary_ar) ? "rtl" : isRtl ? "rtl" : "ltr"}
+                >
                   {cleanPedagogicalText(report?.summary_ar || (isRtl ? "توضح هذه الجلسة ممارسات المعلم والتفاعل الصفي المباشر." : "General performance summary."))}
                 </p>
               </div>
@@ -619,7 +693,12 @@ export function ReportClient({
                       <span className="w-5 h-5 rounded-full bg-[#12B8C4]/20 text-[#12B8C4] flex items-center justify-center shrink-0 mt-0.5">
                         <Check className="w-3.5 h-3.5" />
                       </span>
-                      <p>{cleanPedagogicalText(item)}</p>
+                      <p 
+                        className={`flex-1 ${isArabicText(item) ? "text-right" : isRtl ? "text-right" : "text-left"}`}
+                        dir={isArabicText(item) ? "rtl" : isRtl ? "rtl" : "ltr"}
+                      >
+                        {cleanPedagogicalText(item)}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -649,7 +728,12 @@ export function ReportClient({
                     <span className="w-5 h-5 rounded-full bg-[#D96B58]/20 text-[#D96B58] flex items-center justify-center shrink-0 font-bold mt-0.5">
                       !
                     </span>
-                    <p>{cleanPedagogicalText(item)}</p>
+                    <p 
+                      className={`flex-1 ${isArabicText(item) ? "text-right" : isRtl ? "text-right" : "text-left"}`}
+                      dir={isArabicText(item) ? "rtl" : isRtl ? "rtl" : "ltr"}
+                    >
+                      {cleanPedagogicalText(item)}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -669,7 +753,13 @@ export function ReportClient({
                       isRtl ? "استخدام استراتيجيات تفاعلية مثل العصف الذهني لتفعيل مشاركة الجميع." : "Use participatory strategies.",
                     ]
                 ).map((rec, idx) => (
-                  <li key={idx} className="leading-relaxed">{cleanPedagogicalText(rec)}</li>
+                  <li 
+                    key={idx} 
+                    className={`leading-relaxed ${isArabicText(rec) ? "text-right" : isRtl ? "text-right" : "text-left"}`}
+                    dir={isArabicText(rec) ? "rtl" : isRtl ? "rtl" : "ltr"}
+                  >
+                    {cleanPedagogicalText(rec)}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -719,9 +809,14 @@ export function ReportClient({
                           </span>
                         </div>
                         <span className="text-[11px] font-bold text-[#D96B58] block mb-2">
-                          {isRtl ? `المستوى: ${frameworkScores.danielson.questioningDiscussion.label}` : frameworkScores.danielson.questioningDiscussion.label}
+                          {isRtl ? `المستوى: ${frameworkScores.danielson.questioningDiscussion.label}` : (labelTranslations[frameworkScores.danielson.questioningDiscussion.label] || frameworkScores.danielson.questioningDiscussion.label)}
                         </span>
-                        <p className="text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed">
+                        <p 
+                          className={`text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed ${
+                            isArabicText(frameworkScores.danielson.questioningDiscussion.feedback) ? "text-right" : isRtl ? "text-right" : "text-left"
+                          }`}
+                          dir={isArabicText(frameworkScores.danielson.questioningDiscussion.feedback) ? "rtl" : isRtl ? "rtl" : "ltr"}
+                        >
                           {cleanPedagogicalText(frameworkScores.danielson.questioningDiscussion.feedback)}
                         </p>
                       </div>
@@ -746,9 +841,14 @@ export function ReportClient({
                           </span>
                         </div>
                         <span className="text-[11px] font-bold text-amber-800 dark:text-[#FFB52E] block mb-2">
-                          {isRtl ? `المستوى: ${frameworkScores.danielson.studentEngagement.label}` : frameworkScores.danielson.studentEngagement.label}
+                          {isRtl ? `المستوى: ${frameworkScores.danielson.studentEngagement.label}` : (labelTranslations[frameworkScores.danielson.studentEngagement.label] || frameworkScores.danielson.studentEngagement.label)}
                         </span>
-                        <p className="text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed">
+                        <p 
+                          className={`text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed ${
+                            isArabicText(frameworkScores.danielson.studentEngagement.feedback) ? "text-right" : isRtl ? "text-right" : "text-left"
+                          }`}
+                          dir={isArabicText(frameworkScores.danielson.studentEngagement.feedback) ? "rtl" : isRtl ? "rtl" : "ltr"}
+                        >
                           {cleanPedagogicalText(frameworkScores.danielson.studentEngagement.feedback)}
                         </p>
                       </div>
@@ -773,9 +873,14 @@ export function ReportClient({
                           </span>
                         </div>
                         <span className="text-[11px] font-bold text-[#12B8C4] block mb-2">
-                          {isRtl ? `المستوى: ${frameworkScores.danielson.managingBehavior.label}` : frameworkScores.danielson.managingBehavior.label}
+                          {isRtl ? `المستوى: ${frameworkScores.danielson.managingBehavior.label}` : (labelTranslations[frameworkScores.danielson.managingBehavior.label] || frameworkScores.danielson.managingBehavior.label)}
                         </span>
-                        <p className="text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed">
+                        <p 
+                          className={`text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed ${
+                            isArabicText(frameworkScores.danielson.managingBehavior.feedback) ? "text-right" : isRtl ? "text-right" : "text-left"
+                          }`}
+                          dir={isArabicText(frameworkScores.danielson.managingBehavior.feedback) ? "rtl" : isRtl ? "rtl" : "ltr"}
+                        >
                           {cleanPedagogicalText(frameworkScores.danielson.managingBehavior.feedback)}
                         </p>
                       </div>
@@ -817,9 +922,14 @@ export function ReportClient({
                           </span>
                         </div>
                         <span className="text-[11px] font-bold text-amber-800 dark:text-[#FFB52E] block mb-2">
-                          {isRtl ? `المستوى: ${frameworkScores.classFramework.instructionalSupport.label}` : frameworkScores.classFramework.instructionalSupport.label}
+                          {isRtl ? `المستوى: ${frameworkScores.classFramework.instructionalSupport.label}` : (labelTranslations[frameworkScores.classFramework.instructionalSupport.label] || frameworkScores.classFramework.instructionalSupport.label)}
                         </span>
-                        <p className="text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed">
+                        <p 
+                          className={`text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed ${
+                            isArabicText(frameworkScores.classFramework.instructionalSupport.feedback) ? "text-right" : isRtl ? "text-right" : "text-left"
+                          }`}
+                          dir={isArabicText(frameworkScores.classFramework.instructionalSupport.feedback) ? "rtl" : isRtl ? "rtl" : "ltr"}
+                        >
                           {cleanPedagogicalText(frameworkScores.classFramework.instructionalSupport.feedback)}
                         </p>
                       </div>
@@ -844,9 +954,14 @@ export function ReportClient({
                           </span>
                         </div>
                         <span className="text-[11px] font-bold text-[#12B8C4] block mb-2">
-                          {isRtl ? `المستوى: ${frameworkScores.classFramework.classroomOrganization.label}` : frameworkScores.classFramework.classroomOrganization.label}
+                          {isRtl ? `المستوى: ${frameworkScores.classFramework.classroomOrganization.label}` : (labelTranslations[frameworkScores.classFramework.classroomOrganization.label] || frameworkScores.classFramework.classroomOrganization.label)}
                         </span>
-                        <p className="text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed">
+                        <p 
+                          className={`text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed ${
+                            isArabicText(frameworkScores.classFramework.classroomOrganization.feedback) ? "text-right" : isRtl ? "text-right" : "text-left"
+                          }`}
+                          dir={isArabicText(frameworkScores.classFramework.classroomOrganization.feedback) ? "rtl" : isRtl ? "rtl" : "ltr"}
+                        >
                           {cleanPedagogicalText(frameworkScores.classFramework.classroomOrganization.feedback)}
                         </p>
                       </div>
@@ -871,9 +986,14 @@ export function ReportClient({
                           </span>
                         </div>
                         <span className="text-[11px] font-bold text-[#12B8C4] block mb-2">
-                          {isRtl ? `المستوى: ${frameworkScores.classFramework.emotionalSupport.label}` : frameworkScores.classFramework.emotionalSupport.label}
+                          {isRtl ? `المستوى: ${frameworkScores.classFramework.emotionalSupport.label}` : (labelTranslations[frameworkScores.classFramework.emotionalSupport.label] || frameworkScores.classFramework.emotionalSupport.label)}
                         </span>
-                        <p className="text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed">
+                        <p 
+                          className={`text-xs text-[#071B3A]/70 dark:text-white/70 leading-relaxed ${
+                            isArabicText(frameworkScores.classFramework.emotionalSupport.feedback) ? "text-right" : isRtl ? "text-right" : "text-left"
+                          }`}
+                          dir={isArabicText(frameworkScores.classFramework.emotionalSupport.feedback) ? "rtl" : isRtl ? "rtl" : "ltr"}
+                        >
                           {cleanPedagogicalText(frameworkScores.classFramework.emotionalSupport.feedback)}
                         </p>
                       </div>
