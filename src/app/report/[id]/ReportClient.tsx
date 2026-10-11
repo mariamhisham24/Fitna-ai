@@ -8,7 +8,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MarketSwitcher } from "@/components/MarketSwitcher";
 import { type Language, useTranslation } from "@/lib/i18n";
 import { type FrameworkScoresProps } from "./FrameworkScorecard";
-import { Check, Lightbulb, Mic, Sparkles, RotateCcw } from "lucide-react";
+import { Check, Lightbulb, Mic, Sparkles } from "lucide-react";
 import { TelegramIcon } from "@/components/TelegramIcon";
 import { UserGuideButton } from "@/components/UserGuideButton";
 import { trackEvent } from "@/lib/analytics";
@@ -85,28 +85,6 @@ export function ReportClient({
   const isEn = activeLang === "en";
 
   const [copied, setCopied] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
-
-  const handleRegenerateReport = async () => {
-    setIsRegenerating(true);
-    try {
-      const res = await fetch(`/api/sessions/${session.id}/report/regenerate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ market: activeMarket }),
-      });
-      if (res.ok) {
-        window.location.reload();
-      } else {
-        alert(isRtl ? "تعذر تحديث التحليل. حاول مرة أخرى." : "Failed to regenerate report. Please try again.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert(isRtl ? "حدث خطأ في الاتصال" : "Network error occurred");
-    } finally {
-      setIsRegenerating(false);
-    }
-  };
 
   // Audio Playback Engine
   const [isPlayingAll, setIsPlayingAll] = useState(false);
@@ -412,25 +390,9 @@ export function ReportClient({
               <span className="sm:hidden">PDF</span>
             </button>
 
-            {/* Regenerate Analysis for Current Market */}
-            <button
-              type="button"
-              onClick={handleRegenerateReport}
-              disabled={isRegenerating}
-              className="px-2.5 sm:px-3.5 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 text-xs font-bold transition flex items-center gap-1.5 border border-teal-500/40 active:scale-95 cursor-pointer disabled:opacity-50"
-              title={isRtl ? "إعادة توليد التحليل للهجة/الدولة المختارة" : "Regenerate Analysis for Selected Region"}
-            >
-              <RotateCcw className={`w-3.5 h-3.5 text-teal-400 ${isRegenerating ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">
-                {isRegenerating
-                  ? (isRtl ? "جارٍ التحليل..." : "Analyzing...")
-                  : (activeMarket === "en" ? "Regenerate (EN)" : activeMarket === "sa" ? "تحديث التقرير (🇸🇦 فصحى)" : "تحديث التقرير (🇪🇬)")}
-              </span>
-            </button>
-
             <div className="h-5 w-px bg-white/15 hidden md:block" />
             <div className="hidden md:flex items-center gap-2">
-              <MarketSwitcher locked={false} />
+              <MarketSwitcher locked={true} />
               <LanguageSwitcher />
               <ThemeToggle />
               {/* User Guide Pinned Navbar Button */}
