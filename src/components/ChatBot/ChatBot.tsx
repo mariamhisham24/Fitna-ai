@@ -12,7 +12,7 @@ export type ChatMessage = {
 
 export function ChatBot({ context: propContext }: { context?: 'visitor' | 'teacher' }) {
   const { isOpen, closeChat, toggleChat, defaultContext } = useChatBot();
-  const { t, lang } = useTranslation();
+  const { t, lang, market } = useTranslation();
   const isRtl = lang === 'ar';
   
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -31,10 +31,16 @@ export function ChatBot({ context: propContext }: { context?: 'visitor' | 'teach
         setMessages([]);
       }
     } else {
-      // Set welcome message
-      setMessages([{ role: 'bot', content: t.chatbot?.chatbot_welcome || (isRtl ? "أهلاً بك! أنا مساعد فِطنة الذكي. إزاي أقدر أساعدك النهاردة؟" : "Hi there! I'm your Fitna AI Assistant. How can I help you today?") }]);
+      // Set welcome message according to market / locale
+      const defaultWelcome = market === 'sa'
+        ? "مرحباً بك! أنا مساعد فِطنة الذكي. كيف يمكنني مساعدتك اليوم؟"
+        : market === 'en'
+        ? "Hi there! I'm your Fitna AI Assistant. How can I help you today?"
+        : "أهلاً بك! أنا مساعد فِطنة الذكي. إزاي أقدر أساعدك النهاردة؟";
+
+      setMessages([{ role: 'bot', content: t.chatbot?.chatbot_welcome || defaultWelcome }]);
     }
-  }, [activeContext, t.chatbot, isRtl]);
+  }, [activeContext, t.chatbot, isRtl, market]);
 
   useEffect(() => {
     // Save to sessionStorage
@@ -51,7 +57,12 @@ export function ChatBot({ context: propContext }: { context?: 'visitor' | 'teach
 
   const handleClear = () => {
     sessionStorage.removeItem(`fitna_chat_${activeContext}`);
-    setMessages([{ role: 'bot', content: t.chatbot?.chatbot_welcome || (isRtl ? "أهلاً بك! أنا مساعد فِطنة الذكي. إزاي أقدر أساعدك النهاردة؟" : "Hi there! I'm your Fitna AI Assistant. How can I help you today?") }]);
+    const defaultWelcome = market === 'sa'
+      ? "مرحباً بك! أنا مساعد فِطنة الذكي. كيف يمكنني مساعدتك اليوم؟"
+      : market === 'en'
+      ? "Hi there! I'm your Fitna AI Assistant. How can I help you today?"
+      : "أهلاً بك! أنا مساعد فِطنة الذكي. إزاي أقدر أساعدك النهاردة؟";
+    setMessages([{ role: 'bot', content: t.chatbot?.chatbot_welcome || defaultWelcome }]);
   };
 
   const handleSend = async (e?: React.FormEvent) => {
@@ -74,7 +85,8 @@ export function ChatBot({ context: propContext }: { context?: 'visitor' | 'teach
         body: JSON.stringify({
           message: userMsg,
           history: messages,
-          context: activeContext
+          context: activeContext,
+          market
         }),
       });
 

@@ -66,16 +66,24 @@ export async function POST(req: Request) {
       rateLimit.set(ip, { count: 1, timestamp: now });
     }
 
-    const { message, history = [], context = 'visitor' } = await req.json();
+    const { message, history = [], context = 'visitor', market = 'eg' } = await req.json();
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    }
+
+    let dialectInstruction = "Respond in natural, warm Egyptian Arabic (لهجة مصرية مهذبة ومألوفة للمعلمين).";
+    if (market === 'sa') {
+      dialectInstruction = "Respond in fluent, professional Modern Standard Arabic / formal Arabic (لغة عربية فصحى نقية وراقية تليق بالبيئة التعليمية السعودية وتخاطب المعلمين بأسلوب تربوي رصين ومحترم). Avoid colloquial Egyptian slang.";
+    } else if (market === 'en') {
+      dialectInstruction = "Respond in clear, encouraging, and professional American English tailored for educators.";
     }
 
     const systemPrompt = `You are the official AI Assistant for the "Fitna AI" platform (فِطنة).
 You are an expert on the platform's features, classroom simulation, AI-powered teacher training, and the Danielson & CLASS pedagogical frameworks.
 
 Context of the user asking: ${context}
+Active User Market/Region: ${market}
 
 Information about Fitna AI:
 - Fitna AI is an AI-powered classroom simulation and teacher training platform (فِطنة).
@@ -85,11 +93,10 @@ Information about Fitna AI:
 - For visitors: Answer questions about features, pricing, and how to get started. Be welcoming and encourage them to try the platform.
 - For teachers: Give actionable pedagogical tips, explain report metrics, and suggest teaching strategies based on Danielson/CLASS frameworks. Provide encouragement.
 
-Rules:
+Tone and Language Guidelines:
+- ${dialectInstruction}
 - Keep your answers concise, helpful, and friendly.
 - DO NOT use markdown headers (like # or ##), just bold text for emphasis.
-- You must auto-detect the language from the user's message (Arabic or English) and respond in the SAME language.
-- If the user speaks Arabic, respond in natural, friendly Arabic.
 - If asked about things outside of education, teaching, or Fitna AI, politely steer the conversation back to how Fitna AI can help them.`;
 
     const messages = [
